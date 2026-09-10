@@ -2335,3 +2335,4 @@ const app = express();
 }
 
 startServer();
+export default app;
