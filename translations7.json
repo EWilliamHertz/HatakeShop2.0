@@ -1,0 +1,17 @@
+{
+  "Messages & RFQs": {"zh": "消息与询价", "sv": "Meddelanden & RFQ:er"},
+  "Manage your active Requests for Quotation, negotiate bulk pricing, and track sourcing milestones.": {"zh": "管理您的有效询价，协商批量定价，并跟踪采购里程碑。", "sv": "Hantera dina aktiva anbudsförfrågningar, förhandla om bulkpriser och spåra inköpsmilstolpar."},
+  "General Inquiry": {"zh": "一般询价", "sv": "Allmän förfrågan"},
+  "USD Negotiable": {"zh": "美元 可协商", "sv": "USD Förhandlingsbart"},
+  "Target Qty": {"zh": "目标数量", "sv": "Målkvantitet"},
+  "Target Quantity": {"zh": "目标数量", "sv": "Målkvantitet"},
+  "Budget": {"zh": "预算", "sv": "Budget"},
+  "Create New RFQ": {"zh": "创建新询价", "sv": "Skapa ny RFQ"},
+  "Generate RFQs using the AI Sourcing tool or browse the marketplace.": {"zh": "使用 AI 采购工具生成询价，或浏览市场。", "sv": "Generera RFQ:er med hjälp av AI-inköpsverktyget eller bläddra på marknadsplatsen."},
+  "Pending Sample Request": {"zh": "待处理样品请求", "sv": "Väntande provförfrågan"},
+  "Blind Dropshipping": {"zh": "无痕代发", "sv": "Blind Dropshipping"},
+  "Supplier will ship directly to your end-consumer with unbranded packing slips.": {"zh": "供应商将直接发货给您的终端消费者，装箱单上不包含品牌信息。", "sv": "Leverantören skickar direkt till din slutkonsument med omärkta packsedlar."},
+  "Consumer Full Name": {"zh": "消费者全名", "sv": "Konsumentens fullständiga namn"},
+  "Full Shipping Address": {"zh": "详细收货地址", "sv": "Fullständig leveransadress"},
+  "Target Budget (Per Unit, Optional)": {"zh": "目标预算（单价，可选）", "sv": "Målbudget (per enhet, valfritt)"}
+}

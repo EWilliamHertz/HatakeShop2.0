@@ -1,0 +1,60 @@
+npm notice run hatake-shop@0.0.0 dev
+npm notice run tsx server.ts
+API key should be set when using the Gemini API.
+API key should be set when using the Gemini API.
+Failed to bootstrap admin/products: DrizzleQueryError: Failed query: insert into "users" ("id", "uid", "email", "password", "display_name", "role", "company_name", "vat_number", "country", "verification_status", "auto_translate", "preferred_language", "shipping_address", "shipping_city", "shipping_zip", "stripe_account_id", "stripe_onboarding_complete", "invite_code", "team_owner_id", "team_role", "store_slug", "store_banner_url", "store_policies", "referred_by_id", "referral_code", "kyb_documents", "supplier_tier", "kyb_auto_verified", "org_number", "website", "about_us", "social_links", "portfolio", "profile_picture_url", "banner_url", "created_at") values (default, $1, $2, default, $3, $4, $5, default, $6, $7, default, default, default, default, default, default, default, default, default, $8, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default) on conflict ("uid") do update set "display_name" = $9, "company_name" = $10, "team_role" = $11 returning "id", "uid", "email", "password", "display_name", "role", "company_name", "vat_number", "country", "verification_status", "auto_translate", "preferred_language", "shipping_address", "shipping_city", "shipping_zip", "stripe_account_id", "stripe_onboarding_complete", "invite_code", "team_owner_id", "team_role", "store_slug", "store_banner_url", "store_policies", "referred_by_id", "referral_code", "kyb_documents", "supplier_tier", "kyb_auto_verified", "org_number", "website", "about_us", "social_links", "portfolio", "profile_picture_url", "banner_url", "created_at"
+params: stefan-uid,stefan@hatake.eu,Stefan,seller,Hatake KB,EU,verified,owner,Stefan,Hatake KB,owner
+    at NodePgPreparedQuery.queryWithCache (/home/ewilliamhe/hatake-shop/node_modules/src/pg-core/session.ts:73:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (/home/ewilliamhe/hatake-shop/node_modules/src/node-postgres/session.ts:154:19)
+    at async startServer (/home/ewilliamhe/hatake-shop/server.ts:227:26) {
+  query: 'insert into "users" ("id", "uid", "email", "password", "display_name", "role", "company_name", "vat_number", "country", "verification_status", "auto_translate", "preferred_language", "shipping_address", "shipping_city", "shipping_zip", "stripe_account_id", "stripe_onboarding_complete", "invite_code", "team_owner_id", "team_role", "store_slug", "store_banner_url", "store_policies", "referred_by_id", "referral_code", "kyb_documents", "supplier_tier", "kyb_auto_verified", "org_number", "website", "about_us", "social_links", "portfolio", "profile_picture_url", "banner_url", "created_at") values (default, $1, $2, default, $3, $4, $5, default, $6, $7, default, default, default, default, default, default, default, default, default, $8, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default, default) on conflict ("uid") do update set "display_name" = $9, "company_name" = $10, "team_role" = $11 returning "id", "uid", "email", "password", "display_name", "role", "company_name", "vat_number", "country", "verification_status", "auto_translate", "preferred_language", "shipping_address", "shipping_city", "shipping_zip", "stripe_account_id", "stripe_onboarding_complete", "invite_code", "team_owner_id", "team_role", "store_slug", "store_banner_url", "store_policies", "referred_by_id", "referral_code", "kyb_documents", "supplier_tier", "kyb_auto_verified", "org_number", "website", "about_us", "social_links", "portfolio", "profile_picture_url", "banner_url", "created_at"',
+  params: [
+    'stefan-uid',
+    'stefan@hatake.eu',
+    'Stefan',
+    'seller',
+    'Hatake KB',
+    'EU',
+    'verified',
+    'owner',
+    'Stefan',
+    'Hatake KB',
+    'owner'
+  ],
+  cause: Error: connect ECONNREFUSED 127.0.0.1:5432
+      at /home/ewilliamhe/hatake-shop/node_modules/pg-pool/index.js:45:11
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (/home/ewilliamhe/hatake-shop/node_modules/src/node-postgres/session.ts:161:13)
+      at async NodePgPreparedQuery.queryWithCache (/home/ewilliamhe/hatake-shop/node_modules/src/pg-core/session.ts:71:12)
+      at async <anonymous> (/home/ewilliamhe/hatake-shop/node_modules/src/node-postgres/session.ts:154:19)
+      at async startServer (/home/ewilliamhe/hatake-shop/server.ts:227:26) {
+    errno: -111,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 5432
+  }
+}
+WebSocket server error: Port 24678 is already in use
+7:45:55 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:2167:16)
+    at listenInCluster (node:net:2224:12)
+    at node:net:2448:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2203:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}
+
+Node.js v24.19.0

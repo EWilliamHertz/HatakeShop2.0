@@ -1,0 +1,1 @@
+ALTER TABLE "inquiries" ALTER COLUMN "status" SET DEFAULT 'Draft';

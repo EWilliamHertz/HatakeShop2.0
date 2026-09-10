@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787597043126,
+      "tag": "0000_tricky_owl",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787936913672,
+      "tag": "0001_majestic_carlie_cooper",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787949172092,
+      "tag": "0002_steep_tony_stark",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788199898322,
+      "tag": "0003_hard_black_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788202786595,
+      "tag": "0004_colorful_gabe_jones",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788204866632,
+      "tag": "0005_medical_steel_serpent",
+      "breakpoints": true
+    }
+  ]
+}

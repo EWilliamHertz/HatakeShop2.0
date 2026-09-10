@@ -1,0 +1,56 @@
+# ---------------------------------------------------
+# SECRETS & CREDENTIALS (CRITICAL TO PROTECT)
+# ---------------------------------------------------
+.env
+.env.*
+*.local
+*.pem
+*.key
+credentials.json
+client_secret.json
+service-account.json
+
+# ---------------------------------------------------
+# CLOUD SHELL & GCP SPECIFIC
+# ---------------------------------------------------
+.config/
+.gsutil/
+.gcp/
+.docker/
+
+# ---------------------------------------------------
+# OS GENERATED FILES
+# ---------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ---------------------------------------------------
+# IDE & EDITOR FOLDERS
+# ---------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.project
+.settings/
+
+# ---------------------------------------------------
+# COMMON LANGUAGE / BUILD DIRECTORIES
+# ---------------------------------------------------
+node_modules/
+npm-debug.log
+__pycache__/
+venv/
+.venv/
+*.pyc
+build/
+dist/
+target/
+
+.agents/
+ORIGINAL_REQUEST.md

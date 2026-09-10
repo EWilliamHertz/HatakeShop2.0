@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #020617; /* slate-950 */
+  --color-surface: #0f172a; /* slate-900 */
+  --color-surface-hover: #1e293b; /* slate-800 */
+  --color-ink: #e2e8f0; /* slate-200 */
+  --color-ink-light: #94a3b8; /* slate-400 */
+  --color-hairline: #1e293b; /* slate-800 */
+  
+  /* Premium Wholesale Accent (Cyan) */
+  --color-accent: #06b6d4; /* cyan-500 */
+  --color-accent-hover: #22d3ee; /* cyan-400 */
+  --color-accent-light: #164e63; /* cyan-900 */
+  
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-canvas text-ink antialiased selection:bg-accent/20 selection:text-accent;
+  }
+}
+
+/* Utilities for Premium B2B Wholesale look */
+@layer utilities {
+  .panel {
+    @apply bg-surface border border-hairline rounded-xl shadow-sm transition-shadow duration-200 hover:shadow-md;
+  }
+  
+  .btn-primary {
+    @apply bg-accent text-white px-5 py-2.5 rounded-lg font-medium hover:bg-accent-hover transition-colors inline-flex items-center justify-center shadow-sm;
+  }
+  
+  .btn-secondary {
+    @apply bg-surface border border-hairline text-ink px-5 py-2.5 rounded-lg font-medium hover:bg-surface-hover transition-colors inline-flex items-center justify-center shadow-sm;
+  }
+  
+  .input-modern {
+    @apply bg-surface border border-hairline text-ink px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all w-full;
+  }
+  
+  .heading-xl {
+    @apply font-display text-4xl md:text-5xl font-bold tracking-tight text-ink leading-tight;
+  }
+  
+  .heading-lg {
+    @apply font-display text-2xl md:text-3xl font-bold tracking-tight text-ink;
+  }
+  
+  .heading-md {
+    @apply font-display text-lg md:text-xl font-semibold tracking-tight text-ink;
+  }
+}

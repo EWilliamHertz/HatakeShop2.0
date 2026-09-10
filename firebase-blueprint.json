@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "Notification": {
+      "title": "string",
+      "body": "string",
+      "read": "boolean",
+      "createdAt": "timestamp",
+      "link": "string"
+    },
+    "InquiryAccess": {
+      "buyerUid": "string",
+      "sellerUid": "string"
+    },
+    "Message": {
+      "senderUid": "string",
+      "senderName": "string",
+      "text": "string",
+      "createdAt": "timestamp"
+    },
+    "TypingStatus": {
+      "isTyping": "boolean",
+      "timestamp": "timestamp"
+    }
+  },
+  "firestore": {
+    "users": {
+      "notifications": "Notification"
+    },
+    "inquiries": {
+      "$inquiryId": {
+        "_entity": "InquiryAccess",
+        "messages": "Message",
+        "typing": "TypingStatus"
+      }
+    }
+  }
+}

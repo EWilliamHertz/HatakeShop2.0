@@ -1,0 +1,13 @@
+          for (const plat of ["Facebook", "Instagram", "Twitter", "LinkedIn", "YouTube", "TikTok", "Other Socials"]) {
+            if (lead[plat]) socialLinks.push(lead[plat]);
+          }
+
+          const res = await db.insert(leads).values({
+            email,
+            companyName: companyName ? companyName.toString().substring(0, 255) : null,
+            website,
+            location,
+            socialLinks: socialLinks.length > 0 ? socialLinks : undefined,
+          }).onConflictDoNothing({ target: leads.email }).returning({ id: leads.id });
+          
+          if (res.length > 0) {

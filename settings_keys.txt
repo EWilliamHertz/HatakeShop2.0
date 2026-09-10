@@ -1,0 +1,39 @@
+,
+About Us
+Account Type
+Automatically translate incoming quotes and messages into your preferred language.
+Auto-Translate Messages
+Banner Image
+City
+Company Information
+Company Name
+Company Website
+Connected
+Connect Stripe
+Country of Registration
+Identity & Verification
+KYB Documents (Proof of Business)
+Logistics & Shipping
+Manage
+Manage your organization details and B2B verification status.
+Not connected. Required to receive payouts.
+Organization / Business Number
+Payment Settings
+Please complete your business profile below. B2B access requires a valid VAT/Tax ID and registered company name.
+Postal / Zip Code
+Preferred Language
+Profile Picture
+Save Settings
+Select Country
+Settings
+Social Links (Comma separated URLs)
+Street Address
+Stripe Connect
+System Preferences & Links
+Tell buyers about your company, history, and specialities...
+Upload Certificate of Incorporation or VAT Certificate
+VAT / Tax ID Number
+Verification Pending
+Verified Business Account
+Verifying...
+Your business identity has been verified. You have full access to the wholesale marketplace and sourcing engine.

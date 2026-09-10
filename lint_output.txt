@@ -1,0 +1,8 @@
+
+> hatake-shop@0.0.0 lint
+> tsc --noEmit
+
+src/pages/RFQHub.tsx(110,18): error TS2448: Block-scoped variable 'inquiries' used before its declaration.
+src/pages/RFQHub.tsx(110,29): error TS2448: Block-scoped variable 'user' used before its declaration.
+src/pages/Storefront.tsx(50,64): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.

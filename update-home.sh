@@ -1,0 +1,2 @@
+sed -i 's/import { Link, useNavigate } from '"'"'react-router-dom'"'"';/import { Link, useNavigate } from '"'"'react-router-dom'"'"';\nimport { useQuery } from '"'"'@tanstack\/react-query'"'"';/g' src/pages/Home.tsx
+sed -i 's/const { t, i18n } = useTranslation();/const { t, i18n } = useTranslation();\n  const { data: homeProductsData } = useQuery({ queryKey: ["homeProducts"], queryFn: () => fetch("\/api-v2\/products").then(res => res.json()) });/g' src/pages/Home.tsx
