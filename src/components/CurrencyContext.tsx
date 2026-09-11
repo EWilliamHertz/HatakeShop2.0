@@ -31,7 +31,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // For this implementation, we simulate fetching live rates.
     const fetchRates = async () => {
       try {
-        const res = await fetch('https://api.frankfurter.app/latest?from=USD');
+        const res = await fetch('/api/rates')
         if (res.ok) {
           const data = await res.json();
           setRates({
