@@ -2324,12 +2324,27 @@ const app = express();
     });
   }
 
-  // Only listen on a port if we are NOT running in Vercel's serverless environment
-  if (process.env.NODE_ENV !== 'production') {
+ // ONLY run the static file server and listen on a port if we are running locally (NOT on Vercel)
+  if (!process.env.VERCEL) {
+    if (process.env.NODE_ENV !== "production") {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } else {
+      const distPath = path.join(process.cwd(), 'dist');
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    }
+
+    const PORT = process.env.PORT || 3000;
     httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-} // <--- THIS IS THE MISSING CLOSING BRACKET!
+} // <-- Make sure this closing bracket is here!
 
 module.exports = app;
