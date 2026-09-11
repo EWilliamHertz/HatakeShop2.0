@@ -2324,10 +2324,11 @@ const app = express();
     });
   }
 
+// Only listen on a port if we are NOT running in Vercel's serverless environment
 if (process.env.NODE_ENV !== 'production') {
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
-} // <-- Ensure this closing bracket exists!
+}
 
 module.exports = app;
