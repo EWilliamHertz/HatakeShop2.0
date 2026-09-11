@@ -9,9 +9,16 @@ import { ProductModal } from '../components/ProductModal.tsx';
 import { WishlistButton } from '../components/WishlistButton.tsx';
 
 const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) => {
+  // Safely parse JSON strings sent by the database driver
+  let images = [];
+  try { images = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch(e) {}
+  
+  let tiers = [];
+  try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch(e) {}
+
   return (
     <div 
-      onClick={() => onSelect && onSelect(p)}
+      onClick={() => onSelect && onSelect({ product: p, seller: p.seller })}
       className={`cursor-pointer bg-slate-900 border ${isSponsored ? 'border-[#ffcc00]/50 shadow-[0_0_15px_rgba(255,204,0,0.1)]' : 'border-slate-800 hover:border-slate-600'} transition-all rounded-2xl overflow-hidden group shadow-lg flex flex-col relative`}
     >
       <WishlistButton productId={p.id} />
@@ -21,8 +28,8 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
         </div>
       )}
       <div className="relative h-48 bg-slate-800 overflow-hidden flex items-center justify-center">
-        {p.images && p.images.length > 0 ? (
-          <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        {images.length > 0 ? (
+          <img src={images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <PackageSearch className="w-10 h-10 text-slate-600" />
         )}
@@ -39,7 +46,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Est. Unit Price')}</span>
-              <span className="text-xl font-extrabold text-white font-mono tracking-tight">{formatPrice(p.tieredPricing?.length > 0 ? Math.min(...p.tieredPricing.map((t: any) => parseFloat(t.price || t.unitPrice || '0'))) : (p.unitPrice || 0))}</span>
+              <span className="text-xl font-extrabold text-white font-mono tracking-tight">{formatPrice(tiers.length > 0 ? Math.min(...tiers.map((t: any) => parseFloat(t.price || t.unitPrice || '0'))) : (p.unitPrice || 0))}</span>
             </div>
             <div className="text-right flex flex-col items-end">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Min Order')}</span>
@@ -51,7 +58,6 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
     </div>
   );
 };
-
 export function Marketplace() {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();

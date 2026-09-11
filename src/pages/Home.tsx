@@ -168,14 +168,18 @@ export function Home() {
   }, [selectedProduct]);
   
   const formatTiers = (tiers: any) => {
-  if (!Array.isArray(tiers) || tiers.length === 0) return null;
-  const sorted = [...tiers].sort((a, b) => a.quantity - b.quantity);
-  return sorted.map((tier, idx) => {
-    const nextTier = sorted[idx + 1];
-    const range = nextTier ? `${tier.quantity}-${nextTier.quantity - 1}` : `${tier.quantity}+`;
-    return `${formatPrice(tier.unitPrice)} PPU ${range} units`;
-  });
-};
+    let parsedTiers = tiers;
+    if (typeof tiers === 'string') {
+      try { parsedTiers = JSON.parse(tiers); } catch (e) { parsedTiers = []; }
+    }
+    if (!Array.isArray(parsedTiers) || parsedTiers.length === 0) return null;
+    const sorted = [...parsedTiers].sort((a, b) => a.quantity - b.quantity);
+    return sorted.map((tier, idx) => {
+      const nextTier = sorted[idx + 1];
+      const range = nextTier ? `${tier.quantity}-${nextTier.quantity - 1}` : `${tier.quantity}+`;
+      return `${formatPrice(tier.unitPrice)} PPU ${range} units`;
+    });
+  };
 
   const calculatePrice = () => {
      if (!selectedProduct?.product?.tieredPricing) return null;
@@ -283,8 +287,13 @@ export function Home() {
             <div className="w-full max-w-3xl mt-12 pt-8 animate-in fade-in">
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">{t('Sponsored Products')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-{homeProducts.filter((p: any) => p.isSponsored).slice(0, 3).map((sp: any, idx: number) => (                  <div key={idx} onClick={() => navigate('/marketplace')} className="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-col gap-3 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all cursor-pointer">
-                    <img src={sp.images?.[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-32 object-cover rounded-md border border-slate-800" />
+{homeProducts.filter((p: any) => p.isSponsored).slice(0, 3).map((sp: any, idx: number) => {
+                  let images = [];
+                  try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
+                  
+                  return (
+                  <div key={idx} onClick={() => navigate('/marketplace')} className="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-col gap-3 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all cursor-pointer">
+                    <img src={images[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-32 object-cover rounded-md border border-slate-800" />
                     <div>
                       <h4 className="font-semibold text-slate-200 text-sm truncate">{sp.title}</h4>
                       <p className="text-xs text-slate-400 truncate">{sp.companyName || sp.brand || 'Premium Vendor'}</p>
@@ -294,7 +303,8 @@ export function Home() {
                       <span className="bg-slate-800 text-slate-400 rounded-md text-[10px] py-0.5 px-1.5 font-medium border border-slate-700">MOQ: {sp.moq || 'Negotiable'}</span>
                     </div>
                   </div>
-                ))}
+                );
+              })}
               </div>
             </div>
 
@@ -384,9 +394,15 @@ export function Home() {
                           {t('Top Listings from')} {group.seller.companyName}
                         </h4>
                       )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 justify-center place-items-center">
-                        {group.products.map(({ product, seller }: any) => (
-                          <div key={product.id} onClick={() => {
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 justify-center place-items-center">
+                        {group.products.map((item: any, pIdx: number) => {
+                          const product = item.product || item;
+                          const seller = item.seller || product.seller || group.seller || {};
+                          let images = [];
+                          try { images = Array.isArray(product.images) ? product.images : JSON.parse(product.images || '[]'); } catch(e) {}
+                          
+                          return (
+                          <div key={product.id || pIdx} onClick={() => {
                               setSelectedProduct({ product, seller });
                               setActiveImageIndex(0);
                           }} className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full max-w-sm mx-auto">
@@ -403,11 +419,11 @@ export function Home() {
                               cardNumber={product.cardNumber}
                               year={product.cardYear}
                               variant={product.cardVariant}
-                              image={product.images && product.images.length > 0 ? product.images[0] : undefined}
+                              image={images.length > 0 ? images[0] : undefined}
                             />
                           </div>
                         ) : (
-                          <CardImageCarousel images={product.images} title={product.title} />
+                          <CardImageCarousel images={images} title={product.title} />
                         )}
 
                         <div className="absolute top-3 left-3 flex flex-col gap-2">
