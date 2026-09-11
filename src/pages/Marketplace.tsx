@@ -77,23 +77,27 @@ export function Marketplace() {
     }
   });
 
-  const { data = {}, isLoading } = useQuery({
-    queryKey: ['products', search, page, filters, selectedCategoryId],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        q: search,
-        page: page.toString(),
-        origin: filters.origin,
-        minMoq: filters.minMoq,
-        maxPrice: filters.maxPrice,
-        category: selectedCategoryId ? selectedCategoryId.toString() : filters.category,
-        sortBy: filters.sortBy
-      });
-      const res = await fetch(`/api-v2/products?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch products');
-      return res.json();
+const { data = {}, isLoading, error } = useQuery({
+  queryKey: ['products', search, page, filters, selectedCategoryId],
+  queryFn: async () => {
+    const params = new URLSearchParams({
+      q: search,
+      page: page.toString(),
+      origin: filters.origin,
+      minMoq: filters.minMoq,
+      maxPrice: filters.maxPrice,
+      category: selectedCategoryId ? selectedCategoryId.toString() : filters.category,
+      sortBy: filters.sortBy
+    });
+    const res = await fetch(`/api-v2/products?${params.toString()}`);
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 150)}`);
     }
-  });
+  }
+});
 
   const products = data.products || [];
   const totalPages = data.totalPages || 1;
@@ -181,8 +185,13 @@ export function Marketplace() {
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0">
-          {isLoading ? (
+      <main className="flex-1 min-w-0">
+          {error ? (
+            <div className="p-6 bg-red-950/50 border border-red-500 rounded-2xl text-red-200 my-8">
+              <h3 className="font-bold text-lg mb-2">API Connection Failed</h3>
+              <p className="font-mono text-xs whitespace-pre-wrap">{error.message}</p>
+            </div>
+          ) : isLoading ? (
             <div className="flex justify-center py-20 text-slate-400 animate-pulse">{t('Loading products...')}</div>
           ) : products.length === 0 ? (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col items-center justify-center py-32">
