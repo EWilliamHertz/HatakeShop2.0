@@ -6,11 +6,11 @@
     },
     {
       "source": "/api-v2/(.*)",
-      "destination": "/api/index.cjs"
+      "destination": "/api"
     },
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.cjs"
+      "destination": "/api"
     },
     {
       "source": "/(.*)",

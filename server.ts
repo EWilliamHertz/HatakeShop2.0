@@ -125,6 +125,8 @@ function __dummy_getEasyPost() {
   return easypostClient;
 }
 
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
     app.use("/", adminRouter);
     app.use("/", authRouter);
     app.use("/", productsRouter);
@@ -308,9 +310,6 @@ function __dummy_getEasyPost() {
   if (process.env.NODE_ENV !== 'production') {
     bootstrapDB();
   }
-
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Resend Webhook Endpoint for tracking events (email.delivered, email.opened, email.clicked)
   const requireAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
