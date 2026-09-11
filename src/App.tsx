@@ -14,7 +14,7 @@ import { CurrencyProvider } from './components/CurrencyContext.tsx';
 import { Toaster } from 'sonner';
 import { Layout } from './components/Layout.tsx';
 import { CookieConsent } from './components/CookieConsent.tsx';
-import  Home  from './pages/Home.tsx';
+import { Home } from './pages/Home.tsx';
 import { Marketplace } from './pages/Marketplace.tsx';
 import { RFQHub } from './pages/RFQHub.tsx';
 import { RFQDetails } from './pages/RFQDetails.tsx';
