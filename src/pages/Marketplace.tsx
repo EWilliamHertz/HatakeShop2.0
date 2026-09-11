@@ -101,15 +101,24 @@ export function Marketplace() {
     const groups: { [key: string]: { companyName: string, sellerId: number, products: any[] } } = {};
     const sponsored: any[] = [];
     
-    products.forEach((p: any) => {
+    if (!Array.isArray(products)) {
+      return { sponsored: [], companies: [] };
+    }
+
+    products.forEach((item: any) => {
+      // The API returns { product: {...}, seller: {...} } or just the product
+      const p = item.product || item;
+      const seller = item.seller || p.seller || {};
+
       if (p.isSponsored) {
-        sponsored.push(p);
+        // For consistency in the ProductCard, pass the raw item down if it expects it
+        sponsored.push(item);
       }
-      const cName = p.seller?.companyName || 'Independent Sellers';
+      const cName = seller.companyName || 'Independent Sellers';
       if (!groups[cName]) {
-        groups[cName] = { companyName: cName, sellerId: p.sellerId, products: [] };
+        groups[cName] = { companyName: cName, sellerId: seller.id || p.sellerId, products: [] };
       }
-      groups[cName].products.push(p);
+      groups[cName].products.push(item);
     });
     
     return {

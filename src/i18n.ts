@@ -465,7 +465,7 @@ const resources = {
       "USD Negotiable": "USD Negotiable",
       "商业联系人": "商业联系人",
       "Whether you are sourcing multi-tonne shipments for custom white-label manufacturing, or procuring smaller volumes of established, ready-to-ship brands, Hatake.Shop bridges the gap. Designed to empower vendors of all sizes—allowing you to seamlessly procure goods at massive scale, or distribute your existing inventory to a global network of buyers.": "Whether you are sourcing multi-tonne shipments for custom white-label manufacturing, or procuring smaller volumes of established, ready-to-ship brands, Hatake.Shop bridges the gap. Designed to empower vendors of all sizes—allowing you to seamlessly procure goods at massive scale, or distribute your existing inventory to a global network of buyers.",
-      "Our relentless B2B outreach engine actively onboards over 100 new TCG vendors every single day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.": "Our relentless B2B outreach engine actively onboards over 100 new TCG vendors every single day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers."
+      "Our relentless B2B outreach engine actively onboards up to 50 TCG companies per day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.": "Our relentless B2B outreach engine actively onboards over 50 new TCG vendors every single day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers."
 }
   },
   zh: {
@@ -929,7 +929,7 @@ const resources = {
       "USD Negotiable": "美元 可协商",
       "商业联系人": "商业联系人",
       "Whether you are sourcing multi-tonne shipments for custom white-label manufacturing, or procuring smaller volumes of established, ready-to-ship brands, Hatake.Shop bridges the gap. Designed to empower vendors of all sizes—allowing you to seamlessly procure goods at massive scale, or distribute your existing inventory to a global network of buyers.": "无论您是需要采购数吨的定制贴牌生产物资，还是小批量采购现成知名品牌，Hatake.Shop 都能为您无缝衔接。我们致力于赋能各类规模的供应商——让您不仅能实现大规模的高效采购，还能将现有库存分销至庞大的全球买家网络。",
-      "Our relentless B2B outreach engine actively onboards over 100 new TCG vendors every single day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.": "我们强大的 B2B 拓展引擎每天积极引入超过 100 家全新 TCG 供应商。这种快速扩张确保了我们的市场能够源源不断地获得大量新鲜库存，从而打造极具竞争力的批发价格，并持续将新买家与我们经过严格认证的卖家网络连接起来。"
+      "Our relentless B2B outreach engine actively onboards up to 50 TCG companies per day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.": "我们强大的 B2B 拓展引擎每天积极引入超过 100 家全新 TCG 供应商。这种快速扩张确保了我们的市场能够源源不断地获得大量新鲜库存，从而打造极具竞争力的批发价格，并持续将新买家与我们经过严格认证的卖家网络连接起来。"
 }
   },
   sv: {
@@ -1393,7 +1393,7 @@ const resources = {
       "USD Negotiable": "USD Förhandlingsbart",
       "商业联系人": "Affärskontakter",
       "Whether you are sourcing multi-tonne shipments for custom white-label manufacturing, or procuring smaller volumes of established, ready-to-ship brands, Hatake.Shop bridges the gap. Designed to empower vendors of all sizes—allowing you to seamlessly procure goods at massive scale, or distribute your existing inventory to a global network of buyers.": "Oavsett om du köper in flera ton för skräddarsydd white-label-tillverkning, eller skaffar mindre volymer av etablerade, leveransklara varumärken, överbryggar Hatake.Shop klyftan. Designad för att stärka leverantörer i alla storlekar – vilket gör att du sömlöst kan köpa in varor i massiv skala, eller distribuera ditt befintliga lager till ett globalt nätverk av köpare.",
-      "Our relentless B2B outreach engine actively onboards over 100 new TCG vendors every single day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.": "Vår oförtröttliga B2B-rekryteringsmotor introducerar aktivt över 100 nya TCG-leverantörer varje dag. Denna aggressiva expansion garanterar att vår marknadsplats konsekvent levererar ett massivt inflöde av nytt lager, vilket driver mycket konkurrenskraftiga grossistpriser och kontinuerligt kopplar nya köpare med vårt nätverk av godkända säljare."
+      "Our relentless B2B outreach engine actively onboards up to 50 TCG companies per day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.": "Vår oförtröttliga B2B-rekryteringsmotor introducerar aktivt över 100 nya TCG-leverantörer varje dag. Denna aggressiva expansion garanterar att vår marknadsplats konsekvent levererar ett massivt inflöde av nytt lager, vilket driver mycket konkurrenskraftiga grossistpriser och kontinuerligt kopplar nya köpare med vårt nätverk av godkända säljare."
 }
   }
 };
@@ -1403,6 +1403,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
+    lng: 'en',
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false, // react already safes from xss

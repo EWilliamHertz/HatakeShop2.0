@@ -308,7 +308,7 @@ export function Home() {
                    <h3 className="text-lg font-bold text-cyan-300">{t('Scaling the Verified Vendor Network Daily')}</h3>
                  </div>
                  <p className="text-slate-400 text-sm leading-relaxed">
-                   {t('Our relentless B2B outreach engine actively onboards over 100 new TCG vendors every single day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.')}
+                   {t('Our relentless B2B outreach engine actively onboards up to 50 TCG companies per day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.')}
                  </p>
                </div>
              </div>

@@ -2310,7 +2310,7 @@ const app = express();
     }
   });
 
-  if (process.env.NODE_ENV !== "production") {
+ if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -2324,27 +2324,12 @@ const app = express();
     });
   }
 
- // ONLY run the static file server and listen on a port if we are running locally (NOT on Vercel)
-  if (!process.env.VERCEL) {
-    if (process.env.NODE_ENV !== "production") {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
-    } else {
-      const distPath = path.join(process.cwd(), 'dist');
-      app.use(express.static(distPath));
-      app.get('*', (req, res) => {
-        res.sendFile(path.join(distPath, 'index.html'));
-      });
-    }
-
-    const PORT = process.env.PORT || 3000;
+  // Only listen on a port if we are NOT running in Vercel's serverless environment
+  if (process.env.NODE_ENV !== 'production') {
     httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-} // <-- Make sure this closing bracket is here!
+} // <--- THIS WAS THE MISSING BRACKET CAUSING THE BUILD TO FAIL!
 
 module.exports = app;

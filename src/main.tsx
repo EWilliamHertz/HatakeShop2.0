@@ -6,14 +6,17 @@ import './i18n';
 import { CurrencyProvider } from './components/CurrencyContext.tsx';
 
 import { HelmetProvider } from 'react-helmet-async';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <HelmetProvider>
-      <CurrencyProvider>
-        <App />
-      </CurrencyProvider>
-    </HelmetProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <CurrencyProvider>
+          <App />
+        </CurrencyProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
 
