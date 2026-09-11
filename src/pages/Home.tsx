@@ -133,7 +133,19 @@ export function Home() {
     }
   });
 
-  const products = data.products || [];
+// Safely normalize data structures to prevent 'undefined' crashes
+  const rawProducts = Array.isArray(data.products) ? data.products : [];
+  const products = rawProducts.map((item: any) => ({
+    product: item.product || item,
+    seller: item.seller || item.product?.seller || {}
+  }));
+
+  const rawHomeProducts = Array.isArray(homeProductsData?.products) ? homeProductsData.products : [];
+  const homeProducts = rawHomeProducts.map((item: any) => {
+    const p = item.product || item;
+    return { ...p, seller: item.seller || p.seller || {} };
+  });
+
   const totalPages = data.totalPages || 1;
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
@@ -271,8 +283,7 @@ export function Home() {
             <div className="w-full max-w-3xl mt-12 pt-8 animate-in fade-in">
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">{t('Sponsored Products')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-                {homeProductsData?.products?.filter((p: any) => p.isSponsored).slice(0, 3).map((sp: any, idx: number) => (
-                  <div key={idx} onClick={() => navigate('/marketplace')} className="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-col gap-3 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all cursor-pointer">
+{homeProducts.filter((p: any) => p.isSponsored).slice(0, 3).map((sp: any, idx: number) => (                  <div key={idx} onClick={() => navigate('/marketplace')} className="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-col gap-3 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all cursor-pointer">
                     <img src={sp.images?.[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-32 object-cover rounded-md border border-slate-800" />
                     <div>
                       <h4 className="font-semibold text-slate-200 text-sm truncate">{sp.title}</h4>
