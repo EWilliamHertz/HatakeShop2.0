@@ -456,13 +456,13 @@ export function Home() {
                               </div>
                             ) : (
                               <div className="text-lg font-semibold tracking-tight font-display text-slate-200">{t('Negotiable')}</div>
-                            )}
+                           )}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                        <Link to={`/company/${group.seller.id}`} onClick={() => window.scrollTo(0, 0)} className="group bg-slate-900/50 rounded-2xl border border-slate-800/60 overflow-hidden hover:border-cyan-500/50 hover:bg-slate-800 hover:shadow-lg hover:shadow-cyan-900/20 transition-all duration-300 flex flex-col items-center justify-center h-full min-h-[250px] text-center p-6 cursor-pointer">
+                    );
+                  })}
+                  <Link to={`/company/${group.seller?.id || ''}`} onClick={() => window.scrollTo(0, 0)} className="group bg-slate-900/50 rounded-2xl border border-slate-800/60 overflow-hidden hover:border-cyan-500/50 hover:bg-slate-800 hover:shadow-lg hover:shadow-cyan-900/20 transition-all duration-300 flex flex-col items-center justify-center h-full min-h-[250px] text-center p-6 cursor-pointer">
                            <div className="w-14 h-14 rounded-full bg-slate-800 shadow-none text-cyan-400 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:bg-cyan-500 group-hover:text-slate-900 transition-all duration-300 border border-slate-700 group-hover:border-transparent">
                               <ChevronRight className="w-7 h-7 ml-1" />
                            </div>
