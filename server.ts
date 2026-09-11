@@ -84,7 +84,8 @@ import categoriesRouter from "./src/routes/categories.js";
     }
   }, 1000 * 60 * 60); // Run every 1 hour
 
-async function startServer() {
+const app = express();
+
   async function getDescendantCategoryIds(dbInstance: any, categoryId: number): Promise<number[]> {
   const allCats = await dbInstance.select({ id: categories.id, parentId: categories.parentId }).from(categories);
   const result = new Set<number>();
@@ -124,7 +125,6 @@ function __dummy_getEasyPost() {
   return easypostClient;
 }
 
-const app = express();
     app.use("/", adminRouter);
     app.use("/", authRouter);
     app.use("/", productsRouter);
@@ -240,6 +240,7 @@ const app = express();
   });
 
   // Bootstrap Admin User & Products
+  async function bootstrapDB() {
   try {
     // Hatake KB Team Setup
     const hatakeCompany = 'Hatake KB';
@@ -296,13 +297,18 @@ const app = express();
       await db.insert(products).values([
         { sellerId: adminResult[0].id, title: 'Corrugated Shipping Boxes (Bulk)', description: 'Heavy duty shipping boxes ideal for international freight.', moq: 500, originType: 'Direct Factory', leadTimeDays: 14 },
         { sellerId: adminResult[0].id, title: 'Hatake KB Top-Loaders (1000ct)', description: 'Premium protective card sleeves for collectibles.', moq: 10, originType: 'Verified EU Carrier/Warehouse', leadTimeDays: 3 },
-        { sellerId: adminResult[0].id, title: 'Industrial Warehouse Shelving Unit', description: 'Heavy duty steel shelving for pallets.', moq: 5, originType: 'Global Distributor', leadTimeDays: 21 },
-      ]);
+        { sellerId: adminResult[0].id, title: 'Industrial Warehouse Shelving Unit', description: 'Heavy duty steel shelving for pallets.', moq: 5, originType: 'Global Distributor', leadTimeDays: 21 },]);
       console.log("Database seeded with initial products.");
     }
   } catch (err) {
     console.error("Failed to bootstrap admin/products:", err);
   }
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    bootstrapDB();
+  }
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -2310,26 +2316,28 @@ const app = express();
     }
   });
 
- if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
+ async function startLocalServer() {
+    if (process.env.NODE_ENV !== "production") {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } else {
+      const distPath = path.join(process.cwd(), 'dist');
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    }
 
-  // Only listen on a port if we are NOT running in Vercel's serverless environment
-  if (process.env.NODE_ENV !== 'production') {
     httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-} // <--- THIS WAS THE MISSING BRACKET CAUSING THE BUILD TO FAIL!
+
+  if (process.env.NODE_ENV !== 'production') {
+    startLocalServer();
+  }
 
 module.exports = app;
