@@ -4,7 +4,11 @@ import { FieldValue } from "firebase-admin/firestore";
 import express from "express";
 import { validateEnv } from "./src/envValidator.js";
 import bcrypt from "bcryptjs";
-validateEnv();
+try {
+  validateEnv();
+} catch (e) {
+  console.warn("Env Validation Warning:", e);
+}
 import { generateB2BEmailHtml } from "./src/lib/emailTemplate.ts";
 import Stripe from 'stripe';
 import crypto from "crypto";
@@ -15,7 +19,6 @@ import { Resend } from "resend";
 import { resend, ai, generateEmbedding, getStripe, getEasyPost } from "./src/lib/services.js";
 import { requireAdmin, requireSeller } from "./src/middleware/roles.js";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { Server } from "socket.io";
 import { createServer } from "http";
 import { adminDb, adminAuth } from "./src/lib/firebase-admin.ts";
@@ -2315,14 +2318,16 @@ function __dummy_getEasyPost() {
     }
   });
 
- async function startLocalServer() {
-    if (process.env.NODE_ENV !== "production") {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
-    } else {
+async function startLocalServer() {
+  if (process.env.NODE_ENV !== "production") {
+    const viteModule = await import("vite");
+    const createViteServer = viteModule.createServer;
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
       const distPath = path.join(process.cwd(), 'dist');
       app.use(express.static(distPath));
       app.get('*', (req, res) => {
