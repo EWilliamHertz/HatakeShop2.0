@@ -13,6 +13,7 @@ export const createPool = () => {
     const config: pg.PoolConfig = {
       max: 10,
       connectionTimeoutMillis: 30000,
+      ssl: true,
     };
     
     if (process.env.DATABASE_URL) {
