@@ -353,6 +353,9 @@ function __dummy_getEasyPost() {
   app.get("/api-v2/wishlists", requireAuth, async (req: AuthRequest, res) => {
     try {
       const userProfile = await getUserProfile(req.user!.uid);
+      if (!userProfile) {
+        return res.json([]);
+      }
       const items = await db.select().from(wishlists).where(eq(wishlists.userId, userProfile.id));
       res.json(items);
     } catch (err: any) {
@@ -409,7 +412,8 @@ function __dummy_getEasyPost() {
       res.json(notifications);
     } catch (err: any) {
       console.error("Error fetching notifications:", err);
-      res.status(500).json({ error: err.message });
+      // Non-critical feature: never let a notifications failure break the whole app.
+      res.json([]);
     }
   });
 

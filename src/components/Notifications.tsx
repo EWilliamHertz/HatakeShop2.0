@@ -17,7 +17,9 @@ export function Notifications() {
       const res = await fetch('/api-v2/notifications', {
         headers: { 'Authorization': `Bearer ${await user?.getIdToken()}` }
       });
-      return res.json();
+      if (!res.ok) throw new Error(`Failed to load notifications (${res.status})`);
+      const body = await res.json();
+      return Array.isArray(body) ? body : [];
     },
     enabled: !!user,
     refetchInterval: 30000 // poll every 30s as fallback to sockets
@@ -43,7 +45,7 @@ export function Notifications() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
   });
 
-  const unreadCount = notifications.filter((n: any) => !n.read).length;
+  const unreadCount = Array.isArray(notifications) ? notifications.filter((n: any) => !n.read).length : 0;
 
   if (!user) return null;
 
