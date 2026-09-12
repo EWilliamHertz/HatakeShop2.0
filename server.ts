@@ -382,7 +382,73 @@ function __dummy_getEasyPost() {
 
   // Categories API
   // LEADS
-  
+
+  // Notifications API (Firestore-backed: users/{uid}/notifications/{id})
+  app.get("/api-v2/notifications", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const snapshot = await adminDb
+        .collection('users')
+        .doc(req.user!.uid)
+        .collection('notifications')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+
+      const notifications = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title,
+          message: data.body,
+          read: !!data.read,
+          link: data.link || null,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
+        };
+      });
+
+      res.json(notifications);
+    } catch (err: any) {
+      console.error("Error fetching notifications:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.patch("/api-v2/notifications/:id/read", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      await adminDb
+        .collection('users')
+        .doc(req.user!.uid)
+        .collection('notifications')
+        .doc(req.params.id)
+        .update({ read: true });
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("Error marking notification read:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api-v2/notifications/read-all", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const snapshot = await adminDb
+        .collection('users')
+        .doc(req.user!.uid)
+        .collection('notifications')
+        .where('read', '==', false)
+        .get();
+
+      const batch = adminDb.batch();
+      snapshot.docs.forEach(doc => batch.update(doc.ref, { read: true }));
+      await batch.commit();
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("Error marking all notifications read:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api-v2/feedback", async (req: AuthRequest, res) => {
     try {
       const { type, message } = req.body;
