@@ -9,7 +9,6 @@ import { ProductModal } from '../components/ProductModal.tsx';
 import { WishlistButton } from '../components/WishlistButton.tsx';
 const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) => {
   if (!p) return null;
-
   // Safely parse JSON strings sent by the database driver
   let images = [];
   try { images = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch(e) {}
@@ -19,10 +18,10 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
 
   return (
     <div 
-      onClick={() => onSelect && onSelect({ product: p, seller: p.seller })}
+      onClick={() => onSelect && onSelect({ product: p, seller: p?.seller })}
       className={`cursor-pointer bg-slate-900 border ${isSponsored ? 'border-[#ffcc00]/50 shadow-[0_0_15px_rgba(255,204,0,0.1)]' : 'border-slate-800 hover:border-slate-600'} transition-all rounded-2xl overflow-hidden group shadow-lg flex flex-col relative`}
     >
-      <WishlistButton productId={p.id} />
+      <WishlistButton productId={p?.id} />
       {isSponsored && (
         <div className="absolute top-3 right-3 z-10 bg-[#ffcc00] text-black text-[10px] uppercase font-black px-2 py-1 rounded shadow-sm tracking-wider">
           Sponsored
@@ -109,7 +108,7 @@ const { data = {}, isLoading, error } = useQuery({
     setSearch(searchInput);
   };
 
-  const groupedProducts = React.useMemo(() => {
+ const groupedProducts = React.useMemo(() => {
     const groups: { [key: string]: { companyName: string, sellerId: number, products: any[] } } = {};
     const sponsored: any[] = [];
     
@@ -121,7 +120,7 @@ const { data = {}, isLoading, error } = useQuery({
       const p = item.product || item;
       if (!p) return;
       const seller = item.seller || p.seller || {};
-      const flatProduct = { ...p, seller };
+            const flatProduct = { ...p, seller };
 
       if (flatProduct.isSponsored) {
         sponsored.push(flatProduct);
@@ -173,7 +172,7 @@ const { data = {}, isLoading, error } = useQuery({
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Category')}</label>
            <select value={selectedCategoryId || ''} onChange={e => setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-slate-200">
           <option value="">{t('All Categories')}</option>
-            {safeCategories.map((c: any) => (
+            {Array.isArray(categoriesData) && categoriesData.map((c: any) => (
               <option key={c?.id || Math.random()} value={c?.id}>{c?.name}</option>
             ))}
           </select>
@@ -211,7 +210,7 @@ const { data = {}, isLoading, error } = useQuery({
                     <span className="w-2 h-6 bg-[#ffcc00] rounded-sm"></span>
                     Sponsored & Featured
                   </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {groupedProducts.sponsored.map((p: any) => (
                        <ProductCard key={`sponsored-${p?.id || Math.random()}`} p={p} formatPrice={formatPrice} t={t} isSponsored={true} onSelect={setSelectedProduct} />
                     ))}

@@ -21,7 +21,7 @@ export function WishlistButton({ productId }: { productId: number }) {
         });
         if (res.ok) {
           const items = await res.json();
-          setIsSaved(items.some((item: any) => item.productId === productId));
+          setIsSaved(Array.isArray(items) ? items.some((item: any) => item?.productId === productId) : false);
         }
       } catch (e) {
         console.error(e);
