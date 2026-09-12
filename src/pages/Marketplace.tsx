@@ -242,7 +242,9 @@ const { data = {}, isLoading, error } = useQuery({
           )}
         </main>
       </div>
-      <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+      {selectedProduct && (
+        <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+      )}
     </div>
   );
 }
