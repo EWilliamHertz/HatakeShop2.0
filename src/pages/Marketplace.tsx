@@ -18,7 +18,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
 
   return (
     <div 
-      onClick={() => onSelect && onSelect({ product: p, seller: p?.seller })}
+      onClick={() => onSelect && onSelect(p)}
       className={`cursor-pointer bg-slate-900 border ${isSponsored ? 'border-[#ffcc00]/50 shadow-[0_0_15px_rgba(255,204,0,0.1)]' : 'border-slate-800 hover:border-slate-600'} transition-all rounded-2xl overflow-hidden group shadow-lg flex flex-col relative`}
     >
       <WishlistButton productId={p?.id} />
