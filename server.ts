@@ -9,7 +9,7 @@ try {
 } catch (e) {
   console.warn("Env Validation Warning:", e);
 }
-import { generateB2BEmailHtml } from "./src/lib/emailTemplate.ts";
+import { generateB2BEmailHtml } from "./src/lib/emailTemplate.js";
 import Stripe from 'stripe';
 import crypto from "crypto";
 import { Resend } from "resend";
@@ -21,14 +21,14 @@ import { requireAdmin, requireSeller } from "./src/middleware/roles.js";
 import path from "path";
 import { Server } from "socket.io";
 import { createServer } from "http";
-import { adminDb, adminAuth } from "./src/lib/firebase-admin.ts";
-import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
-import { getOrCreateUser, getUserProfile, updateUserProfile } from "./src/db/users.ts";
-import { db } from "./src/db/index.ts";
-import { products, categories, inquiries, inquiryMessages, users, marketing_logs, affiliates, leads, reviews, feedback, wishlists } from "./src/db/schema.ts";
+import { adminDb, adminAuth } from "./src/lib/firebase-admin.js";
+import { requireAuth, AuthRequest } from "./src/middleware/auth.js";
+import { getOrCreateUser, getUserProfile, updateUserProfile } from "./src/db/users.js";
+import { db } from "./src/db/index.js";
+import { products, categories, inquiries, inquiryMessages, users, marketing_logs, affiliates, leads, reviews, feedback, wishlists } from "./src/db/schema.js";
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
-import { fixOldInquiries } from "./fix_old_inquiries.ts";
+import { fixOldInquiries } from "./fix_old_inquiries.js";
 import adminRouter from "./src/routes/admin.js";
 import authRouter from "./src/routes/auth.js";
 import productsRouter from "./src/routes/products.js";
@@ -54,9 +54,10 @@ import categoriesRouter from "./src/routes/categories.js";
 
 
   // Background task to process drip campaigns
-  setInterval(async () => {
-    try {
-      console.log("Running CRM Drip processor...");
+  if (!process.env.VERCEL) {
+    setInterval(async () => {
+      try {
+        console.log("Running CRM Drip processor...");
       const now = new Date();
       // Find leads that need drip 2 (3 days after sent) or drip 3 (7 days after)
       const pendingLeads = await db.select().from(leads).where(eq(leads.status, 'sent'));
@@ -86,9 +87,9 @@ import categoriesRouter from "./src/routes/categories.js";
       console.error("Drip processor error:", e);
     }
   }, 1000 * 60 * 60); // Run every 1 hour
+}
 
 const app = express();
-
   async function getDescendantCategoryIds(dbInstance: any, categoryId: number): Promise<number[]> {
   const allCats = await dbInstance.select({ id: categories.id, parentId: categories.parentId }).from(categories);
   const result = new Set<number>();
