@@ -172,9 +172,9 @@ const { data = {}, isLoading, error } = useQuery({
             <div>
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Category')}</label>
            <select value={selectedCategoryId || ''} onChange={e => setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-slate-200">
-            <option value="">{t('All Categories')}</option>
+          <option value="">{t('All Categories')}</option>
             {safeCategories.map((c: any) => (
-              <option key={c.id || Math.random()} value={c.id}>{c.name}</option>
+              <option key={c?.id || Math.random()} value={c?.id}>{c?.name}</option>
             ))}
           </select>
             </div>
@@ -213,7 +213,7 @@ const { data = {}, isLoading, error } = useQuery({
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {groupedProducts.sponsored.map((p: any) => (
-                       <ProductCard key={`sponsored-${p.id}`} p={p} formatPrice={formatPrice} t={t} isSponsored={true} onSelect={setSelectedProduct} />
+                       <ProductCard key={`sponsored-${p?.id || Math.random()}`} p={p} formatPrice={formatPrice} t={t} isSponsored={true} onSelect={setSelectedProduct} />
                     ))}
                   </div>
                 </div>
@@ -234,7 +234,7 @@ const { data = {}, isLoading, error } = useQuery({
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {group.products.map((p: any) => (
-                       <ProductCard key={p.id} p={p} formatPrice={formatPrice} t={t} onSelect={setSelectedProduct} />
+                       <ProductCard key={p?.id || Math.random()} p={p} formatPrice={formatPrice} t={t} onSelect={setSelectedProduct} />
                     ))}
                   </div>
                 </div>
