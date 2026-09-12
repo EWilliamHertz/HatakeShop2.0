@@ -126,10 +126,10 @@ export function ProductModal({ product, onClose }: { product: any, onClose: () =
                     <span className="text-slate-200 font-medium flex items-center gap-1"><MapPin className="w-3 h-3" /> {product.originType}</span>
                   </div>
                 )}
-                {product.leadTime && (
+                {product.leadTimeDays && (
                   <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
                     <span className="block text-xs uppercase tracking-wider text-slate-500 mb-1">{t('Lead Time')}</span>
-                    <span className="text-slate-200 font-medium flex items-center gap-1"><Clock className="w-3 h-3" /> {product.leadTime}</span>
+                    <span className="text-slate-200 font-medium flex items-center gap-1"><Clock className="w-3 h-3" /> {product.leadTimeDays} {t('days')}</span>
                   </div>
                 )}
                 {product.stockQuantity !== undefined && (
@@ -182,7 +182,7 @@ export function ProductModal({ product, onClose }: { product: any, onClose: () =
               ) : (
                 <div className="mt-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
                   <span className="text-slate-400 uppercase tracking-wider text-xs font-bold">{t('Unit Price')}</span>
-                  <span className="text-2xl font-mono font-bold text-white">{formatPrice(product.unitPrice || 0)}</span>
+                  <span className="text-2xl font-mono font-bold text-white">{formatPrice(product.unitCost || 0)}</span>
                 </div>
               )}
 

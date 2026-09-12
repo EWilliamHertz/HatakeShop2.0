@@ -53,11 +53,13 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
           cardSet: products.cardSet,
           cardNumber: products.cardNumber,
           cardVariant: products.cardVariant,
-          createdAt: products.createdAt
+          createdAt: products.createdAt,
+          category: categories.name
         },
         seller: { id: users.id, companyName: users.companyName, country: users.country }
       }).from(products)
-      .leftJoin(users, eq(products.sellerId, users.id));
+      .leftJoin(users, eq(products.sellerId, users.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id));
       
       let countQuery = db.select({ count: sql`count(*)` }).from(products);
 
