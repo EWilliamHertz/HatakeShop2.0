@@ -5,13 +5,13 @@
       "destination": "https://api.frankfurter.app/latest?from=USD"
     },
    {
-      "source": "/api-v2/(.*)",
-      "destination": "/api/index.cjs"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.cjs"
-    },
+  "source": "/api-v2/(.*)",
+  "destination": "/server.ts"
+},
+{
+  "source": "/api/(.*)",
+  "destination": "/server.ts"
+},
     {
       "source": "/(.*)",
       "destination": "/index.html"

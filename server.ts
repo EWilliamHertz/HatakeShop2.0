@@ -2339,4 +2339,4 @@ function __dummy_getEasyPost() {
     startLocalServer();
   }
 
-module.exports = app;
+export default app;
