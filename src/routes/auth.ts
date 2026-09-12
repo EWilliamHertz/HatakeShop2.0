@@ -9,7 +9,7 @@ import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
 import crypto from "crypto";
 import { generateB2BEmailHtml } from "../lib/emailTemplate.js";
-import { getUserProfile } from "../db/users.js";
+import { getUserProfile, getOrCreateUser } from "../db/users.js";
 
 const router = Router();
 
