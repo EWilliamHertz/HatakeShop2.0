@@ -44,12 +44,19 @@ function ProtectedRoute({ children, requireAdmin, requireSeller }: { children: R
      return <Navigate to="/settings" />;
   }
 
-  if (requireAdmin && dbUser?.role !== 'admin') {
-    return <Navigate to="/" />;
+ if (requireAdmin) {
+    const isHardcodedAdmin = user.email === 'ernst@hatake.eu';
+    const isDbAdmin = dbUser?.role?.toLowerCase() === 'admin';
+    if (!isHardcodedAdmin && !isDbAdmin) {
+      return <Navigate to="/" />;
+    }
   }
 
-  if (requireSeller && dbUser?.role !== 'seller' && dbUser?.role !== 'both' && dbUser?.role !== 'admin') {
-    return <Navigate to="/" />;
+  if (requireSeller) {
+    const role = dbUser?.role?.toLowerCase();
+    if (role !== 'seller' && role !== 'both' && role !== 'admin') {
+      return <Navigate to="/" />;
+    }
   }
 
   return children;
