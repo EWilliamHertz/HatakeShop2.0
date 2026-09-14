@@ -157,10 +157,10 @@ export function Login() {
             </div>
           </div>
         )}
-        <button
+      <button
           type="submit"
           disabled={loading}
-          className="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20 w-full shadow-md disabled:opacity-50"
+          className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-bold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20 w-full disabled:opacity-50"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : (isRegister ? <UserPlus className="w-5 h-5 mr-2" /> : <LogIn className="w-5 h-5 mr-2" />)}
           {isRegister ? 'Register' : 'Sign In'}
