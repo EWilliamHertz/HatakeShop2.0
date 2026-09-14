@@ -2367,13 +2367,26 @@ const unitCost = Number(prod.unitCost) || 0;
         name: l.companyName,
         location: l.location,
         signedUp: l.status === 'recruited',
-        contacted: true
+        contacted: true,
+        isLeadOnly: true
       })).filter(l => l.name);
 
-      const sellers = await db.select({ companyName: users.companyName, country: users.country }).from(users).where(eq(users.role, 'seller'));
+      const sellers = await db.select({ id: users.id, companyName: users.companyName, country: users.country, verificationStatus: users.verificationStatus }).from(users).where(or(eq(users.role, 'seller'), eq(users.role, 'both'), eq(users.role, 'admin')));
+      
       for (const seller of sellers) {
-         if (seller.companyName && !responseList.find(r => r.name === seller.companyName)) {
-            responseList.push({ name: seller.companyName, location: seller.country, signedUp: true, contacted: true });
+         if (seller.companyName) {
+            const existingIdx = responseList.findIndex(r => r.name === seller.companyName);
+            if (existingIdx > -1) responseList.splice(existingIdx, 1);
+            
+            responseList.push({ 
+              id: seller.id,
+              name: seller.companyName, 
+              location: seller.country, 
+              signedUp: true, 
+              contacted: true,
+              verificationStatus: seller.verificationStatus,
+              isLeadOnly: false
+            });
          }
       }
 
