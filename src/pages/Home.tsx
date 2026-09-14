@@ -300,7 +300,7 @@ export function Home() {
                   try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
                   
                   return (
-                  <div key={idx} onClick={() => navigate('/marketplace')} className="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-col gap-3 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all cursor-pointer">
+                  <div key={idx} onClick={() => { setSelectedProduct({ product: sp, seller: sp.seller }); setActiveImageIndex(0); }} className="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-col gap-3 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all cursor-pointer">
                     <img src={images[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-32 object-cover rounded-md border border-slate-800" />
                     <div>
                       <h4 className="font-semibold text-slate-200 text-sm truncate">{sp.title}</h4>
