@@ -24,8 +24,9 @@ export function Layout() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [logoMenuOpen, setLogoMenuOpen] = useState(false);
 
-  const mainNavItems = [
+const mainNavItems = [
     { name: 'Home', path: '/', icon: Package },
+    { name: 'Directory', path: '/suppliers', icon: Users }, // Add this line!
     { name: 'Marketplace', path: '/marketplace', icon: Store },
     { name: 'Messages', path: '/rfq', icon: MessageSquare, protected: true },
   ];
