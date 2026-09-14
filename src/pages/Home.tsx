@@ -84,7 +84,14 @@ const CardImageCarousel = ({ images, title }: { images: string[], title: string 
 export function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { data: homeProductsData } = useQuery({ queryKey: ["homeProducts"], queryFn: () => fetch("/api-v2/products").then(res => res.json()) });
+  const { data: homeProductsData } = useQuery({ 
+    queryKey: ["homeProducts"], 
+    queryFn: async () => {
+      const res = await fetch("/api-v2/products");
+      if (!res.ok) return { products: [] }; // Safety net: gracefully return empty array if API fails
+      return res.json();
+    } 
+  });
   const { formatPrice } = useCurrency();
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
