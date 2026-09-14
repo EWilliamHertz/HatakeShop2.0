@@ -19,7 +19,7 @@ export function Suppliers() {
 
   // Only show actual signed-up platform users, not pending leads
   const filteredPartners = partners.filter((p: any) => 
-    p.name.toLowerCase().includes(search.toLowerCase()) && !p.isLeadOnly
+    p.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -44,9 +44,11 @@ export function Suppliers() {
         <div className="text-center text-slate-400 py-12">{t('Loading network...')}</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredPartners.map((partner: any, idx: number) => (
-            <Link 
-              to={`/company/${partner.id}`} 
+          {filteredPartners.map((partner: any, idx: number) => {
+            const Wrapper: any = partner.id ? Link : 'div';
+            return (
+            <Wrapper 
+              to={partner.id ? `/company/${partner.id}` : undefined} 
               key={idx}
               className="bg-slate-800 border border-slate-700 rounded-2xl p-6 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all group flex flex-col items-center text-center"
             >
@@ -55,14 +57,22 @@ export function Suppliers() {
               </div>
               <h3 className="text-lg font-bold tracking-tight text-slate-100 flex items-center justify-center gap-1.5 mb-2">
                 {partner.name}
-                {partner.verificationStatus === 'verified' && <BadgeCheck className="w-4 h-4 text-cyan-500 shrink-0" />}
-                {partner.verificationStatus === 'audited' && <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />}
+                {partner.verificationStatus === 'verified' && <BadgeCheck className="w-4 h-4 text-cyan-500 shrink-0" title="Verified" />}
+                {partner.verificationStatus === 'audited' && <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" title="Audited" />}
               </h3>
+              
+              <div className="mb-3">
+                {partner.signedUp || !partner.isLeadOnly ? (
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-semibold tracking-tight uppercase">{t('Joined')}</span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-semibold tracking-tight uppercase">{t('Invited')}</span>
+                )}
+              </div>
               <div className="flex items-center text-sm font-medium text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-700">
                 <MapPin className="w-3.5 h-3.5 mr-1.5" /> {partner.location || 'Global'}
               </div>
-            </Link>
-          ))}
+            </Wrapper>
+          )})}
         </div>
       )}
     </div>

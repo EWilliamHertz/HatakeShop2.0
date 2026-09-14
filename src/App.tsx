@@ -33,6 +33,7 @@ import { JoinCompany } from "./pages/JoinCompany.tsx";
 import { Orders } from './pages/Orders.tsx';
 import { CookieBanner } from './components/CookieBanner.tsx';
 import { Wishlist } from './pages/Wishlist.tsx';
+import { Suppliers } from './pages/Suppliers.tsx';
 
 function ProtectedRoute({ children, requireAdmin, requireSeller }: { children: React.ReactNode, requireAdmin?: boolean, requireSeller?: boolean }) {
   const { user, dbUser, loading } = useAuth();
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/company/:id" element={<CompanyProfile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />

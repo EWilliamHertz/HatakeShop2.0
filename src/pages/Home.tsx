@@ -84,6 +84,7 @@ const CardImageCarousel = ({ images, title }: { images: string[], title: string 
 export function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { formatPrice } = useCurrency();
  const { data: homeProductsData } = useQuery({ 
     queryKey: ["homeProducts"], 
     queryFn: async () => {
