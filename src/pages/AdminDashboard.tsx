@@ -154,7 +154,35 @@ export function AdminDashboard() {
   const [addingUser, setAddingUser] = useState(false);
   const [newUserForm, setNewUserForm] = useState({ email: '', password: '', companyName: '', role: 'seller' });
   const [marketingForm, setMarketingForm] = useState({ campaignName: '', targetSegment: '', messageContent: '' });
-  const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEmail: '', website: '' });
+const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEmail: '', website: '' });
+  const [reviewForm, setReviewForm] = useState({ targetUserId: '', targetProductId: '', rating: 5, title: '', comment: '' });
+
+  const handleInjectReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error("Firebase Auth Error: " + e.message); }
+      const res = await fetch('/api-v2/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          targetUserId: parseInt(reviewForm.targetUserId) || null,
+          targetProductId: parseInt(reviewForm.targetProductId) || null,
+          rating: Number(reviewForm.rating),
+          title: reviewForm.title,
+          comment: reviewForm.comment
+        })
+      });
+      if (res.ok) {
+        toast.success(t('Legacy review injected successfully'));
+        setReviewForm({ targetUserId: '', targetProductId: '', rating: 5, title: '', comment: '' });
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to inject review');
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
 
   const [leads, setLeads] = useState([]);
   const [leadFilter, setLeadFilter] = useState('all');
@@ -396,8 +424,8 @@ export function AdminDashboard() {
         <h1 className="heading-xl font-display">Platform Administration</h1>
       </div>
       
-      <div className="flex space-x-6 border-b border-slate-700 mb-8 overflow-x-auto">
-         {['overview', 'approvals', 'users', 'marketing', 'affiliates', 'leads', 'feedback'].map(tab => (
+    <div className="flex space-x-6 border-b border-slate-700 mb-8 overflow-x-auto">
+         {['overview', 'approvals', 'users', 'marketing', 'affiliates', 'leads', 'feedback', 'reviews'].map(tab => (
            <button 
              key={tab}
              onClick={() => setActiveTab(tab)}
@@ -991,8 +1019,42 @@ export function AdminDashboard() {
                    ))}
                  </tbody>
                </table>
-             </div>
+            </div>
            </div>
+        </div>
+      )}
+
+      {activeTab === 'reviews' && (
+        <div className="bg-slate-800 rounded-xl shadow-none border border-slate-700 overflow-hidden p-6">
+          <div className="mb-6 border-b border-slate-700 pb-4">
+            <h3 className="text-xl font-bold tracking-tight text-slate-100">Inject Legacy Review</h3>
+            <p className="text-sm text-slate-400 mt-1">Bypass transaction verification to post testimonials for trusted off-platform partners.</p>
+          </div>
+          <form onSubmit={handleInjectReview} className="space-y-4 max-w-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Target User ID (Seller)</label>
+                <input type="number" value={reviewForm.targetUserId} onChange={e => setReviewForm({...reviewForm, targetUserId: e.target.value})} className="bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 w-full px-4 py-2" placeholder="Leave blank if product review" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Target Product ID</label>
+                <input type="number" value={reviewForm.targetProductId} onChange={e => setReviewForm({...reviewForm, targetProductId: e.target.value})} className="bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 w-full px-4 py-2" placeholder="Leave blank if seller review" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Rating (1-5)</label>
+              <input type="number" min="1" max="5" required value={reviewForm.rating} onChange={e => setReviewForm({...reviewForm, rating: parseInt(e.target.value)})} className="bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 w-full px-4 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Headline</label>
+              <input type="text" required value={reviewForm.title} onChange={e => setReviewForm({...reviewForm, title: e.target.value})} className="bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 w-full px-4 py-2" placeholder="e.g. Flawless OEM production" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Testimonial Body</label>
+              <textarea required rows={4} value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} className="bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 w-full px-4 py-2" placeholder="Describe the transaction..."></textarea>
+            </div>
+            <button type="submit" className="px-6 py-2.5 bg-emerald-600 text-white font-semibold tracking-tight rounded-xl hover:bg-emerald-700">Inject Verified Testimonial</button>
+          </form>
         </div>
       )}
 
