@@ -81,11 +81,14 @@ export function CompanyProfile() {
   const { company, teamMembers, products } = data;
   
   // We don't need useMemo here since it's just extracting strings, but to fix the hook order:
-  const allImages = (() => {
+const allImages = (() => {
     if (!products) return [];
     const imgs = products.flatMap((p: any) => p.images || []);
     if (company.profilePictureUrl) imgs.push(company.profilePictureUrl);
     if (company.bannerUrl) imgs.push(company.bannerUrl);
+    if (data.reviews) {
+      imgs.push(...data.reviews.flatMap((r: any) => r.images || []));
+    }
     return imgs.filter(Boolean);
   })();
 
