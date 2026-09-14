@@ -2389,7 +2389,12 @@ async function startLocalServer() {
 // Only start the manual HTTP server for local development.
 // In production, Vercel automatically runs `app` as a Serverless Function.
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  startLocalServer();
-}
+    startLocalServer();
+  }
 
 export default app;
+
+// Add CommonJS export specifically for Vercel Serverless compatibility
+if (typeof module !== 'undefined') {
+  module.exports = app;
+}
