@@ -84,15 +84,13 @@ const CardImageCarousel = ({ images, title }: { images: string[], title: string 
 export function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { data: homeProductsData } = useQuery({ 
+ const { data: homeProductsData } = useQuery({ 
     queryKey: ["homeProducts"], 
     queryFn: async () => {
-      const res = await fetch("/api-v2/products");
-      if (!res.ok) return { products: [] }; // Safety net: gracefully return empty array if API fails
-      return res.json();
+      try { const res = await fetch("/api-v2/products"); return res.ok ? await res.json() : { products: [] }; } 
+      catch { return { products: [] }; }
     } 
   });
-  const { formatPrice } = useCurrency();
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   
@@ -102,41 +100,46 @@ export function Home() {
 
   const [showFilters, setShowFilters] = useState(false);
 
-  
   const { data: sneakPeekData = [] } = useQuery({
     queryKey: ['sneakPeek', filters.productType],
     queryFn: async () => {
-      const res = await fetch(`/api-v2/marketplace/sneak-peek?productType=${filters.productType}`);
-      if (!res.ok) throw new Error('Failed to fetch sneak peek');
-      return res.json();
+      try {
+        const res = await fetch(`/api-v2/marketplace/sneak-peek?productType=${filters.productType}`);
+        const json = await res.json();
+        return Array.isArray(json) ? json : [];
+      } catch { return []; }
     }
   });
 
   const { data: categoriesData = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const res = await fetch('/api-v2/categories');
-      if (!res.ok) throw new Error('Failed to fetch categories');
-      return res.json();
+      try {
+        const res = await fetch('/api-v2/categories');
+        const json = await res.json();
+        return Array.isArray(json) ? json : [];
+      } catch { return []; }
     }
   });
 
   const { data = {}, isLoading: loading } = useQuery({
     queryKey: ['products', search, page, filters, selectedCategoryId],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        q: search,
-        page: page.toString(),
-        origin: filters.origin,
-        minMoq: filters.minMoq,
-        maxPrice: filters.maxPrice,
-        productType: filters.productType,
-        category: selectedCategoryId ? selectedCategoryId.toString() : filters.category,
-        sortBy: filters.sortBy
-      });
-      const res = await fetch(`/api-v2/products?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch products');
-      return res.json();
+      try {
+        const params = new URLSearchParams({
+          q: search,
+          page: page.toString(),
+          origin: filters.origin,
+          minMoq: filters.minMoq,
+          maxPrice: filters.maxPrice,
+          productType: filters.productType,
+          category: selectedCategoryId ? selectedCategoryId.toString() : filters.category,
+          sortBy: filters.sortBy
+        });
+        const res = await fetch(`/api-v2/products?${params.toString()}`);
+        const json = await res.json();
+        return json && Array.isArray(json.products) ? json : { products: [], totalPages: 1 };
+      } catch { return { products: [], totalPages: 1 }; }
     }
   });
 
@@ -159,12 +162,13 @@ export function Home() {
   const { data: leadsProgress = { sentCount: 0, totalGoal: 20000 } } = useQuery({
     queryKey: ['leadsProgress'],
     queryFn: async () => {
-      const res = await fetch('/api-v2/leads/progress');
-      if (!res.ok) throw new Error('Failed to fetch leads progress');
-      return res.json();
+      try {
+        const res = await fetch('/api-v2/leads/progress');
+        const json = await res.json();
+        return json && typeof json.sentCount === 'number' ? json : { sentCount: 0, totalGoal: 20000 };
+      } catch { return { sentCount: 0, totalGoal: 20000 }; }
     }
   });
-
     const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedQuantity, setSelectedQuantity] = useState<number>(0);
   
