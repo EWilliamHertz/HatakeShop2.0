@@ -232,6 +232,7 @@ export const reviews = pgTable('reviews', {
   rating: integer('rating').notNull(), // 1 to 5
   title: text('title'),
   comment: text('comment'),
+  images: jsonb('images').default(sql`'[]'::jsonb`),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
