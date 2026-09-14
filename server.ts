@@ -1745,29 +1745,7 @@ function __dummy_getEasyPost() {
           }
         }
       }
-
-          // Trigger Resend Email
-          if (sellerEmail) {
-            try {
-              const buyerName = userProfile.companyName || userProfile.displayName;
-              const htmlBody = generateB2BEmailHtml(
-                "New Request for Quote (RFQ)",
-                `Good news! <b>${buyerName}</b> has submitted a new RFQ for <b>${quantity} units</b> of <b>${productTitle}</b>.<br/><br/>Target Budget: ${targetBudget} ${currency}<br/><br/>Click the link below to view the request and respond with an official quote.`,
-                `${process.env.APP_URL || 'https://hatake.shop'}/rfq/${newInquiry.id}`
-              );
-
-              await resend.emails.send({
-                from: "Hatake.Shop <notifications@hatake.eu>",
-                to: sellerEmail,
-                subject: `New RFQ Received: ${quantity}x ${productTitle}`,
-                html: htmlBody
-              });
-            } catch (emailErr) {
-              console.error("Failed to send RFQ notification email:", emailErr);
-            }
-          }
-        }
-      }
+      
       res.json(newInquiry);
     } catch (err: any) {
       console.error(err);
