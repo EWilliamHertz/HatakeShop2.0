@@ -1,20 +1,23 @@
 {
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/rates",
-      "destination": "https://api.frankfurter.app/latest?from=USD"
+      "src": "server.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server.ts"
     },
     {
-      "source": "/api-v2/(.*)",
-      "destination": "/api/index"
+      "src": "/api-v2/(.*)",
+      "dest": "server.ts"
     },
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "server.ts"
     }
   ]
 }
