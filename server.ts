@@ -2365,6 +2365,9 @@ app.get(["/inquiries/:id", "/api/inquiries/:id", "/api-v2/inquiries/:id"], requi
 });
 
 async function startLocalServer() {
+ const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+
   if (process.env.NODE_ENV !== "production") {
     const viteModule = await import("vite");
     const createViteServer = viteModule.createServer;
@@ -2373,21 +2376,16 @@ async function startLocalServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-      const distPath = path.join(process.cwd(), 'dist');
-      app.use(express.static(distPath));
-      app.get('*', (req, res) => {
-        res.sendFile(path.join(distPath, 'index.html'));
-      });
-    }
+  }
 
+  // Catch-all route to serve index.html for frontend SPA routing
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+
+  if (process.env.NODE_ENV !== 'production') {
     httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-
-  if (process.env.NODE_ENV !== 'production') {
-    startLocalServer();
-  }
-
 export default app;
