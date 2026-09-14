@@ -155,7 +155,7 @@ export function AdminDashboard() {
   const [newUserForm, setNewUserForm] = useState({ email: '', password: '', companyName: '', role: 'seller' });
   const [marketingForm, setMarketingForm] = useState({ campaignName: '', targetSegment: '', messageContent: '' });
 const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEmail: '', website: '' });
-  const [reviewForm, setReviewForm] = useState({ targetUserId: '', targetProductId: '', rating: 5, title: '', comment: '' });
+ const [reviewForm, setReviewForm] = useState({ targetUserId: '', targetProductId: '', rating: 5, title: '', comment: '', images: [] as string[] });
 
   const handleInjectReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,12 +169,13 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
           targetProductId: parseInt(reviewForm.targetProductId) || null,
           rating: Number(reviewForm.rating),
           title: reviewForm.title,
-          comment: reviewForm.comment
+          comment: reviewForm.comment,
+          images: reviewForm.images
         })
       });
       if (res.ok) {
         toast.success(t('Legacy review injected successfully'));
-        setReviewForm({ targetUserId: '', targetProductId: '', rating: 5, title: '', comment: '' });
+        setReviewForm({ targetUserId: '', targetProductId: '', rating: 5, title: '', comment: '', images: [] });
       } else {
         const data = await res.json();
         toast.error(data.error || 'Failed to inject review');
@@ -183,7 +184,6 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
       toast.error(e.message);
     }
   };
-
   const [leads, setLeads] = useState([]);
   const [leadFilter, setLeadFilter] = useState('all');
   const [segmentFilter, setSegmentFilter] = useState('all');
@@ -1049,9 +1049,13 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
               <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Headline</label>
               <input type="text" required value={reviewForm.title} onChange={e => setReviewForm({...reviewForm, title: e.target.value})} className="bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 w-full px-4 py-2" placeholder="e.g. Flawless OEM production" />
             </div>
-            <div>
+          <div>
               <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Testimonial Body</label>
               <textarea required rows={4} value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} className="bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 w-full px-4 py-2" placeholder="Describe the transaction..."></textarea>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Attached Photos (Optional)</label>
+              <ImageUploader images={reviewForm.images} onChange={(imgs) => setReviewForm({...reviewForm, images: imgs})} />
             </div>
             <button type="submit" className="px-6 py-2.5 bg-emerald-600 text-white font-semibold tracking-tight rounded-xl hover:bg-emerald-700">Inject Verified Testimonial</button>
           </form>
