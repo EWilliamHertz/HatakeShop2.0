@@ -246,9 +246,14 @@ export function Layout() {
             </select>
           </div>
 
-          <div className="text-center">
+         <div className="text-center flex flex-col items-center">
             <p className="font-semibold text-slate-300">&copy; {new Date().getFullYear()} Hatake.Shop. {t('All rights reserved.')}</p>
             <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest">{t('International Wholesale B2B')}</p>
+            {dbUser?.role === 'admin' && (
+              <Link to="/admin" className="mt-2 text-xs font-bold text-cyan-500 hover:text-cyan-400 transition-colors uppercase tracking-widest">
+                {t('Admin Panel')}
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center justify-center md:justify-end">
