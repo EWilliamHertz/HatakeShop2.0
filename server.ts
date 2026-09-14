@@ -1825,7 +1825,8 @@ function __dummy_getEasyPost() {
            ));
       }
 
-      if (!verifiedTransactionQuery || verifiedTransactionQuery.length === 0) {
+   // Allow platform admins to bypass the check to post legacy/off-platform testimonials
+      if ((!verifiedTransactionQuery || verifiedTransactionQuery.length === 0) && userProfile.role !== 'admin') {
          return res.status(403).json({ error: "You can only review suppliers after completing a verified transaction." });
       }
 
@@ -1833,7 +1834,7 @@ function __dummy_getEasyPost() {
         reviewerId: userProfile.id,
         targetUserId,
         targetProductId,
-        inquiryId,
+        inquiryId: inquiryId || null, // Allow null for legacy reviews without an on-platform inquiry
         rating,
         title,
         comment
