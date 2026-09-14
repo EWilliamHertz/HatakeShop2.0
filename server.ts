@@ -928,17 +928,20 @@ function __dummy_getEasyPost() {
       );
 
       const companyProducts = await db.select().from(products).where(eq(products.sellerId, companyId));
+      const companyReviews = await db.query.reviews.findMany({
+        where: eq(reviews.targetUserId, companyId)
+      });
 
       res.json({
         company: company[0],
         teamMembers,
-        products: companyProducts
+        products: companyProducts,
+        reviews: companyReviews
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
-
   app.patch("/api-v2/profile", requireAuth, async (req: AuthRequest, res) => {
     try {
       if (!req.user) return res.status(401).send("Unauthorized");
@@ -1795,37 +1798,34 @@ function __dummy_getEasyPost() {
   });
 
 
-  app.post("/api-v2/reviews", requireAuth, async (req: AuthRequest, res) => {
+app.post("/api-v2/reviews", requireAuth, async (req: AuthRequest, res) => {
     try {
       if (!req.user) return res.status(401).send("Unauthorized");
       const userProfile = await getUserProfile(req.user.uid);
       if (!userProfile) return res.status(404).send("User missing");
       
-      const { targetUserId, targetProductId, inquiryId, rating, title, comment } = req.body;
+      const { targetUserId, targetProductId, inquiryId, rating, title, comment, images } = req.body;
 
-      // Ensure the buyer has completed a verified transaction with this seller or product
-      // We look for inquiries with paymentStatus = 'Escrow Released' or 'Paid'
+      // Ensure the buyer has completed a verified transaction with this seller or product, or allow admin override
       let verifiedTransactionQuery;
       
       if (targetProductId) {
          verifiedTransactionQuery = await db.select().from(inquiries)
-           .where(and(
-             eq(inquiries.buyerId, userProfile.id),
-             eq(inquiries.targetProductId, targetProductId),
-             inArray(inquiries.paymentStatus, ['Paid', 'Escrow Released', 'Escrow Funded'])
-           ));
+            .where(and(
+              eq(inquiries.buyerId, userProfile.id),
+              eq(inquiries.targetProductId, targetProductId),
+              inArray(inquiries.paymentStatus, ['Paid', 'Escrow Released', 'Escrow Funded'])
+            ));
       } else if (targetUserId) {
-         // Join products to check seller
          verifiedTransactionQuery = await db.select().from(inquiries)
-           .innerJoin(products, eq(inquiries.targetProductId, products.id))
-           .where(and(
-             eq(inquiries.buyerId, userProfile.id),
-             eq(products.sellerId, targetUserId),
-             inArray(inquiries.paymentStatus, ['Paid', 'Escrow Released', 'Escrow Funded'])
-           ));
+            .innerJoin(products, eq(inquiries.targetProductId, products.id))
+            .where(and(
+              eq(inquiries.buyerId, userProfile.id),
+              eq(products.sellerId, targetUserId),
+              inArray(inquiries.paymentStatus, ['Paid', 'Escrow Released', 'Escrow Funded'])
+            ));
       }
 
-   // Allow platform admins to bypass the check to post legacy/off-platform testimonials
       if ((!verifiedTransactionQuery || verifiedTransactionQuery.length === 0) && userProfile.role !== 'admin') {
          return res.status(403).json({ error: "You can only review suppliers after completing a verified transaction." });
       }
@@ -1834,18 +1834,19 @@ function __dummy_getEasyPost() {
         reviewerId: userProfile.id,
         targetUserId,
         targetProductId,
-        inquiryId: inquiryId || null, // Allow null for legacy reviews without an on-platform inquiry
+        inquiryId: inquiryId || null,
         rating,
         title,
-        comment
+        comment,
+        images: images || []
       }).returning();
+      
       res.json(review);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to submit review" });
     }
   });
-
   app.get("/api-v2/users/:id/reviews", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
