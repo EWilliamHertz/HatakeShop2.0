@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { FeedbackModal } from './FeedbackModal';
 import { useCart } from './SampleCart.tsx';
-import { Package, Search, MessageSquare, Settings, LogIn, LogOut, Hexagon, Shield, Store, Menu, X, ChevronDown, ShoppingCart, TrendingUp } from 'lucide-react';
+import { Package, Search, MessageSquare, Settings, LogIn, LogOut, Hexagon, Shield, Store, Menu, X, ChevronDown, ShoppingCart, TrendingUp, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Notifications } from './Notifications.tsx';
