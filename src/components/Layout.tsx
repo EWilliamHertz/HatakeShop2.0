@@ -162,9 +162,9 @@ export function Layout() {
                   </div>
                 </>
               ) : (
-                <Link
+          <Link
                   to="/login"
-                  className="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20"
+                  className="flex items-center px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20"
                 >
                   <LogIn className="w-4 h-4 mr-2" />
                   Business Sign In
