@@ -386,7 +386,7 @@ export function Home() {
                 <div>
                   <h3 className="text-2xl font-bold tracking-tight text-slate-200">{dataItem.category.name}</h3>
                   <div className="flex flex-wrap gap-2.5 mt-3">
-                    {dataItem.subcategories.map((sub: any) => (
+                    {(dataItem.subcategories || []).map((sub: any) => (
                       <button 
                         key={sub.id} 
                         onClick={() => { setSelectedCategoryId(sub.id); setSearch(""); setPage(1); }} 
@@ -405,7 +405,7 @@ export function Home() {
                  <div className="text-slate-400 text-sm py-4">{t('No products listed in this category yet.')}</div>
               ) : (
                 <div className="space-y-8">
-                  {dataItem.groups.map((group: any, gIdx: number) => (
+                {(dataItem.groups || []).map((group: any, gIdx: number) => (
                     <div key={gIdx} className="mb-8 border-b border-slate-800 pb-8 last:border-0 last:mb-0 last:pb-0">
                       {group.seller && (
                         <h4 className="text-md font-semibold tracking-tight text-slate-400 mb-4 flex items-center gap-2">
@@ -414,7 +414,7 @@ export function Home() {
                         </h4>
                       )}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 justify-center place-items-center">
-                        {group.products.map((item: any, pIdx: number) => {
+                        {(group.products || []).map((item: any, pIdx: number) => {
                           const product = item.product || item;
                           const seller = item.seller || product.seller || group.seller || {};
                           let images = [];
@@ -746,7 +746,7 @@ export function Home() {
                           <ChevronRight className="w-5 h-5" />
                         </button>
                         <div className="absolute bottom-4 left-1/2 -translate-y-1/2 flex gap-1.5 z-10">
-                          {selectedProduct.product.images.map((_: any, i: number) => (
+                          {(selectedProduct.product.images || []).map((_: any, i: number) => (
                             <div key={i} className={`w-2 h-2 rounded-full ${i === activeImageIndex ? 'bg-cyan-500' : 'bg-slate-600'}`} />
                           ))}
                         </div>

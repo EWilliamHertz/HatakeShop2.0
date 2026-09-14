@@ -50,14 +50,20 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const formatPrice = (priceInUSD: number) => {
     if (isNaN(priceInUSD) || priceInUSD == null) return "N/A";
-    const rate = rates[currency] || 1;
+    
+    const safeCurrency = ['USD', 'EUR', 'GBP', 'JPY'].includes(currency) ? currency : 'USD';
+    const rate = rates[safeCurrency] || 1;
     const converted = priceInUSD * rate;
     
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: currency,
-      maximumFractionDigits: currency === 'JPY' ? 0 : 2
-    }).format(converted);
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: safeCurrency,
+        maximumFractionDigits: safeCurrency === 'JPY' ? 0 : 2
+      }).format(converted);
+    } catch (e) {
+      return `${safeCurrency} ${converted.toFixed(2)}`;
+    }
   };
 
   useEffect(() => {
