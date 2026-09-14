@@ -1876,10 +1876,10 @@ function __dummy_getEasyPost() {
         if (productInfo.length > 0) {
             const sellerInfo = await db.select({ stripeAccountId: users.stripeAccountId }).from(users).where(eq(users.id, productInfo[0].sellerId));
             
-            // Execute Stripe Transfer to the seller (Mocking the transfer if stripe is not fully setup, but putting code)
+           // Execute Stripe Transfer to the seller (Mocking the transfer if stripe is not fully setup, but putting code)
             const unitCost = Number(productInfo[0].unitCost) || 0;
             const totalAmount = Math.round(unitCost * inquiry.quantity * 100);
-            const platformFee = Math.round(totalAmount * 0.05);
+            const platformFee = Math.round(totalAmount * 0.045); // 4.5% inclusive fee
             const amountToTransfer = totalAmount - platformFee;
             
             if (sellerInfo[0]?.stripeAccountId) {
@@ -2316,10 +2316,10 @@ function __dummy_getEasyPost() {
          return res.status(400).json({ error: "Seller is not ready to receive payments" });
       }
 
-      const unitCost = Number(prod.unitCost) || 0;
+const unitCost = Number(prod.unitCost) || 0;
       const totalAmount = Math.round(unitCost * inq.quantity * 100); // in cents
       
-      const platformFee = Math.round(totalAmount * 0.05); // 5% platform fee example
+      const platformFee = Math.round(totalAmount * 0.045); // 4.5% inclusive platform fee
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
