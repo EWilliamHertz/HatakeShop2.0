@@ -287,7 +287,15 @@ export function Home() {
             <div className="w-full max-w-3xl mt-12 pt-8 animate-in fade-in">
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">{t('Sponsored Products')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-{homeProducts.filter((p: any) => p.isSponsored).slice(0, 3).map((sp: any, idx: number) => {
+              {[...homeProducts]
+                .sort((a: any, b: any) => {
+                  // Checks common database naming variations and pulls sponsored items to the front
+                  const aSponsored = a.isSponsored || a.is_sponsored || a.sponsored || a.featured ? 1 : 0;
+                  const bSponsored = b.isSponsored || b.is_sponsored || b.sponsored || b.featured ? 1 : 0;
+                  return bSponsored - aSponsored;
+                })
+                .slice(0, 3)
+                .map((sp: any, idx: number) => {
                   let images = [];
                   try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
                   
