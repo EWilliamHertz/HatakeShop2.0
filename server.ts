@@ -1432,10 +1432,10 @@ function __dummy_getEasyPost() {
         messageContent: "I would like to get in touch."
       });
 
-      // Send Resend email
+// Send Resend email
       try {
         await resend.emails.send({
-          from: "Hatake <onboarding@resend.dev>",
+          from: "Hatake.Shop <notifications@hatake.shop>",
           to: sellerProfile.email,
           subject: `New Message from ${userProfile.companyName || userProfile.displayName}`,
           html: `<p>You have received a new message from ${userProfile.companyName || userProfile.displayName}.</p><p>Please log in to your dashboard to view and reply.</p>`
@@ -1637,9 +1637,29 @@ function __dummy_getEasyPost() {
               createdAt: new Date(),
               link: `/rfq/${newInquiry.id}`
             });
+
+            // Trigger Resend Email for Bulk Cart
+            if (seller.email) {
+              try {
+                const buyerName = userProfile.companyName || userProfile.displayName;
+                const htmlBody = generateB2BEmailHtml(
+                  "New Bulk Quote Request",
+                  `<b>${buyerName}</b> has submitted a new bulk RFQ for multiple products.<br/><br/>Click the link below to view the items and respond with an official quote.`,
+                  `${process.env.APP_URL || 'https://hatake.shop'}/rfq/${newInquiry.id}`
+                );
+
+                await resend.emails.send({
+                  from: "Hatake.Shop <notifications@hatake.eu>",
+                  to: seller.email,
+                  subject: `New Bulk RFQ from ${buyerName}`,
+                  html: htmlBody
+                });
+              } catch (emailErr) {
+                console.error("Cart RFQ email failed:", emailErr);
+              }
+            }
           }
-        } catch(e) {
-          console.error("Firestore error creating cart rfq:", e);
+        } catch(e) {  console.error("Firestore error creating cart rfq:", e);
         }
 
         createdInquiries.push(newInquiry);
@@ -1678,13 +1698,13 @@ function __dummy_getEasyPost() {
       
       // Setup Firestore inquiry & notification
       if (targetProductId) {
-        const productInfo = await db.select({ sellerUid: users.uid })
+        const productInfo = await db.select({ sellerUid: users.uid, sellerEmail: users.email, productTitle: products.title })
           .from(products)
           .innerJoin(users, eq(products.sellerId, users.id))
           .where(eq(products.id, targetProductId));
           
         if (productInfo.length > 0) {
-          const sellerUid = productInfo[0].sellerUid;
+          const { sellerUid, sellerEmail, productTitle } = productInfo[0];
           await adminDb.collection('inquiries').doc(newInquiry.id.toString()).set({
             buyerUid: req.user.uid,
             sellerUid: sellerUid
@@ -1702,9 +1722,52 @@ function __dummy_getEasyPost() {
           if (io) {
             io.to(`user_${sellerUid}`).emit("inquiry_updated");
           }
+
+          // Trigger Resend Email
+          if (sellerEmail) {
+            try {
+              const buyerName = userProfile.companyName || userProfile.displayName;
+              const htmlBody = generateB2BEmailHtml(
+                "New Request for Quote (RFQ)",
+                `Good news! <b>${buyerName}</b> has submitted a new RFQ for <b>${quantity} units</b> of <b>${productTitle}</b>.<br/><br/>Target Budget: ${targetBudget} ${currency}<br/><br/>Click the link below to view the request and respond with an official quote.`,
+                `${process.env.APP_URL || 'https://hatake.shop'}/rfq/${newInquiry.id}`
+              );
+
+              await resend.emails.send({
+                from: "Hatake.Shop <notifications@hatake.shop>",
+                to: sellerEmail,
+                subject: `New RFQ Received: ${quantity}x ${productTitle}`,
+                html: htmlBody
+              });
+            } catch (emailErr) {
+              console.error("Failed to send RFQ notification email:", emailErr);
+            }
+          }
         }
       }
 
+          // Trigger Resend Email
+          if (sellerEmail) {
+            try {
+              const buyerName = userProfile.companyName || userProfile.displayName;
+              const htmlBody = generateB2BEmailHtml(
+                "New Request for Quote (RFQ)",
+                `Good news! <b>${buyerName}</b> has submitted a new RFQ for <b>${quantity} units</b> of <b>${productTitle}</b>.<br/><br/>Target Budget: ${targetBudget} ${currency}<br/><br/>Click the link below to view the request and respond with an official quote.`,
+                `${process.env.APP_URL || 'https://hatake.shop'}/rfq/${newInquiry.id}`
+              );
+
+              await resend.emails.send({
+                from: "Hatake.Shop <notifications@hatake.eu>",
+                to: sellerEmail,
+                subject: `New RFQ Received: ${quantity}x ${productTitle}`,
+                html: htmlBody
+              });
+            } catch (emailErr) {
+              console.error("Failed to send RFQ notification email:", emailErr);
+            }
+          }
+        }
+      }
       res.json(newInquiry);
     } catch (err: any) {
       console.error(err);
