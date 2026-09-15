@@ -115,26 +115,34 @@ app.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/prod
     if (userProfile?.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
 
     const productId = parseInt(req.params.id, 10);
-    const { categoryId, isSponsored, approvalStatus, title, description, moq, originType, sellerId, shippingOptions, images } = req.body;
+    const updates: any = {};
 
-    // Safely parse the category ID
-    const parsedCatId = (categoryId && categoryId !== "" && categoryId !== "null") ? parseInt(categoryId, 10) : null;
+    // SMART PARTIAL UPDATES: Only update the exact fields sent by the frontend
+    if (req.body.categoryId !== undefined) {
+       const parsedCatId = parseInt(req.body.categoryId, 10);
+       updates.categoryId = isNaN(parsedCatId) ? null : parsedCatId;
+    }
+    if (req.body.isSponsored !== undefined) updates.isSponsored = req.body.isSponsored;
+    if (req.body.approvalStatus !== undefined) updates.approvalStatus = req.body.approvalStatus;
+    if (req.body.title !== undefined) updates.title = req.body.title;
+    if (req.body.description !== undefined) updates.description = req.body.description;
+    if (req.body.moq !== undefined) updates.moq = parseInt(req.body.moq, 10);
+    if (req.body.originType !== undefined) updates.originType = req.body.originType;
+    if (req.body.shippingOptions !== undefined) updates.shippingOptions = req.body.shippingOptions;
+    if (req.body.images !== undefined) updates.images = req.body.images;
+    
+    if (req.body.sellerId !== undefined) {
+        const sId = parseInt(req.body.sellerId, 10);
+        if (!isNaN(sId)) updates.sellerId = sId;
+    }
 
-    await db.update(products).set({
-      categoryId: isNaN(parsedCatId) ? null : parsedCatId,
-      isSponsored: isSponsored || false,
-      approvalStatus: approvalStatus || 'pending',
-      title,
-      description,
-      moq: parseInt(moq, 10) || 1,
-      originType,
-      sellerId: parseInt(sellerId, 10),
-      shippingOptions: shippingOptions || [],
-      images: images || []
-    }).where(eq(products.id, productId));
+    if (Object.keys(updates).length > 0) {
+      await db.update(products).set(updates).where(eq(products.id, productId));
+    }
 
-    res.json({ success: true });
+    res.json({ success: true, updates });
   } catch (err: any) {
+    console.error("Admin Product Patch Error:", err);
     res.status(500).json({ error: err.message });
   }
 });
