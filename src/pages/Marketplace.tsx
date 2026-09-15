@@ -15,24 +15,6 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
   
   let tiers = [];
   try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch(e) {}
-
-  
-  const categoryTree = React.useMemo(() => {
-    if (!Array.isArray(categoriesData)) return [];
-    const map = new Map();
-    const roots = [];
-    categoriesData.forEach(c => map.set(c.id, { ...c, children: [] }));
-    categoriesData.forEach(c => {
-        if (c.parentId) {
-            const parent = map.get(c.parentId);
-            if (parent) parent.children.push(map.get(c.id));
-        } else {
-            roots.push(map.get(c.id));
-        }
-    });
-    return roots;
-  }, [categoriesData]);
-
   return (
     <div 
       onClick={() => onSelect && onSelect(p)}
@@ -96,6 +78,25 @@ export function Marketplace() {
       return res.json();
     }
   });
+
+
+  
+  const categoryTree = React.useMemo(() => {
+    if (!Array.isArray(categoriesData)) return [];
+    const map = new Map();
+    const roots = [];
+    categoriesData.forEach(c => map.set(c.id, { ...c, children: [] }));
+    categoriesData.forEach(c => {
+        if (c.parentId) {
+            const parent = map.get(c.parentId);
+            if (parent) parent.children.push(map.get(c.id));
+        } else {
+            roots.push(map.get(c.id));
+        }
+    });
+    return roots;
+  }, [categoriesData]);
+
 
 const { data = {}, isLoading, error } = useQuery({
   queryKey: ['products', search, page, filters, selectedCategoryId],
