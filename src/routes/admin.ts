@@ -618,6 +618,41 @@ router.delete("/api-v2/admin/products/:id", requireAuth, requireAdmin, async (re
   });
 
 
+
+router.get("/api-v2/admin/products", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const allProducts = await db.select({
+      product: products,
+      seller: users
+    }).from(products).leftJoin(users, eq(products.sellerId, users.id)).orderBy(desc(products.createdAt));
+    res.json(allProducts.map(p => ({ ...p.product, seller: p.seller })));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.patch("/api-v2/admin/products/bulk", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { productIds, updates } = req.body;
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ error: "No productIds provided" });
+    }
+    
+    const updateData: any = {};
+    if (updates.categoryId !== undefined) updateData.categoryId = updates.categoryId;
+    if (updates.approvalStatus !== undefined) updateData.approvalStatus = updates.approvalStatus;
+    
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "No valid updates provided" });
+    }
+
+    await db.update(products).set(updateData).where(inArray(products.id, productIds));
+    res.json({ success: true, updatedCount: productIds.length });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get("/api-v2/admin/approvals", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const pendingProducts = await db.select().from(products).where(eq(products.approvalStatus, 'pending'));

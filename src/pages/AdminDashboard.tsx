@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AdminListings } from '../components/AdminListings.tsx';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.tsx';
 import { ShieldAlert, Users, Package, Activity, Edit2, Trash2, X, ChevronDown } from 'lucide-react';
@@ -693,6 +694,10 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
            </div>
         </div>
       )}
+      {activeTab === 'listings' && (
+        <AdminListings />
+      )}
+
       {activeTab === 'users' && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
           <div className="bg-slate-900 p-5 border-b border-slate-700 flex justify-between items-center">
