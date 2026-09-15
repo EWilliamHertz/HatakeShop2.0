@@ -19,6 +19,7 @@ import { Marketplace } from './pages/Marketplace.tsx';
 import { RFQHub } from './pages/RFQHub.tsx';
 import { RFQDetails } from './pages/RFQDetails.tsx';
 import { CompanyProfile } from './pages/CompanyProfile.tsx';
+import { UserProfile } from './pages/UserProfile.tsx';
 import { Settings } from './pages/Settings.tsx';
 import { CompanySettings } from './pages/CompanySettings.tsx';
 import { Login } from './pages/Login.tsx';
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/company/:id" element={<CompanyProfile />} />
+            <Route path="/user/:id" element={<UserProfile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
             <Route path="/rfq" element={<ProtectedRoute><RFQHub /></ProtectedRoute>} />

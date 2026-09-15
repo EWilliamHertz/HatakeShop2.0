@@ -7,6 +7,37 @@ import { getUserProfile, updateUserProfile } from "../db/users.js";
 
 const router = Router();
 
+router.get(["/users/:id", "/api/users/:id", "/api-v2/users/:id"], async (req, res) => {
+  if (req.params.id === 'team') return; // Skip /users/team route
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
+    
+    const { db } = require('../db/index.js');
+    const { users } = require('../db/schema.js');
+    const { eq } = require('drizzle-orm');
+
+    const userQuery = await db.select({
+      id: users.id,
+      displayName: users.displayName,
+      profilePictureUrl: users.profilePictureUrl,
+      teamRole: users.teamRole,
+      role: users.role,
+      country: users.country,
+      teamOwnerId: users.teamOwnerId,
+      companyName: users.companyName,
+      createdAt: users.createdAt,
+    }).from(users).where(eq(users.id, userId)).limit(1);
+
+    if (userQuery.length === 0) return res.status(404).json({ error: "User not found" });
+    res.json(userQuery[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 router.get(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
@@ -75,13 +106,20 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
     if (!req.user) return res.status(401).send("Unauthorized");
     
     // Check if this is a company settings update
-    const isCompanyUpdate = req.body.hasOwnProperty('orgNumber') || req.body.hasOwnProperty('companyFocus') || req.body.hasOwnProperty('vatNumber');
+    const isCompanyUpdate = req.body.hasOwnProperty('orgNumber') || req.body.hasOwnProperty('companyFocus') || req.body.hasOwnProperty('vatNumber') || req.body.hasOwnProperty('isCompanyUpdate');
     
-    let user = await updateUserProfile(req.user.uid, req.body);
+    let user;
     
     if (isCompanyUpdate) {
-       // If it's a company update, sync these specific company fields to the parent and all team members
-       const parentId = user.teamOwnerId || user.id;
+       const { db } = require('../db/index.js');
+       const { users } = require('../db/schema.js');
+       const { eq, and } = require('drizzle-orm');
+       const { getUserProfile } = require('../db/users.js');
+       
+       const currentUser = await getUserProfile(req.user.uid);
+       const parentId = currentUser.teamOwnerId || currentUser.id;
+       
+       // Update parent row with company info
        const companyFields = {
          companyName: req.body.companyName,
          orgNumber: req.body.orgNumber,
@@ -89,7 +127,7 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
          aboutUs: req.body.aboutUs,
          socialLinks: req.body.socialLinks,
          portfolio: req.body.portfolio,
-         profilePictureUrl: req.body.profilePictureUrl,
+         profilePictureUrl: req.body.profilePictureUrl, // Company logo
          bannerUrl: req.body.bannerUrl,
          country: req.body.country,
          region: req.body.region,
@@ -101,15 +139,27 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
          kybDocuments: req.body.kybDocuments,
          verificationStatus: req.body.verificationStatus
        };
-       // Remove undefined fields
        Object.keys(companyFields).forEach(key => companyFields[key] === undefined && delete companyFields[key]);
        
        if (Object.keys(companyFields).length > 0) {
-          // Update parent
           await db.update(users).set(companyFields).where(eq(users.id, parentId));
-          // Update all team members
-          await db.update(users).set(companyFields).where(eq(users.teamOwnerId, parentId));
        }
+       
+       // Sync ONLY shared identity fields to all team members
+       const sharedFields = {
+           companyName: req.body.companyName,
+           country: req.body.country,
+           verificationStatus: req.body.verificationStatus
+       };
+       Object.keys(sharedFields).forEach(key => sharedFields[key] === undefined && delete sharedFields[key]);
+       if (Object.keys(sharedFields).length > 0) {
+           await db.update(users).set(sharedFields).where(eq(users.teamOwnerId, parentId));
+       }
+       
+       user = await getUserProfile(req.user.uid);
+    } else {
+       // Personal update
+       user = await updateUserProfile(req.user.uid, req.body);
     }
     
     res.json(user);
