@@ -120,8 +120,7 @@ export default function App() {
       </CartProvider>
       </CurrencyProvider>
       </BrowserRouter>
-      <CookieBanner />
-      </AuthProvider>
+    </AuthProvider>
     </QueryClientProvider>
   );
 }

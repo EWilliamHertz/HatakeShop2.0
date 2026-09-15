@@ -47,7 +47,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Est. Unit Price')}</span>
               <span className="text-xl font-extrabold text-white font-mono tracking-tight">{(() => {
                 const minPrice = Array.isArray(tiers) && tiers.length > 0 ? Math.min(...tiers.map((t: any) => parseFloat(t.price || t.unitPrice || '0'))) : (p.unitCost || p.unitPrice || 0);
-                return (!minPrice || minPrice === 0) ? <span className="text-sm font-semibold tracking-wide text-cyan-400">{t("Negotiable")}</span> : formatPrice(minPrice);
+                return (!minPrice || Number(minPrice) === 0) ? <span className="text-sm font-semibold tracking-wide text-cyan-400">{t("Negotiate")}</span> : formatPrice(Number(minPrice));
               })()}</span>
             </div>
             <div className="text-right flex flex-col items-end">

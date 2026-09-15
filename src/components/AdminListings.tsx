@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Edit, CheckSquare, Square, Check, X, Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from './AuthContext.tsx';
 
 export function AdminListings() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkCategoryIds, setBulkCategoryIds] = useState<number[]>([]);
@@ -14,7 +16,10 @@ export function AdminListings() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
-      const res = await fetch('/api-v2/admin/products');
+      let token; try { token = await user?.getIdToken(); } catch(e) {}
+      const res = await fetch('/api-v2/admin/products', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!res.ok) throw new Error('Failed to fetch products');
       return res.json();
     }
@@ -31,9 +36,13 @@ export function AdminListings() {
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async (updates: any) => {
+      let token; try { token = await user?.getIdToken(); } catch(e) {}
       const res = await fetch('/api-v2/admin/products/bulk', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
         body: JSON.stringify({ productIds: selectedIds, updates })
       });
       if (!res.ok) throw new Error('Failed to update products');

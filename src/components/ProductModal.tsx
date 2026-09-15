@@ -188,7 +188,7 @@ export function ProductModal({ product, onClose }: { product: any, onClose: () =
               ) : (
                 <div className="mt-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
                   <span className="text-slate-400 uppercase tracking-wider text-xs font-bold">{t('Unit Price')}</span>
-                  <span className="text-2xl font-mono font-bold text-white">{(!product.unitCost || product.unitCost === 0) ? t("Negotiable") : formatPrice(product.unitCost)}</span>
+                  <span className="text-2xl font-mono font-bold text-white">{(!product.unitCost || Number(product.unitCost) === 0) ? t("Negotiate") : formatPrice(Number(product.unitCost))}</span>
                 </div>
               )}
 
