@@ -285,6 +285,22 @@ export function CompanySettings() {
                         </div>
                         <div className="space-y-2 flex flex-col">
                            <label className="text-sm font-semibold tracking-tight text-slate-300 flex justify-between">
+                             <span>{t('Profile Picture')}</span>
+                           </label>
+                           <div className="flex flex-col gap-2">
+                             {formData.profilePictureUrl && (
+                                <div className="h-16 w-16 rounded-full overflow-hidden border border-[var(--color-hairline)] bg-slate-900 shrink-0">
+                                  <img src={formData.profilePictureUrl} alt="Profile" className="w-full h-full object-cover" />
+                                </div>
+                             )}
+                             <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all w-full flex items-center justify-center px-4 py-2 cursor-pointer">
+                               <Upload className="w-4 h-4 mr-2" /> {t('Upload Profile Pic')}
+                               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload('profilePictureUrl')} />
+                             </label>
+                           </div>
+                        </div>
+                        <div className="space-y-2 flex flex-col">
+                           <label className="text-sm font-semibold tracking-tight text-slate-300 flex justify-between">
                              <span>{t('Banner Image')}</span>
                            </label>
                            <div className="flex flex-col gap-2">
@@ -419,7 +435,15 @@ export function CompanySettings() {
                             </div>
                           </div>
                         </div>
-                        <button type="button" className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all px-4 py-2.5">
+                        <button type="button" onClick={async () => {
+                          try {
+                            const token = await user?.getIdToken();
+                            const res = await fetch('/api-v2/stripe/create-account', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+                            const data = await res.json();
+                            if (data.url) window.location.href = data.url;
+                            else alert("Failed to connect stripe: " + (data.error || 'Unknown Error'));
+                          } catch (e: any) { alert(e.message); }
+                        }} className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all px-4 py-2.5">
                           {formData.stripeAccountId ? t('Manage') : t('Connect Stripe')}
                         </button>
                       </div>
