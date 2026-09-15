@@ -67,6 +67,7 @@ export const products = pgTable('products', {
   description: text('description').notNull(),
   specifications: jsonb('specifications'),
   moq: integer('moq').notNull().default(1),
+  oemMoq: integer('oem_moq').default(1),
   stockQuantity: integer('stock_quantity').default(0),
   salesVelocity30d: integer('sales_velocity_30d').default(0),
   restockForecastDate: timestamp('restock_forecast_date'),

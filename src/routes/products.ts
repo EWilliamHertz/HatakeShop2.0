@@ -38,6 +38,7 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
           description: products.description,
           specifications: products.specifications,
           moq: products.moq,
+          oemMoq: products.oemMoq,
           stockQuantity: products.stockQuantity,
           unitCost: products.unitCost,
           tieredPricing: products.tieredPricing,

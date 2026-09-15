@@ -9,6 +9,7 @@ export const productSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   moq: z.coerce.number().min(1, "MOQ must be at least 1"),
+  oemMoq: z.coerce.number().min(1, "OEM MOQ must be at least 1").optional().default(1),
   stockQuantity: z.coerce.number().min(0, "Stock cannot be negative"),
   unitCost: z.coerce.number().min(0, "Cost cannot be negative"),
   originType: z.string().min(1, "Origin type is required"),
@@ -55,6 +56,7 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
       title: initialValues?.title || '',
       description: initialValues?.description || '',
       moq: initialValues?.moq || 1,
+      oemMoq: initialValues?.oemMoq || 1,
       stockQuantity: initialValues?.stockQuantity || 0,
       unitCost: initialValues?.unitCost || 0,
       originType: initialValues?.originType || 'Direct Factory',
@@ -125,6 +127,15 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
             className="w-full bg-slate-900 text-slate-100 px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-ink outline-none"
           />
           {errors.moq && <p className="text-red-500 text-xs mt-1">{errors.moq.message as string}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-semibold tracking-tight text-slate-300 mb-1">OEM MOQ</label>
+          <input 
+            type="number" 
+            className="w-full bg-slate-800 border border-slate-700 text-slate-100 px-3 py-2 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all outline-none"
+            {...register("oemMoq")}
+          />
+          {errors.oemMoq && <p className="text-red-500 text-xs mt-1">{errors.oemMoq.message as string}</p>}
         </div>
         <div>
           <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Lead Time (Days)</label>

@@ -421,6 +421,7 @@ router.get("/api-v2/admin/stats", requireAuth, requireAdmin, async (req: AuthReq
           description: products.description,
           specifications: products.specifications,
           moq: products.moq,
+          oemMoq: products.oemMoq,
           stockQuantity: products.stockQuantity,
           unitCost: products.unitCost,
           tieredPricing: products.tieredPricing,
@@ -511,8 +512,8 @@ router.delete("/api-v2/admin/users/:id", requireAuth, requireAdmin, async (req: 
 router.patch("/api-v2/admin/products/:id", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
       const productId = parseInt(req.params.id, 10);
-      const { title, description, moq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, certifications, isSponsored } = req.body;
-      const updateData: any = {}; if(title) updateData.title = title; if(description) updateData.description = description; if(moq) updateData.moq = moq; if(originType) updateData.originType = originType; if(sellerId) updateData.sellerId = sellerId; if(shippingOptions) updateData.shippingOptions = shippingOptions; if(images) updateData.images = images; if(certifications) updateData.certifications = certifications; if(approvalStatus) updateData.approvalStatus = approvalStatus; if(categoryId !== undefined) updateData.categoryId = categoryId; if(isSponsored !== undefined) updateData.isSponsored = isSponsored; await db.update(products).set(updateData).where(eq(products.id, productId));
+      const { title, description, moq, oemMoq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, certifications, isSponsored } = req.body;
+      const updateData: any = {}; if(title) updateData.title = title; if(description) updateData.description = description; if(moq) updateData.moq = moq; if(oemMoq !== undefined) updateData.oemMoq = oemMoq; if(originType) updateData.originType = originType; if(sellerId) updateData.sellerId = sellerId; if(shippingOptions) updateData.shippingOptions = shippingOptions; if(images) updateData.images = images; if(certifications) updateData.certifications = certifications; if(approvalStatus) updateData.approvalStatus = approvalStatus; if(categoryId !== undefined) updateData.categoryId = categoryId; if(isSponsored !== undefined) updateData.isSponsored = isSponsored; await db.update(products).set(updateData).where(eq(products.id, productId));
       return res.json({ success: true });
 
     } catch (err: any) {
