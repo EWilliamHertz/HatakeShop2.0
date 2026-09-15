@@ -63,7 +63,10 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Est. Unit Price')}</span>
-              <span className="text-xl font-extrabold text-white font-mono tracking-tight">{formatPrice(tiers.length > 0 ? Math.min(...tiers.map((t: any) => parseFloat(t.price || t.unitPrice || '0'))) : (p.unitPrice || 0))}</span>
+              <span className="text-xl font-extrabold text-white font-mono tracking-tight">{(() => {
+                const minPrice = tiers.length > 0 ? Math.min(...tiers.map((t: any) => parseFloat(t.price || t.unitPrice || '0'))) : (p.unitCost || p.unitPrice || 0);
+                return (!minPrice || minPrice === 0) ? <span className="text-sm font-semibold tracking-wide text-cyan-400">{t("Negotiable")}</span> : formatPrice(minPrice);
+              })()}</span>
             </div>
             <div className="text-right flex flex-col items-end">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Min Order')}</span>
