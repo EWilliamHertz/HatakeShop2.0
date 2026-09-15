@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, products, inquiries, inquiryMessages, leads } from "../db/schema.js";
-import { eq, or, and, isNull, desc } from "drizzle-orm";
+import { not, eq, or, and, isNull, desc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { getUserProfile } from "../db/users.js";
 import { getStripe, resend } from "../lib/services.js";
