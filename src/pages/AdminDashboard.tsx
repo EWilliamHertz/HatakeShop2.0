@@ -1079,9 +1079,10 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                       </div>
                       {(stats?.recentUsers || [])
                         .filter((u: any) => 
-                          (u.companyName || '').toLowerCase().includes(companySearch.toLowerCase()) || 
+                          ((u.companyName || '').toLowerCase().includes(companySearch.toLowerCase()) || 
                           u.id.toString().includes(companySearch) ||
-                          (u.displayName || '').toLowerCase().includes(companySearch.toLowerCase())
+                          (u.displayName || '').toLowerCase().includes(companySearch.toLowerCase())) &&
+                          !u.teamOwnerId // ONLY show parent companies, not team members
                         )
                         .map((u: any) => (
                           <div 
@@ -1252,7 +1253,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                   className="w-full px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-ink outline-none"
                 >
                   <option value="">No Team (Independent)</option>
-                  {(stats?.recentUsers || []).filter(u => u.companyName && u.id !== editingUser.id).map(u => (
+                  {(stats?.recentUsers || []).filter(u => u.companyName && !u.teamOwnerId && u.id !== editingUser.id).map(u => (
                     <option key={u.id} value={u.id}>{u.companyName} (Owner: {u.email})</option>
                   ))}
                 </select>
@@ -1295,7 +1296,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                   onChange={e => setEditingProduct({...editingProduct, sellerId: parseInt(e.target.value)})}
                   className="w-full px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-ink outline-none"
                 >
-                  {(stats?.recentUsers || []).map((u: any) => (
+                  {(stats?.recentUsers || []).filter(u => !u.teamOwnerId).map((u: any) => (
                     <option key={u.id} value={u.id}>{u.companyName || u.email} ({u.email})</option>
                   ))}
                 </select>

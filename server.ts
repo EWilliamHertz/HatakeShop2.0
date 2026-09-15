@@ -24,7 +24,7 @@ import { requireAuth, AuthRequest } from "./src/middleware/auth.js";
 import { getOrCreateUser, getUserProfile, updateUserProfile } from "./src/db/users.js";
 import { db } from "./src/db/index.js";
 import { products, categories, inquiries, inquiryMessages, users, marketing_logs, affiliates, leads, reviews, feedback, wishlists } from "./src/db/schema.js";
-import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
+import { eq, or, ilike, sql, and, desc, isNotNull, isNull, inArray, ne, not, asc } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
 import { fixOldInquiries } from "./fix_old_inquiries.js";
 import adminRouter from "./src/routes/admin.js";
@@ -2291,7 +2291,10 @@ app.get(["/public/partners", "/api/public/partners", "/api-v2/public/partners"],
       isLeadOnly: true
     })).filter(l => l.name);
 
-    const sellers = await db.select({ id: users.id, companyName: users.companyName, country: users.country, verificationStatus: users.verificationStatus }).from(users).where(or(eq(users.role, 'seller'), eq(users.role, 'both'), eq(users.role, 'admin')));
+    const sellers = await db.select({ id: users.id, companyName: users.companyName, country: users.country, verificationStatus: users.verificationStatus }).from(users).where(and(
+      or(eq(users.role, 'seller'), eq(users.role, 'both'), eq(users.role, 'admin')),
+      isNull(users.teamOwnerId)
+    ));
     
     for (const seller of sellers) {
        if (seller.companyName) {

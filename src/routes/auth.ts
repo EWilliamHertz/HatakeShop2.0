@@ -4,7 +4,7 @@ import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/se
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, products, feedback, leads, affiliates, marketing_logs, categories, inquiries, inquiryMessages, reviews } from "../db/schema.js";
-import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
+import { eq, or, ilike, sql, and, desc, isNotNull, isNull, inArray, ne, not, asc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
 import crypto from "crypto";
@@ -53,8 +53,15 @@ router.post("/api-v2/auth/sync", requireAuth, async (req: AuthRequest, res) => {
       const user = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
       
       if (finalCompanyName && !user.companyName) {
-         await db.update(users).set({ companyName: finalCompanyName }).where(eq(users.id, user.id));
-         user.companyName = finalCompanyName;
+         const existingCompany = await db.select().from(users).where(and(eq(users.companyName, finalCompanyName), isNull(users.teamOwnerId))).limit(1);
+         if (existingCompany.length > 0) {
+            await db.update(users).set({ companyName: finalCompanyName, teamOwnerId: existingCompany[0].id }).where(eq(users.id, user.id));
+            user.companyName = finalCompanyName;
+            user.teamOwnerId = existingCompany[0].id;
+         } else {
+            await db.update(users).set({ companyName: finalCompanyName }).where(eq(users.id, user.id));
+            user.companyName = finalCompanyName;
+         }
       }
       
       res.json({ user });
