@@ -447,7 +447,7 @@ export function Home() {
 
                                 <div className="absolute top-3 left-3 flex flex-col gap-2">
                                   <span className="px-2.5 py-1 bg-slate-900/95 backdrop-blur-sm text-slate-200 text-[10px] uppercase font-semibold tracking-tight rounded-full shadow-sm border border-slate-700">
-                                    {t('MOQ')}: {product.moq} Gen / {product.oemMoq || product.moq} OEM
+                                    {t('MOQ')}: {product.moq}{product.offersOem ? ` Gen / \${product.oemMoq || product.moq} OEM` : ''}
                                   </span>
                                 </div>
                               </div>
@@ -642,7 +642,7 @@ export function Home() {
                   <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                     <div className="flex items-center">
                       <Package className="w-4 h-4 mr-1.5 text-slate-400" />
-                      {t('MOQ')}: {p.product.moq} Gen / {p.product.oemMoq || p.product.moq} OEM
+                      {t('MOQ')}: {p.product.moq}{p.product.offersOem ? ` Gen / \${p.product.oemMoq || p.product.moq} OEM` : ''}
                     </div>
                     <div className="flex items-center">
                       <MapPin className="w-4 h-4 mr-1.5 text-slate-400 shrink-0" />

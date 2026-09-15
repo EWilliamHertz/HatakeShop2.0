@@ -146,7 +146,7 @@ export function ProductModal({ product, onClose }: { product: any, onClose: () =
                 )}
                 <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
                   <span className="block text-xs uppercase tracking-wider text-slate-500 mb-1">{t('MOQ')}</span>
-                  <span className="text-slate-200 font-medium">{product.moq} {t('units')} (Generic) {product.oemMoq ? `| ${product.oemMoq} units (OEM)` : ''}</span>
+                  <span className="text-slate-200 font-medium">{product.moq} {t('units')}{product.offersOem ? ` (Generic) | ${product.oemMoq} units (OEM)` : ''}</span>
                 </div>
               </div>
 

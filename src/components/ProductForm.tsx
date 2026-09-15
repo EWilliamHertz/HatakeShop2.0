@@ -9,6 +9,7 @@ export const productSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   moq: z.coerce.number().min(1, "MOQ must be at least 1"),
+  offersOem: z.boolean().default(false),
   oemMoq: z.coerce.number().min(1, "OEM MOQ must be at least 1").optional().default(1),
   stockQuantity: z.coerce.number().min(0, "Stock cannot be negative"),
   unitCost: z.coerce.number().min(0, "Cost cannot be negative"),
@@ -50,12 +51,13 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
   React.useEffect(() => {
     fetch('/api-v2/categories').then(res => res.json()).then(data => setCategories(data)).catch(console.error);
   }, []);
-  const { register, control, handleSubmit, formState: { errors } } = useForm<any>({
+  const { register, watch, control, handleSubmit, formState: { errors } } = useForm<any>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       title: initialValues?.title || '',
       description: initialValues?.description || '',
       moq: initialValues?.moq || 1,
+      offersOem: initialValues?.offersOem || false,
       oemMoq: initialValues?.oemMoq || 1,
       stockQuantity: initialValues?.stockQuantity || 0,
       unitCost: initialValues?.unitCost || 0,
@@ -129,13 +131,24 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
           {errors.moq && <p className="text-red-500 text-xs mt-1">{errors.moq.message as string}</p>}
         </div>
         <div>
-          <label className="block text-sm font-semibold tracking-tight text-slate-300 mb-1">OEM MOQ</label>
-          <input 
-            type="number" 
-            className="w-full bg-slate-800 border border-slate-700 text-slate-100 px-3 py-2 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all outline-none"
-            {...register("oemMoq")}
-          />
-          {errors.oemMoq && <p className="text-red-500 text-xs mt-1">{errors.oemMoq.message as string}</p>}
+          <label className="flex items-center text-sm font-semibold tracking-tight text-slate-300 mb-2 cursor-pointer">
+            <input 
+              type="checkbox"
+              className="mr-2 rounded border-slate-700 bg-slate-800 focus:ring-cyan-500 text-cyan-600"
+              {...register("offersOem")}
+            />
+            Offer OEM / Private Label?
+          </label>
+          <div className={`transition-opacity ${watch("offersOem") ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+            <label className="block text-xs font-semibold tracking-tight text-slate-400 mb-1">OEM MOQ</label>
+            <input 
+              type="number" 
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 px-3 py-2 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all outline-none"
+              {...register("oemMoq")}
+              disabled={!watch("offersOem")}
+            />
+            {errors.oemMoq && <p className="text-red-500 text-xs mt-1">{errors.oemMoq.message as string}</p>}
+          </div>
         </div>
         <div>
           <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Lead Time (Days)</label>
