@@ -46,7 +46,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
             <div className="flex flex-col">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Est. Unit Price')}</span>
               <span className="text-xl font-extrabold text-white font-mono tracking-tight">{(() => {
-                const minPrice = tiers.length > 0 ? Math.min(...tiers.map((t: any) => parseFloat(t.price || t.unitPrice || '0'))) : (p.unitCost || p.unitPrice || 0);
+                const minPrice = Array.isArray(tiers) && tiers.length > 0 ? Math.min(...tiers.map((t: any) => parseFloat(t.price || t.unitPrice || '0'))) : (p.unitCost || p.unitPrice || 0);
                 return (!minPrice || minPrice === 0) ? <span className="text-sm font-semibold tracking-wide text-cyan-400">{t("Negotiable")}</span> : formatPrice(minPrice);
               })()}</span>
             </div>
@@ -130,7 +130,7 @@ const { data = {}, isLoading, error } = useQuery({
   };
 
 
-  const isFiltering = Boolean(search || selectedCategoryId || selectedOrigin || minMoq || maxPrice || sortBy !== 'newest' || productType !== 'all');
+  const isFiltering = Boolean(search || selectedCategoryId || filters.origin || filters.minMoq || filters.maxPrice || filters.sortBy !== 'newest' );
 
   const groupedProducts = React.useMemo(() => {
     const groups: { [key: string]: { companyName: string, sellerId: number, products: any[] } } = {};
