@@ -64,6 +64,7 @@ export const products = pgTable('products', {
   id: serial('id').primaryKey(),
   sellerId: integer('seller_id').notNull(),
   categoryId: integer('category_id'),
+  categoryIds: integer('category_ids').array().default(sql`'{}'::int[]`),
   title: text('title').notNull(),
   brand: text('brand'),
   description: text('description').notNull(),

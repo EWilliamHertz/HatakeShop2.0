@@ -8,7 +8,7 @@ export function AdminListings() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkCategoryIds, setBulkCategoryIds] = useState<number[]>([]);
   
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -41,7 +41,7 @@ export function AdminListings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       setSelectedIds([]);
-      setBulkCategory("");
+      setBulkCategoryIds([]);
     }
   });
 
@@ -69,7 +69,7 @@ export function AdminListings() {
   const handleBulkUpdate = () => {
     if (selectedIds.length === 0) return;
     const updates: any = {};
-    if (bulkCategory) updates.categoryId = bulkCategory === 'null' ? null : parseInt(bulkCategory);
+    if (bulkCategoryIds.length > 0) updates.categoryIds = bulkCategoryIds;
     
     if (Object.keys(updates).length > 0) {
       bulkUpdateMutation.mutate(updates);
@@ -104,20 +104,38 @@ export function AdminListings() {
         <div className="bg-cyan-900/20 border-b border-cyan-800 p-3 flex items-center justify-between px-5">
           <span className="text-sm font-semibold text-cyan-400">{selectedIds.length} listings selected</span>
           <div className="flex items-center gap-3">
-            <select 
-              value={bulkCategory} 
-              onChange={e => setBulkCategory(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
-            >
-              <option value="">-- Assign Category --</option>
-              <option value="null">No Category</option>
-              {categoriesData.map((c: any) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            
+            <div className="flex flex-col relative group">
+              <button type="button" className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none min-w-[200px] text-left flex justify-between items-center">
+                <span>{bulkCategoryIds.length > 0 ? `${bulkCategoryIds.length} categories selected` : '-- Assign Categories --'}</span>
+              </button>
+              <div className="absolute top-full left-0 mt-1 w-[300px] max-h-[300px] overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-xl hidden group-hover:block z-50 p-2">
+                {categoriesData.map((c: any) => (
+                  <label key={c.id} className="flex items-center gap-2 p-1.5 hover:bg-slate-700 rounded cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={bulkCategoryIds.includes(c.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setBulkCategoryIds([...bulkCategoryIds, c.id]);
+                        else setBulkCategoryIds(bulkCategoryIds.filter(id => id !== c.id));
+                      }}
+                      className="rounded bg-slate-900 border-slate-600 text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span className="text-sm text-slate-200">{c.name}</span>
+                  </label>
+                ))}
+                <button 
+                  onClick={() => setBulkCategoryIds([])}
+                  className="w-full text-left p-1.5 mt-1 text-xs text-slate-400 hover:text-slate-200 border-t border-slate-700"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+
             <button 
               onClick={handleBulkUpdate}
-              disabled={!bulkCategory || bulkUpdateMutation.isPending}
+              disabled={bulkCategoryIds.length === 0 || bulkUpdateMutation.isPending}
               className="bg-cyan-500 hover:bg-cyan-400 text-slate-900 px-4 py-1.5 rounded-lg text-sm font-bold tracking-tight disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}
@@ -168,9 +186,18 @@ export function AdminListings() {
                   <div className="font-medium text-slate-300 text-sm">{p.seller?.companyName || 'Unknown'}</div>
                   <div className="text-xs text-slate-500">{p.seller?.email}</div>
                 </td>
+                
                 <td className="p-4 text-sm text-slate-300">
-                  {p.categoryId ? categoriesData.find((c: any) => c.id === p.categoryId)?.name || 'Unknown' : <span className="text-slate-500 italic">None</span>}
+                  {p.categoryIds && p.categoryIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {p.categoryIds.map((cid: number) => {
+                        const c = categoriesData.find((cat: any) => cat.id === cid);
+                        return c ? <span key={cid} className="bg-slate-700 px-1.5 py-0.5 rounded text-xs">{c.name}</span> : null;
+                      })}
+                    </div>
+                  ) : p.categoryId ? categoriesData.find((c: any) => c.id === p.categoryId)?.name || 'Unknown' : <span className="text-slate-500 italic">None</span>}
                 </td>
+
                 <td className="p-4">
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.approvalStatus === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : p.approvalStatus === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}`}>
                     {p.approvalStatus}

@@ -640,6 +640,7 @@ router.patch("/api-v2/admin/products/bulk", requireAuth, requireAdmin, async (re
     
     const updateData: any = {};
     if (updates.categoryId !== undefined) updateData.categoryId = updates.categoryId;
+    if (updates.categoryIds !== undefined) updateData.categoryIds = updates.categoryIds;
     if (updates.approvalStatus !== undefined) updateData.approvalStatus = updates.approvalStatus;
     
     if (Object.keys(updateData).length === 0) {

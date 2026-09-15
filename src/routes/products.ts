@@ -33,6 +33,7 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
           id: products.id,
           sellerId: products.sellerId,
           categoryId: products.categoryId,
+          categoryIds: products.categoryIds,
           title: products.title,
           brand: products.brand,
           description: products.description,
@@ -73,7 +74,7 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
       if (categoryId) {
          const parsedId = parseInt(categoryId, 10);
          const catIds = await getDescendantCategoryIds(db, parsedId);
-         conditions.push(inArray(products.categoryId, catIds));
+         conditions.push(or(inArray(products.categoryId, catIds), sql`${products.categoryIds} && ARRAY[${sql.join(catIds.map(id => sql`${id}`), sql`, `)}]::int[]`));
       }
 
       
