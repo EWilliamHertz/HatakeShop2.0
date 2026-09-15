@@ -65,8 +65,8 @@ export function SplashModal() {
           <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-8 md:w-2/5 flex flex-col justify-center relative overflow-hidden">
             <div className="absolute inset-0 bg-black/20 mix-blend-multiply"></div>
             <div className="relative z-10 flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6">
-                <Rocket className="w-8 h-8 text-white" />
+              <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 p-4">
+                <img src="https://i.imgur.com/B06rBhI.png" alt="Hatake Logo" className="w-full h-full object-contain" />
               </div>
               <h2 className="text-3xl font-bold text-white mb-2">Welcome to Hatake!</h2>
               <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-sm font-medium border border-white/20 shadow-sm mt-4">
