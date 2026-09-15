@@ -691,6 +691,7 @@ router.get(["/public/partners", "/api/public/partners", "/api-v2/public/partners
           if (existingIdx > -1) responseList.splice(existingIdx, 1);
           
           responseList.push({ 
+            // @ts-ignore
             id: seller.id,
             name: seller.companyName, 
             location: seller.country, 

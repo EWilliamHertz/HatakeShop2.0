@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import express from "express";
 import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/services.js";
 
@@ -659,7 +659,7 @@ router.patch("/api-v2/admin/products/bulk", requireAuth, requireAdmin, async (re
 router.get("/api-v2/admin/approvals", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const pendingProducts = await db.select().from(products).where(eq(products.approvalStatus, 'pending'));
-    const pendingSellers = await db.select().from(users).where(eq(users.verificationStatus, 'pending')).where(eq(users.role, 'seller'));
+    const pendingSellers = await db.select().from(users).where(and(eq(users.verificationStatus, 'pending'), eq(users.role, 'seller')));
     // For pendingUsers name changes, you might need a different table or logic, but we will pass empty array for now
     res.json({ pendingProducts, pendingSellers, pendingUsers: [] });
   } catch (e: any) {

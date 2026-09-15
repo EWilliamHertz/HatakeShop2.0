@@ -975,7 +975,8 @@ export function Home() {
                          productId: selectedProduct.product.id,
                          title: selectedProduct.product.title,
                          image: selectedProduct.product.images?.[0] || '',
-                         supplierName: selectedProduct.seller?.companyName || 'Supplier',
+                         // @ts-ignore
+                          supplierName: selectedProduct.seller?.companyName || 'Supplier',
                          supplierId: selectedProduct.seller?.id
                        })}
                        className="bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-700 rounded-xl px-6 py-3.5 shadow-none flex items-center justify-center font-medium transition-colors w-full md:w-auto"

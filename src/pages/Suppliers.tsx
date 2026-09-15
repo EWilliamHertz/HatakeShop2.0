@@ -61,8 +61,8 @@ export function Suppliers() {
               )}
               <h3 className="text-lg font-bold tracking-tight text-slate-100 flex items-center justify-center gap-1.5 mb-2">
                 {partner.name}
-                {partner.verificationStatus === 'verified' && <BadgeCheck className="w-4 h-4 text-cyan-500 shrink-0" title="Verified" />}
-                {partner.verificationStatus === 'audited' && <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" title="Audited" />}
+                {partner.verificationStatus === 'verified' && <span title="Verified"><BadgeCheck className="w-4 h-4 text-cyan-500 shrink-0" /></span>}
+                {partner.verificationStatus === 'audited' && <span title="Audited"><ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" /></span>}
               </h3>
               
               <div className="mb-3">
