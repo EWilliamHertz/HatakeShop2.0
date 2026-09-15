@@ -1,23 +1,22 @@
-import admin from 'firebase-admin';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
-// Bulletproof ESM/CJS interop for Firebase Admin on Vercel
-const fbAdmin = typeof admin.initializeApp === 'function' ? admin : (admin as any).default;
-
-if (!fbAdmin.apps.length) {
+if (getApps().length === 0) {
   try {
-    fbAdmin.initializeApp({
-      credential: fbAdmin.credential.cert({
+    initializeApp({
+      credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // The replace regex ensures Vercel doesn't mangle the private key line breaks
+        // Ensure Vercel doesn't mangle private key line breaks
         privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
       }),
     });
     console.log("Firebase Admin Initialized Successfully");
   } catch (error: any) {
-    console.error('Firebase admin initialization error', error.stack);
+    console.error('Firebase admin initialization error:', error.message);
   }
 }
 
-export const adminDb = fbAdmin.firestore();
-export const adminAuth = fbAdmin.auth();
+export const adminDb = getFirestore();
+export const adminAuth = getAuth();
