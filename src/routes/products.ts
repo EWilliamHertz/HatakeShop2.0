@@ -14,6 +14,23 @@ import { getTranslatedProduct } from "../lib/translate.js";
 
 const router = Router();
 
+async function getDescendantCategoryIds(db: any, parentId: number): Promise<number[]> {
+  const allCats = await db.select().from(categories);
+  const ids = new Set<number>();
+  ids.add(parentId);
+  let added = true;
+  while (added) {
+    added = false;
+    for (const cat of allCats) {
+      if (cat.parentId && ids.has(cat.parentId) && !ids.has(cat.id)) {
+        ids.add(cat.id);
+        added = true;
+      }
+    }
+  }
+  return Array.from(ids);
+}
+
 router.get("/api-v2/products", async (req: AuthRequest, res) => {
     try {
       const q = req.query.q as string;

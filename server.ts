@@ -15,7 +15,6 @@ import crypto from "crypto";
 import { Resend } from "resend";
 
 import { resend, ai, generateEmbedding, getStripe, getEasyPost } from "./src/lib/services.js";
-import { requireAdmin, requireSeller } from "./src/middleware/roles.js";
 import path from "path";
 import { Server } from "socket.io";
 import { createServer } from "http";
@@ -155,7 +154,7 @@ app.get(["/products", "/api/products", "/api-v2/products"], async (req, res) => 
     // Apply General Filters
     if (q && typeof q === 'string') conditions.push(ilike(products.title, `%${q}%`));
     if (minMoq) conditions.push(gte(products.moq, parseInt(minMoq as string, 10)));
-    if (maxPrice) conditions.push(lte(products.unitCost, parseFloat(maxPrice as string)));
+    if (maxPrice) conditions.push(sql`CAST(${products.unitCost} AS numeric) <= ${parseFloat(maxPrice as string)}`);
     if (origin && typeof origin === 'string') conditions.push(eq(products.originType, origin));
 
     // Handle Smart Category Matching (Translate Strings to IDs)
@@ -240,7 +239,7 @@ app.get(["/products", "/api/products", "/api-v2/products"], async (req, res) => 
     // Apply Filters
     if (q && typeof q === 'string') conditions.push(ilike(products.title, `%${q}%`));
     if (minMoq) conditions.push(gte(products.moq, parseInt(minMoq as string, 10)));
-    if (maxPrice) conditions.push(lte(products.unitCost, parseFloat(maxPrice as string)));
+    if (maxPrice) conditions.push(sql`CAST(${products.unitCost} AS numeric) <= ${parseFloat(maxPrice as string)}`);
     if (origin && typeof origin === 'string') conditions.push(eq(products.originType, origin));
 
     // Deep-Tree Category Matching (e.g., clicking "TCG" gets Pokemon, Magic, AND Binders)

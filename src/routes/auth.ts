@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 import express from "express";
 import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/services.js";
 

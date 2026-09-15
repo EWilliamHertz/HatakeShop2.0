@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, products, inquiries, orders } from "../db/schema.js";
+import { users, products, inquiries, orders, categories } from "../db/schema.js";
 import { eq, or, and, desc, sql, inArray, ilike } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { requireSeller } from "../middleware/roles.js";
@@ -157,7 +157,6 @@ router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/product
     const parsedYear = parseInt(cardYear, 10);
 
     const [newProduct] = await db.insert(products).values({
-      embedding,
       sellerId: teamOwnerId,
       title,
       description,
@@ -171,14 +170,14 @@ router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/product
       certifications: certifications || [],
       images: images || [],
       stockQuantity: isNaN(parsedStock) ? 0 : parsedStock,
-      unitCost: isNaN(parsedCost) ? 0 : parsedCost,
+      unitCost: isNaN(parsedCost) ? "0" : parsedCost.toString(),
       categoryId: categoryId || null,
       approvalStatus: userProfile.role === "admin" ? "approved" : "pending",
       productType: productType || 'sealed',
       gradingCompany: gradingCompany || null,
       grade: grade || null,
       certNumber: certNumber || null,
-      cardYear: isNaN(parsedYear) ? null : parsedYear,
+      cardYear: isNaN(parsedYear) ? null : parsedYear.toString(),
       cardSet: cardSet || null,
       cardNumber: cardNumber || null,
       cardVariant: cardVariant || null,
@@ -210,8 +209,7 @@ router.post(["/seller/products/bulk", "/api/seller/products/bulk", "/api-v2/sell
       const parsedYear = parseInt(cardYear, 10);
 
       return {
-        embedding,
-        sellerId: teamOwnerId,
+          sellerId: teamOwnerId,
         title,
         description,
         moq: isNaN(parsedMoq) ? 1 : parsedMoq,
@@ -222,14 +220,14 @@ router.post(["/seller/products/bulk", "/api/seller/products/bulk", "/api-v2/sell
         certifications: certifications || [],
         images: images || [],
         stockQuantity: isNaN(parsedStock) ? 0 : parsedStock,
-        unitCost: isNaN(parsedCost) ? 0 : parsedCost,
+        unitCost: isNaN(parsedCost) ? "0" : parsedCost.toString(),
         categoryId: categoryId || null,
       approvalStatus: userProfile.role === "admin" ? "approved" : "pending",
         productType: productType || 'sealed',
         gradingCompany: gradingCompany || null,
         grade: grade || null,
         certNumber: certNumber || null,
-        cardYear: isNaN(parsedYear) ? null : parsedYear,
+        cardYear: isNaN(parsedYear) ? null : parsedYear.toString(),
         cardSet: cardSet || null,
         cardNumber: cardNumber || null,
         cardVariant: cardVariant || null,
@@ -255,7 +253,6 @@ router.patch(["/seller/products/:id", "/api/seller/products/:id", "/api-v2/selle
     const { title, description, moq, offersOem, oemMoq, originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant } = req.body;
     const embedding = await generateEmbedding(`${title} ${description} ${originType}`);
     await db.update(products).set({
-      embedding,
       title, description, moq, offersOem: !!offersOem, oemMoq: parseInt(oemMoq) || null, originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant,
     }).where(eq(products.id, productId));
     
