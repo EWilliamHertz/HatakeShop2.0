@@ -254,7 +254,7 @@ router.post('/api-v2/checkout/session', requireAuth, async (req: any, res) => {
         return res.status(400).json({ error: "The seller is not fully onboarded with Stripe to receive payments yet." });
     }
 
-    const platformFeeCents = Math.round((totalAmount * 100) * 0.045); // 4.5% platform fee
+    const platformFeeCents = Math.round((totalAmount * 100) * 0.045) + 30; // 4.5% + 30c total fee
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
