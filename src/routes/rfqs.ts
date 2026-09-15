@@ -680,7 +680,7 @@ router.get(["/public/partners", "/api/public/partners", "/api-v2/public/partners
     })).filter(l => l.name);
 
     const sellers = await db.select({ id: users.id, companyName: users.companyName, country: users.country, verificationStatus: users.verificationStatus, profilePictureUrl: users.profilePictureUrl, region: users.region, companyFocus: users.companyFocus }).from(users).where(and(
-      or(eq(users.role, 'seller'), eq(users.role, 'both')),
+      or(eq(users.role, 'seller'), eq(users.role, 'both'), eq(users.role, 'admin')),
       isNull(users.teamOwnerId)
     ));
     
