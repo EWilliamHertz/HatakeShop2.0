@@ -56,7 +56,8 @@ async function run() {
         leadTimeDays: 7,
         images: imageUrls,
         embedding,
-        categoryId: null, // or appropriate category
+        categoryId: null,
+        approvalStatus: 'approved', // or appropriate category
         productType: 'sealed' // or appropriate
      });
 

@@ -16,7 +16,7 @@ async function run() {
   const regex = /From: (https:\/\/drive\.google\.com\/uc\?id=[\w-]+)\r?\nTo: ([^\n]+)/g;
   let m;
   while ((m = regex.exec(logContent)) !== null) {
-      const url = m[1];
+      const url = m[1].replace("drive.google.com/uc?id=", "lh3.googleusercontent.com/d/") + "=w1000";
       const filePath = m[2];
       const filename = path.basename(filePath);
       const folder = path.basename(path.dirname(filePath));
@@ -52,6 +52,7 @@ async function run() {
         images: imageUrls,
         embedding: null,
         categoryId: null,
+        approvalStatus: 'approved',
         productType: 'sealed'
      });
 
