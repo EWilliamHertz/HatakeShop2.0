@@ -277,7 +277,7 @@ app.get(["/products", "/api/products", "/api-v2/products"], async (req, res) => 
 });
 
 // --- ROUTE MOUNTING (Supporting both /api/ and /api-v2/ prefixes to prevent 404s) ---
-const routers = [adminRouter, authRouter, productsRouter, leadsRouter, webhooksRouter, categoriesRouter];
+const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter];
 
 for (const router of routers) {
   app.use("/", router);
