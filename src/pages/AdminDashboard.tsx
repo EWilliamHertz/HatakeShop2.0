@@ -440,7 +440,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
       </div>
       
     <div className="flex space-x-6 border-b border-slate-700 mb-8 overflow-x-auto">
-         {['overview', 'approvals', 'users', 'marketing', 'affiliates', 'leads', 'feedback', 'reviews'].map(tab => (
+         {['overview', 'approvals', 'listings', 'users', 'marketing', 'affiliates', 'leads', 'feedback', 'reviews'].map(tab => (
            <button 
              key={tab}
              onClick={() => setActiveTab(tab)}
