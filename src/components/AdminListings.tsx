@@ -47,7 +47,7 @@ export function AdminListings() {
     }
   });
 
-  const filteredProducts = products.filter((p: any) => 
+  const filteredProducts = (Array.isArray(products) ? products : []).filter((p: any) => 
     p.title?.toLowerCase().includes(search.toLowerCase()) ||
     p.seller?.companyName?.toLowerCase().includes(search.toLowerCase())
   );
@@ -113,7 +113,7 @@ export function AdminListings() {
                 <span>{bulkCategoryIds.length > 0 ? `${bulkCategoryIds.length} categories selected` : '-- Assign Categories --'}</span>
               </button>
               <div className="absolute top-full left-0 mt-1 w-[300px] max-h-[300px] overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-xl hidden group-hover:block z-50 p-2">
-                {categoriesData.map((c: any) => (
+                {Array.isArray(categoriesData) && categoriesData.map((c: any) => (
                   <label key={c.id} className="flex items-center gap-2 p-1.5 hover:bg-slate-700 rounded cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -172,7 +172,7 @@ export function AdminListings() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700/50">
-            {filteredProducts.map((p: any) => (
+            {Array.isArray(filteredProducts) && filteredProducts.map((p: any) => (
               <tr key={p.id} className="hover:bg-slate-800/50 transition-colors group">
                 <td className="p-4 text-center">
                   <button onClick={() => toggleSelect(p.id)} className="text-slate-500 hover:text-cyan-400 transition-colors">
@@ -200,14 +200,14 @@ export function AdminListings() {
                 </td>
                 
                 <td className="p-4 text-sm text-slate-300">
-                  {p.categoryIds && p.categoryIds.length > 0 ? (
+                  {Array.isArray(p.categoryIds) && p.categoryIds.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {p.categoryIds.map((cid: number) => {
-                        const c = categoriesData.find((cat: any) => cat.id === cid);
+                        const c = (Array.isArray(categoriesData) ? categoriesData : []).find((cat: any) => cat.id === cid);
                         return c ? <span key={cid} className="bg-slate-700 px-1.5 py-0.5 rounded text-xs">{c.name}</span> : null;
                       })}
                     </div>
-                  ) : p.categoryId ? categoriesData.find((c: any) => c.id === p.categoryId)?.name || 'Unknown' : <span className="text-slate-500 italic">None</span>}
+                  ) : p.categoryId ? (Array.isArray(categoriesData) ? categoriesData : []).find((c: any) => c.id === p.categoryId)?.name || 'Unknown' : <span className="text-slate-500 italic">None</span>}
                 </td>
 
                 <td className="p-4">

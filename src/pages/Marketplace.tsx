@@ -213,7 +213,7 @@ const { data = {}, isLoading, error } = useQuery({
                   {t('All Categories')}
                 </button>
                 
-                {categoryTree.map((parent: any) => (
+                {Array.isArray(categoryTree) && categoryTree.map((parent: any) => (
                   <div key={parent.id} className="space-y-1">
                     <button 
                       onClick={() => setSelectedCategoryId(parent.id)}
@@ -223,7 +223,7 @@ const { data = {}, isLoading, error } = useQuery({
                     </button>
                     {parent.children.length > 0 && (
                       <div className="pl-4 space-y-1 border-l-2 border-slate-700/50 ml-3 mt-1">
-                        {parent.children.map((child: any) => (
+                        {Array.isArray(parent.children) && parent.children.map((child: any) => (
                           <button 
                             key={child.id}
                             onClick={() => setSelectedCategoryId(child.id)}
