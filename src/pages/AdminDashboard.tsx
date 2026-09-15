@@ -147,7 +147,8 @@ export function AdminDashboard() {
     } catch(e) {}
   };
 
-  const [stats, setStats] = useState<any>(null);
+const [stats, setStats] = useState<any>(null);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [marketingLogs, setMarketingLogs] = useState([]);
@@ -229,8 +230,11 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
         } catch (e) { return null; }
       };
 
-      const statsData = await safeFetch('/api-v2/admin/stats');
+     const statsData = await safeFetch('/api-v2/admin/stats');
       if (statsData) setStats(statsData);
+
+      const catData = await safeFetch('/api-v2/categories');
+      if (catData) setCategories(catData);
 
       const mktData = await safeFetch('/api-v2/admin/marketing');
       if (mktData) setMarketingLogs(mktData);
@@ -1350,11 +1354,11 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                   onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value ? parseInt(e.target.value) : null})}
                   className="w-full px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-ink outline-none"
                 >
-                  <option value="">No Category</option>
-                  {stats?.categories?.map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                 <option value="">No Category</option>
+                {categories.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
               </div>
 
               <div>
