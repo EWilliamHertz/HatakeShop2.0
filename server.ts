@@ -396,7 +396,7 @@ app.get(["/notifications", "/api/notifications", "/api-v2/notifications"], requi
 
     res.json(notifications);
   } catch (err: any) {
-    console.error("Error fetching notifications:", err);
+    if (err.code !== 5) console.error("Error fetching notifications:", err);
     res.json([]);
   }
 });
