@@ -921,7 +921,29 @@ export function Home() {
                     </div>
                   </div>
                 )}
-                
+                {/* BUILD YOUR OWN BRAND - OEM/WHITE LABEL PROMO */}
+        <div className="my-12 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-cyan-500/30 rounded-3xl p-8 sm:p-12 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all duration-700"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="max-w-2xl">
+              <span className="px-3 py-1 text-[10px] uppercase tracking-widest font-bold bg-cyan-500/20 text-cyan-400 rounded-full border border-cyan-500/30 mb-4 inline-block">Private Label & OEM</span>
+              <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight">Build Your Own <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Brand.</span></h2>
+              <p className="text-slate-400 text-lg mb-6 leading-relaxed">
+                Source unbranded, high-quality TCG accessories, top-loaders, and binders directly from verified manufacturers. Apply your logo, set your margins, and dominate the market.
+              </p>
+              <Link to="/marketplace?origin=Direct+Factory" className="inline-flex items-center px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                Shop White-Label Products <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+            </div>
+            <div className="hidden md:flex shrink-0 relative">
+              <div className="w-48 h-48 bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center transform rotate-3 hover:rotate-0 transition-transform duration-500 z-10">
+                <Hexagon className="w-24 h-24 text-slate-600" />
+                <div className="absolute inset-0 flex items-center justify-center font-black text-slate-500 text-xl rotate-[-3deg]">YOUR LOGO</div>
+              </div>
+              <div className="absolute -bottom-4 -right-4 w-48 h-48 bg-slate-900 rounded-2xl border border-slate-800 transform -rotate-6 z-0"></div>
+            </div>
+          </div>
+        </div>
                 {selectedProduct.product.tieredPricing && (
                   <div className="pt-2">
                     <h3 className="text-[11px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest mb-4">{t('Volume Pricing')}</h3>
