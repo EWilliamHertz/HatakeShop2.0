@@ -9,6 +9,7 @@ export function AdminListings() {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkCategoryIds, setBulkCategoryIds] = useState<number[]>([]);
+  const [bulkSponsored, setBulkSponsored] = useState<string>('');
   
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -42,6 +43,7 @@ export function AdminListings() {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       setSelectedIds([]);
       setBulkCategoryIds([]);
+      setBulkSponsored('');
     }
   });
 
@@ -70,6 +72,7 @@ export function AdminListings() {
     if (selectedIds.length === 0) return;
     const updates: any = {};
     if (bulkCategoryIds.length > 0) updates.categoryIds = bulkCategoryIds;
+    if (bulkSponsored !== '') updates.isSponsored = bulkSponsored === 'true';
     
     if (Object.keys(updates).length > 0) {
       bulkUpdateMutation.mutate(updates);
@@ -133,9 +136,18 @@ export function AdminListings() {
               </div>
             </div>
 
+            <select 
+              value={bulkSponsored} 
+              onChange={e => setBulkSponsored(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">-- Set Sponsored --</option>
+              <option value="true">Mark as Sponsored</option>
+              <option value="false">Remove Sponsored</option>
+            </select>
             <button 
               onClick={handleBulkUpdate}
-              disabled={bulkCategoryIds.length === 0 || bulkUpdateMutation.isPending}
+              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '') || bulkUpdateMutation.isPending}
               className="bg-cyan-500 hover:bg-cyan-400 text-slate-900 px-4 py-1.5 rounded-lg text-sm font-bold tracking-tight disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}
@@ -177,7 +189,7 @@ export function AdminListings() {
                       )}
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-200 line-clamp-1">{p.title}</div>
+                      <div className="font-semibold text-slate-200 line-clamp-1">{p.title} {p.isSponsored && <span className="ml-2 bg-[#ffcc00] text-black px-1.5 py-0.5 rounded text-[10px] font-bold">SPONSORED</span>}</div>
                       <div className="text-xs text-slate-500">{p.originType} • MOQ: {p.moq}</div>
                     </div>
                   </div>

@@ -34,6 +34,7 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
           sellerId: products.sellerId,
           categoryId: products.categoryId,
           categoryIds: products.categoryIds,
+          isSponsored: products.isSponsored,
           title: products.title,
           brand: products.brand,
           description: products.description,
