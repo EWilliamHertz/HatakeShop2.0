@@ -2291,7 +2291,7 @@ app.get(["/public/partners", "/api/public/partners", "/api-v2/public/partners"],
       isLeadOnly: true
     })).filter(l => l.name);
 
-    const sellers = await db.select({ id: users.id, companyName: users.companyName, country: users.country, verificationStatus: users.verificationStatus }).from(users).where(and(
+    const sellers = await db.select({ id: users.id, companyName: users.companyName, country: users.country, verificationStatus: users.verificationStatus, profilePictureUrl: users.profilePictureUrl, region: users.region, companyFocus: users.companyFocus }).from(users).where(and(
       or(eq(users.role, 'seller'), eq(users.role, 'both'), eq(users.role, 'admin')),
       isNull(users.teamOwnerId)
     ));
@@ -2305,6 +2305,9 @@ app.get(["/public/partners", "/api/public/partners", "/api-v2/public/partners"],
             id: seller.id,
             name: seller.companyName, 
             location: seller.country, 
+            region: seller.region,
+            companyFocus: seller.companyFocus,
+            profilePictureUrl: seller.profilePictureUrl,
             signedUp: true, 
             contacted: true,
             verificationStatus: seller.verificationStatus,

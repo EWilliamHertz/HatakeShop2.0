@@ -19,6 +19,8 @@ export const users = pgTable('users', {
   role: text('role', { enum: ['buyer', 'seller', 'both', 'admin'] }).default('buyer'),
   companyName: text('company_name'),
   vatNumber: text('vat_number'),
+  region: text('region'),
+  companyFocus: text('company_focus'),
   country: text('country'),
   verificationStatus: text('verification_status', { enum: ['pending', 'verified', 'rejected'] }).default('pending'),
   autoTranslate: boolean('auto_translate').default(false),
