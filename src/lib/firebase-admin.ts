@@ -1,12 +1,12 @@
 import admin from 'firebase-admin';
 
-// Safely resolve the Firebase Admin instance (handles Vercel's ESM bundling quirk)
-const firebaseAdmin = admin.apps ? admin : (admin as any).default || admin;
+// Bulletproof ESM/CJS interop for Firebase Admin on Vercel
+const fbAdmin = typeof admin.initializeApp === 'function' ? admin : (admin as any).default;
 
-if (!firebaseAdmin.apps || firebaseAdmin.apps.length === 0) {
+if (!fbAdmin.apps.length) {
   try {
-    firebaseAdmin.initializeApp({
-      credential: firebaseAdmin.credential.cert({
+    fbAdmin.initializeApp({
+      credential: fbAdmin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         // The replace regex ensures Vercel doesn't mangle the private key line breaks
@@ -19,5 +19,5 @@ if (!firebaseAdmin.apps || firebaseAdmin.apps.length === 0) {
   }
 }
 
-export const adminDb = firebaseAdmin.firestore();
-export const adminAuth = firebaseAdmin.auth();
+export const adminDb = fbAdmin.firestore();
+export const adminAuth = fbAdmin.auth();
