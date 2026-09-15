@@ -16,6 +16,23 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
   let tiers = [];
   try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch(e) {}
 
+  
+  const categoryTree = React.useMemo(() => {
+    if (!Array.isArray(categoriesData)) return [];
+    const map = new Map();
+    const roots = [];
+    categoriesData.forEach(c => map.set(c.id, { ...c, children: [] }));
+    categoriesData.forEach(c => {
+        if (c.parentId) {
+            const parent = map.get(c.parentId);
+            if (parent) parent.children.push(map.get(c.id));
+        } else {
+            roots.push(map.get(c.id));
+        }
+    });
+    return roots;
+  }, [categoriesData]);
+
   return (
     <div 
       onClick={() => onSelect && onSelect(p)}
@@ -170,12 +187,38 @@ const { data = {}, isLoading, error } = useQuery({
           <div className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Category')}</label>
-           <select value={selectedCategoryId || ''} onChange={e => setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-slate-200">
-          <option value="">{t('All Categories')}</option>
-            {Array.isArray(categoriesData) && categoriesData.map((c: any) => (
-              <option key={c?.id || Math.random()} value={c?.id}>{c?.name}</option>
-            ))}
-          </select>
+           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <button 
+                  onClick={() => setSelectedCategoryId(null)} 
+                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-all ${selectedCategoryId === null ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent font-medium'}`}
+                >
+                  {t('All Categories')}
+                </button>
+                
+                {categoryTree.map((parent: any) => (
+                  <div key={parent.id} className="space-y-1">
+                    <button 
+                      onClick={() => setSelectedCategoryId(parent.id)}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-all ${selectedCategoryId === parent.id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent font-medium'}`}
+                    >
+                      {parent.name}
+                    </button>
+                    {parent.children.length > 0 && (
+                      <div className="pl-4 space-y-1 border-l-2 border-slate-700/50 ml-3 mt-1">
+                        {parent.children.map((child: any) => (
+                          <button 
+                            key={child.id}
+                            onClick={() => setSelectedCategoryId(child.id)}
+                            className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === child.id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'}`}
+                          >
+                            {child.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Sort By')}</label>

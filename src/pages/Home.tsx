@@ -123,6 +123,23 @@ export function Home() {
     }
   });
 
+  const categoryTree = React.useMemo(() => {
+    if (!Array.isArray(categoriesData)) return [];
+    const map = new Map();
+    const roots = [];
+    categoriesData.forEach(c => map.set(c.id, { ...c, children: [] }));
+    categoriesData.forEach(c => {
+        if (c.parentId) {
+            const parent = map.get(c.parentId);
+            if (parent) parent.children.push(map.get(c.id));
+        } else {
+            roots.push(map.get(c.id));
+        }
+    });
+    return roots;
+  }, [categoriesData]);
+
+
   const { data = {}, isLoading: loading } = useQuery({
     queryKey: ['products', search, page, filters, selectedCategoryId],
     queryFn: async () => {
@@ -525,16 +542,38 @@ export function Home() {
                 
                 <div>
                    <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-2">{t('Category')}</label>
-                   <select 
-                     value={selectedCategoryId || ''} 
-                     onChange={e => { setSelectedCategoryId(e.target.value ? parseInt(e.target.value) : null); setPage(1); }}
-                     className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-4 py-2 w-full text-sm font-medium appearance-none outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all" style={{ backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")", backgroundPosition: "right 0.5rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.5em 1.5em", paddingRight: "2.5rem" }}
-                   >
-                      <option value="">{t('All Categories')}</option>
-                      {categoriesData.map((c: any) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                   </select>
+                   <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <button 
+                  onClick={() => { setSelectedCategoryId(null); setPage(1); }} 
+                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-all ${selectedCategoryId === null ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent font-medium'}`}
+                >
+                  {t('All Categories')}
+                </button>
+                
+                {categoryTree.map((parent: any) => (
+                  <div key={parent.id} className="space-y-1">
+                    <button 
+                      onClick={() => { setSelectedCategoryId(parent.id); setPage(1); }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-all ${selectedCategoryId === parent.id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent font-medium'}`}
+                    >
+                      {parent.name}
+                    </button>
+                    {parent.children.length > 0 && (
+                      <div className="pl-4 space-y-1 border-l-2 border-slate-700/50 ml-3 mt-1">
+                        {parent.children.map((child: any) => (
+                          <button 
+                            key={child.id}
+                            onClick={() => { setSelectedCategoryId(child.id); setPage(1); }}
+                            className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === child.id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'}`}
+                          >
+                            {child.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
                 </div>
 
                 <div>
