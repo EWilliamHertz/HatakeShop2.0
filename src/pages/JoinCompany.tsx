@@ -16,7 +16,7 @@ export function JoinCompany() {
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-       setError("You must be signed in to join a company.");
+       navigate('/login?invite=' + code);
        return;
     }
     
@@ -73,7 +73,7 @@ export function JoinCompany() {
             className="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20 w-full shadow-md disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-              <>{t('Join Workspace')} <ArrowRight className="w-4 h-4 ml-2" /></>
+              <>{!user ? t('Sign in to Join Workspace') : t('Join Workspace')} <ArrowRight className="w-4 h-4 ml-2" /></>
             )}
           </button>
         </form>

@@ -9,6 +9,16 @@ export function Login() {
   const { signIn, signInWithEmail, registerWithEmail, signInWithCustom } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const redirectAfterLogin = (defaultPath: string) => {
+    const pendingCode = localStorage.getItem('pendingJoinCode');
+    if (pendingCode) {
+      localStorage.removeItem('pendingJoinCode');
+      navigate('/join?code=' + pendingCode);
+    } else {
+      navigate(defaultPath);
+    }
+  };
+
   const [searchParams] = useSearchParams();
   const [isRegister, setIsRegister] = useState(searchParams.has('invite'));
   const [email, setEmail] = useState('');
@@ -38,7 +48,7 @@ export function Login() {
     try {
       if (isRegister) {
         await registerWithEmail(email, password, name);
-        navigate('/');
+        redirectAfterLogin('/');
       } else {
         // Attempt custom backend auth first (to bypass Firebase operation-not-allowed)
         const res = await fetch('/api-v2/auth/custom-login', {
@@ -52,18 +62,18 @@ export function Login() {
           if (data.token) {
             await signInWithCustom(data.token);
             if (data.role === 'admin') {
-              navigate('/admin');
+              redirectAfterLogin('/admin');
             } else if (data.role === 'seller' || data.role === 'both') {
-              navigate('/seller');
+              redirectAfterLogin('/seller');
             } else {
-              navigate('/');
+              redirectAfterLogin('/');
             }
             return;
           }
         } else {
           // If custom login fails (not the admin), fall back to Firebase standard auth
           await signInWithEmail(email, password);
-          navigate('/');
+          redirectAfterLogin('/');
         }
       }
     } catch (err: any) {
@@ -80,7 +90,7 @@ export function Login() {
   const handleGoogleLogin = async () => {
     try {
       await signIn();
-      navigate('/');
+      redirectAfterLogin('/');
     } catch (err: any) {
       if (err.message && err.message.includes('auth/unauthorized-domain')) {
          setError("This domain is not authorized in Firebase yet. Please add this URL to Authorized Domains in Firebase Console > Authentication > Settings.");

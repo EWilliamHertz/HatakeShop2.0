@@ -193,7 +193,9 @@ router.post(["/users/team/join", "/api/users/team/join", "/api-v2/users/team/joi
        teamOwnerId: owner.id,
        companyName: owner.companyName,
        role: owner.role,
-       country: owner.country
+       country: owner.country,
+       verificationStatus: owner.verificationStatus,
+       teamRole: 'sales_rep'
     }).where(eq(users.id, userProfile.id)).returning();
 
     res.json({ success: true, user: updatedUser[0] });

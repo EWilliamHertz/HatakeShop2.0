@@ -41,6 +41,30 @@ router.post("/api-v2/auth/sync", requireAuth, async (req: AuthRequest, res) => {
       
       let finalCompanyName = "";
       if (inviteToken) {
+         if (inviteToken.startsWith("SEC-")) {
+            const ownerQuery = await db.select().from(users).where(eq(users.inviteCode, inviteToken)).limit(1);
+            if (ownerQuery.length > 0) {
+               const owner = ownerQuery[0];
+               const user = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
+               if (user.id !== owner.id) {
+                  await db.update(users).set({
+                     teamOwnerId: owner.id,
+                     companyName: owner.companyName,
+                     role: owner.role,
+                     country: owner.country,
+                     verificationStatus: owner.verificationStatus,
+                     teamRole: 'sales_rep'
+                  }).where(eq(users.id, user.id));
+                  user.companyName = owner.companyName;
+                  user.teamOwnerId = owner.id;
+                  user.role = owner.role;
+                  user.verificationStatus = owner.verificationStatus;
+                  user.teamRole = 'sales_rep';
+                  return res.json({ user });
+               }
+            }
+         }
+         
          const tokenHash = crypto.createHash('sha256').update(inviteToken).digest('hex');
          const lead = await db.select().from(leads).where(eq(leads.inviteTokenHash, tokenHash)).limit(1);
          if (lead.length > 0 && lead[0].status !== 'recruited') {
