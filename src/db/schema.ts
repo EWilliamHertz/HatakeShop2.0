@@ -28,6 +28,7 @@ export const users = pgTable('users', {
   shippingAddress: text('shipping_address'),
   shippingCity: text('shipping_city'),
   shippingZip: text('shipping_zip'),
+  restrictedShippingCountries: jsonb('restricted_shipping_countries').default(sql`'[]'::jsonb`),
   stripeAccountId: text('stripe_account_id'),
   stripeOnboardingComplete: boolean('stripe_onboarding_complete').default(false),
   inviteCode: text('invite_code'),

@@ -136,6 +136,7 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
          shippingAddress: req.body.shippingAddress,
          shippingCity: req.body.shippingCity,
          shippingZip: req.body.shippingZip,
+         restrictedShippingCountries: req.body.restrictedShippingCountries,
          kybDocuments: req.body.kybDocuments,
          verificationStatus: req.body.verificationStatus
        };
@@ -149,6 +150,7 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
        const sharedFields = {
            companyName: req.body.companyName,
            country: req.body.country,
+           restrictedShippingCountries: req.body.restrictedShippingCountries,
            verificationStatus: req.body.verificationStatus
        };
        Object.keys(sharedFields).forEach(key => sharedFields[key] === undefined && delete sharedFields[key]);
