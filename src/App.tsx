@@ -14,6 +14,7 @@ import { CurrencyProvider } from './components/CurrencyContext.tsx';
 import { Toaster } from 'sonner';
 import { Layout } from './components/Layout.tsx';
 import { CookieConsent } from './components/CookieConsent.tsx';
+import { SplashModal } from './components/SplashModal.tsx';
 import { Home } from './pages/Home.tsx';
 import { Marketplace } from './pages/Marketplace.tsx';
 import { RFQHub } from './pages/RFQHub.tsx';
@@ -74,6 +75,7 @@ export default function App() {
       <BrowserRouter>
       <CurrencyProvider>
       <CartProvider>
+        <SplashModal />
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
