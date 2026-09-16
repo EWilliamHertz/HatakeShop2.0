@@ -178,10 +178,10 @@ const CartDrawer = () => {
 
         {items.length > 0 && (
           <div className="p-6 border-t border-slate-700 bg-slate-800 space-y-3">
-            <button onClick={handleRFQ} className="w-full flex items-center justify-center py-3.5 bg-slate-700 text-white font-semibold tracking-tight rounded-xl hover:bg-slate-600 transition-all shadow-none active:scale-95">
+            <button onClick={handleRFQ} className="btn-secondary w-full">
               Request Bulk Quote (RFQ)
             </button>
-            <button onClick={handleCheckout} className="w-full flex items-center justify-center py-3.5 bg-ink text-white font-semibold tracking-tight rounded-xl hover:bg-ink-light transition-all shadow-none active:scale-95">
+            <button onClick={handleCheckout} className="btn-primary w-full">
               <Send className="w-4 h-4 mr-2" />
               Checkout ({items.length} {items.length === 1 ? 'Item' : 'Items'})
             </button>

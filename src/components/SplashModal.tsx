@@ -55,7 +55,7 @@ export function SplashModal() {
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 rounded-full transition-colors z-10"
+          className="btn-ghost"
         >
           <X className="w-5 h-5" />
         </button>
@@ -136,7 +136,7 @@ export function SplashModal() {
                   </button>
                   <button
                     onClick={handleClose}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-lg transition-colors border border-slate-700"
+                    className="btn-secondary flex-1"
                   >
                     Explore Platform
                   </button>

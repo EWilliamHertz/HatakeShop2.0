@@ -55,7 +55,7 @@ export function PWAInstallButton() {
     <>
       <button
         onClick={install}
-        className="flex items-center gap-2 rounded-xl bg-ink px-4 py-2 text-sm font-semibold tracking-tight text-white shadow-none hover:bg-ink-light transition-colors"
+        className="btn-primary"
       >
         <Download className="w-4 h-4" />
         {isIOS ? 'Install on iOS' : 'Install App'}

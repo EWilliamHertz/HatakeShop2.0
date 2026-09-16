@@ -80,7 +80,7 @@ export function Storefront() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {products.map((p: any) => (
-                  <Link key={p.id} to={`/products/${p.id}`} className="bg-slate-800 border border-slate-700 rounded-2xl hover:border-cyan-500/50 hover:shadow-md transition-all overflow-hidden flex flex-col p-0 group">
+                  <Link key={p.id} to={`/products/${p.id}`} className="btn-secondary">
                     <div className="h-52 bg-slate-900 flex items-center justify-center p-6 border-b border-slate-700">
                       {p.images && p.images[0] ? (
                         <img src={p.images[0]} alt={p.title} className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />

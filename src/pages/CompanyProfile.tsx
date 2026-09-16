@@ -201,7 +201,7 @@ const allImages = (() => {
             {products && products.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {products.map((p: any) => (
-                  <Link to="/marketplace" key={p.id} className="block p-4 border border-slate-700 rounded-xl hover:border-cyan-500/50 transition-all group bg-slate-800">
+                  <Link to="/marketplace" key={p.id} className="btn-secondary">
                     <div className="aspect-video bg-slate-900 rounded-lg mb-4 overflow-hidden relative">
                       {p.images && p.images[0] ? (
                         <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />

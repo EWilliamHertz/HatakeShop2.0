@@ -222,7 +222,7 @@ export function Whiteboard({ inquiryId, socket }: WhiteboardProps) {
              </button>
              <button 
                 onClick={downloadImage}
-                className="text-xs font-medium text-slate-400 bg-slate-700 px-3 py-1.5 rounded hover:bg-slate-600 transition-colors flex items-center gap-1"
+                className="btn-secondary"
              >
                 <Download className="w-3 h-3" /> Save
              </button>

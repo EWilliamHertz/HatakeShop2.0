@@ -254,7 +254,7 @@ export function RFQHub() {
                   <FileText className="w-12 h-12 text-slate-400 mb-4" />
                   <p className="font-medium text-slate-100">{t('No RFQs found.')}</p>
                   <p className="text-sm mt-1">{t('Generate RFQs using the AI Sourcing tool or browse the marketplace.')}</p>
-                  <Link to="/marketplace" className="mt-6 px-5 py-2 bg-cyan-600 text-white font-bold rounded-xl hover:bg-cyan-500 shadow-lg shadow-cyan-900/50 transition-all">
+                  <Link to="/marketplace" className="btn-primary mt-6">
                      Browse Marketplace
                   </Link>
                </div>
@@ -338,7 +338,7 @@ export function RFQHub() {
                  const latestMsg = inq.messages && inq.messages.length > 0 ? inq.messages[0] : null;
                  
                  return (
-                 <Link key={idx} to={`/rfq/${inq.inquiry.id}`} className="flex items-center p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-cyan-500/50 hover:shadow-md transition-all group">
+                 <Link key={idx} to={`/rfq/${inq.inquiry.id}`} className="btn-secondary">
                    <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-[#ffcc00] mr-4 font-semibold text-lg">
                      {otherParty.charAt(0).toUpperCase()}
                    </div>
@@ -404,7 +404,7 @@ export function RFQHub() {
                      </div>
                    </div>
                    <div className="flex items-center gap-2 sm:self-end">
-                     <Link to={`/company/${contact.id}`} className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all !p-2" title="View Products">
+                     <Link to={`/company/${contact.id}`} className="btn-secondary" title="View Products">
                        <Package className="w-4 h-4 text-slate-400" />
                      </Link>
                      <button 
@@ -428,7 +428,7 @@ export function RFQHub() {
                        <Phone className="w-4 h-4 text-slate-400" />
                      </button>
                      {contact.latestInquiryId && (
-                       <Link to={`/rfq/${contact.latestInquiryId}`} className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all !p-2" title="Message">
+                       <Link to={`/rfq/${contact.latestInquiryId}`} className="btn-secondary" title="Message">
                          <MessageSquare className="w-4 h-4 text-slate-400" />
                        </Link>
                      )}

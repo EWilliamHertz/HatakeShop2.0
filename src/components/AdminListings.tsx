@@ -208,7 +208,7 @@ export function AdminListings() {
             <button 
               onClick={handleBulkUpdate}
               disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '') || bulkUpdateMutation.isPending}
-              className="bg-cyan-500 hover:bg-cyan-400 text-slate-900 px-4 py-1.5 rounded-lg text-sm font-bold tracking-tight disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="btn-primary"
             >
               {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}
             </button>

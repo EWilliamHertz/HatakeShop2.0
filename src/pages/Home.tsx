@@ -306,7 +306,7 @@ export function Home() {
                   onChange={e => setSearchInput(e.target.value)}
                 />
               </div>
-              <button type="submit" className="bg-cyan-500 text-slate-900 hover:bg-cyan-400 font-bold px-6 py-2.5 rounded-xl transition-colors shadow-none w-full sm:w-auto">
+              <button type="submit" className="btn-primary w-full">
                 Search
               </button>
             </form>
@@ -703,11 +703,11 @@ export function Home() {
                       </span>
                     </div>
                     {user ? (
-                       <Link to="/rfq" state={{ productId: p.product.id, title: p.product.title }} className="bg-cyan-500 text-slate-900 hover:bg-cyan-400 font-medium px-4 py-2 rounded-xl text-sm transition-colors">
+                       <Link to="/rfq" state={{ productId: p.product.id, title: p.product.title }} className="btn-primary">
                          Quote
                        </Link>
                     ) : (
-                       <button className="px-4 py-2 bg-slate-800 text-slate-400 cursor-not-allowed text-sm font-semibold tracking-tight rounded-xl border border-slate-700">
+                       <button className="btn-secondary">
                          Sign in
                        </button>
                     )}
@@ -983,12 +983,12 @@ export function Home() {
                      >
                        {cartItems.find(i => i.productId === selectedProduct.product.id) ? 'Sample in Cart' : t('Request Sample')}
                      </button>
-                     <Link to="/rfq" state={{ productId: selectedProduct.product.id, title: selectedProduct.product.title }} className="bg-cyan-500 text-slate-900 hover:bg-cyan-400 font-bold px-8 py-3.5 shadow-none rounded-xl text-center w-full md:w-auto transition-colors">
+                     <Link to="/rfq" state={{ productId: selectedProduct.product.id, title: selectedProduct.product.title }} className="btn-primary w-full md:w-auto">
                        {t('Start Request for Quote')}
                      </Link>
                    </div>
                 ) : (
-                   <button className="px-8 py-3.5 bg-slate-800 text-slate-400 cursor-not-allowed text-sm font-semibold tracking-tight rounded-xl border border-slate-700 w-full md:w-auto">
+                   <button className="btn-secondary w-full md:w-auto">
                      Sign in to Quote
                    </button>
                 )}

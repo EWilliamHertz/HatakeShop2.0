@@ -702,7 +702,7 @@ export function RFQDetails() {
                  <input type="number" placeholder="Lead Time (Days)" value={quoteData.leadTimeDays} onChange={e => setQuoteData({...quoteData, leadTimeDays: e.target.value})} className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500" />
                </div>
                <div className="flex gap-2">
-                 <button onClick={sendQuote} className="px-4 py-2 bg-cyan-600 text-white rounded-lg font-medium shadow-sm hover:bg-cyan-500 text-sm transition-colors">{t('Send Quote')}</button>
+                 <button onClick={sendQuote} className="btn-primary">{t('Send Quote')}</button>
                  <button onClick={() => setShowQuoteForm(false)} className="px-4 py-2 bg-slate-800 text-slate-400 rounded-lg border border-slate-700 font-medium hover:bg-slate-700 hover:text-white text-sm transition-colors">{t('Cancel')}</button>
                </div>
              </div>
@@ -754,7 +754,7 @@ export function RFQDetails() {
               <button 
                 type="submit" 
                 disabled={(!text.trim() && !attachment)}
-                className="p-2.5 bg-cyan-600 text-white rounded-xl hover:bg-cyan-500 disabled:opacity-50 disabled:hover:bg-cyan-600 transition-colors shadow-sm ml-1"
+                className="btn-primary"
               >
                 <Send className="w-5 h-5" />
               </button>

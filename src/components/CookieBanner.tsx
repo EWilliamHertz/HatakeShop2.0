@@ -33,7 +33,7 @@ export function CookieBanner() {
         <div className="flex gap-3 shrink-0">
           <button 
             onClick={handleDecline}
-            className="px-4 py-2 text-sm font-semibold text-slate-400 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700"
+            className="btn-secondary"
           >
             {t('Decline')}
           </button>

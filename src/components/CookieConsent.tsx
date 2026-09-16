@@ -56,7 +56,7 @@ export function CookieConsent() {
                 <span className="text-sm font-medium text-slate-100">Marketing</span>
                 <input type="checkbox" checked={preferences.marketing} onChange={e => setPreferences({...preferences, marketing: e.target.checked})} className="w-4 h-4 text-[#ffcc00] rounded border-slate-700 focus:ring-ink" />
              </label>
-             <button onClick={handleSavePreferences} className="mt-2 w-full py-2 bg-slate-900 text-white rounded-xl text-sm font-semibold tracking-tight hover:bg-slate-800 transition-colors">
+             <button onClick={handleSavePreferences} className="btn-primary mt-2 w-full">
                 Save Preferences
              </button>
           </div>
@@ -70,7 +70,7 @@ export function CookieConsent() {
             </button>
             <button 
               onClick={handleAcceptAll}
-              className="px-6 py-2.5 text-sm font-semibold tracking-tight text-white bg-ink rounded-xl hover:bg-ink-light transition-colors shadow-none whitespace-nowrap"
+              className="btn-primary"
             >
               Accept All
             </button>

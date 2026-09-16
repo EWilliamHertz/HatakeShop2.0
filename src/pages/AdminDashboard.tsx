@@ -779,7 +779,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                  <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Message Content (HTML allowed)</label>
                  <textarea required rows={5} value={marketingForm.messageContent} onChange={e => setMarketingForm({...marketingForm, messageContent: e.target.value})} className="bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500" placeholder="Write your marketing email here..."></textarea>
                </div>
-               <button type="submit" className="px-6 py-2 bg-ink text-white font-semibold tracking-tight rounded-xl hover:bg-ink-light">Save Note / Send Campaign</button>
+               <button type="submit" className="btn-primary">Save Note / Send Campaign</button>
              </form>
            </div>
            
@@ -1216,7 +1216,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                   <option value="admin">Admin</option>
                 </select>
               </div>
-              <button type="submit" className="w-full py-3 bg-ink text-white rounded-xl font-semibold tracking-tight hover:bg-ink-light">Create Account</button>
+              <button type="submit" className="btn-primary w-full">Create Account</button>
             </form>
           </div>
         </div>
@@ -1317,7 +1317,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
               </div>
               <div className="pt-2 flex justify-end space-x-3">
                 <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2 text-slate-400 hover:bg-slate-900 rounded-xl font-medium">Cancel</button>
-                <button type="submit" className="px-6 py-2 bg-ink text-white rounded-xl hover:bg-ink-light font-medium">Save Changes</button>
+                <button type="submit" className="btn-primary">Save Changes</button>
               </div>
             </form>
           </div>
@@ -1462,7 +1462,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
               </div>
               <div className="pt-2 flex justify-end space-x-3">
                 <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2 text-slate-400 hover:bg-slate-900 rounded-xl font-medium">Cancel</button>
-                <button type="submit" className="px-6 py-2 bg-ink text-white rounded-xl hover:bg-ink-light font-medium">Save Changes</button>
+                <button type="submit" className="btn-primary">Save Changes</button>
               </div>
             </form>
           </div>

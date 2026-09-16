@@ -57,7 +57,7 @@ export function ContractModal({ inquiry, onClose, isBuyer, onSign }: ContractMod
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-700 bg-slate-900">
           <h2 className="text-xl font-semibold tracking-tight font-display text-slate-100">Purchase Order / Contract</h2>
           <div className="flex items-center gap-3">
-             <button onClick={downloadPDF} className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-100 rounded-xl font-semibold tracking-tight text-sm hover:bg-slate-700">
+             <button onClick={downloadPDF} className="btn-secondary">
                <Download className="w-4 h-4" /> Download PDF
              </button>
              <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-400 hover:bg-slate-600 rounded-full transition-colors">
@@ -174,9 +174,9 @@ export function ContractModal({ inquiry, onClose, isBuyer, onSign }: ContractMod
                  />
               </div>
               <div className="flex gap-2 mt-4">
-                 <button onClick={clearSignature} className="px-4 py-2 text-sm font-semibold tracking-tight text-slate-400 bg-slate-700 hover:bg-slate-600 rounded-xl">Clear</button>
+                 <button onClick={clearSignature} className="btn-secondary">Clear</button>
                  <button onClick={() => setIsSigning(false)} className="px-4 py-2 text-sm font-semibold tracking-tight text-slate-400 bg-slate-700 hover:bg-slate-600 rounded-xl">Cancel</button>
-                 <button disabled={isSaving} onClick={saveSignature} className="px-6 py-2 text-sm font-semibold tracking-tight text-white bg-ink hover:bg-ink-light rounded-xl shadow-none flex items-center gap-2">
+                 <button disabled={isSaving} onClick={saveSignature} className="btn-primary">
                    {isSaving ? 'Saving...' : 'Save Signature'}
                  </button>
               </div>

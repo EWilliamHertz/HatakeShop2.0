@@ -105,7 +105,7 @@ export function SellerOnboarding() {
                 </div>
               </div>
               <div className="flex justify-end pt-6">
-                <button onClick={handleNext} disabled={!formData.companyName} className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg transition-colors disabled:opacity-50">{t('Next Step')}</button>
+                <button onClick={handleNext} disabled={!formData.companyName} className="btn-primary">{t('Next Step')}</button>
               </div>
             </div>
           )}
@@ -122,7 +122,7 @@ export function SellerOnboarding() {
               </div>
               <div className="flex justify-between pt-6">
                 <button onClick={handlePrev} className="px-6 py-2.5 text-slate-400 hover:text-white font-semibold rounded-lg transition-colors">{t('Back')}</button>
-                <button onClick={handleNext} className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg transition-colors">{t('Next Step')}</button>
+                <button onClick={handleNext} className="btn-primary">{t('Next Step')}</button>
               </div>
             </div>
           )}

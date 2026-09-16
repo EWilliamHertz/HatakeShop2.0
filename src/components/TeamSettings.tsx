@@ -76,7 +76,7 @@ export function TeamSettings() {
             </div>
             <button 
               onClick={copyLink}
-              className="w-full md:w-auto px-4 py-2 bg-cyan-600 text-white rounded-xl hover:bg-cyan-500 font-medium flex items-center justify-center whitespace-nowrap"
+              className="btn-primary w-full md:w-auto"
             >
               {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
               {copied ? 'Copied Link' : 'Copy Invite Link'}

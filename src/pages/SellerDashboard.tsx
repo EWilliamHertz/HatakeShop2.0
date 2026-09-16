@@ -406,7 +406,7 @@ export function SellerDashboard() {
                     </div>
                     <button 
                       onClick={handleStripeOnboarding}
-                      className="px-6 py-2.5 bg-slate-800 border border-emerald-200 hover:bg-emerald-50 text-emerald-700 font-semibold tracking-tight rounded-xl transition-colors shadow-none whitespace-nowrap"
+                      className="btn-secondary"
                     >
                       Update Details
                     </button>
@@ -442,7 +442,7 @@ export function SellerDashboard() {
                     </div>
                     <button 
                       onClick={handleStripeOnboarding}
-                      className="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20 flex items-center space-x-2 whitespace-nowrap bg-[#635BFF] hover:bg-[#524BDE]"
+                      className="btn-primary"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                       <span>{t('Connect with Stripe')}</span>

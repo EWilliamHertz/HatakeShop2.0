@@ -258,7 +258,7 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
 
       <div className="flex justify-end space-x-3 pt-4">
          <button type="button" onClick={onCancel} className="px-4 py-2 text-slate-400 hover:bg-slate-700 rounded-xl font-medium">Cancel</button>
-         <button type="submit" className="px-6 py-2 bg-cyan-600 text-white rounded-xl hover:bg-cyan-500 font-medium">{submitLabel}</button>
+         <button type="submit" className="btn-primary">{submitLabel}</button>
       </div>
     </form>
   );

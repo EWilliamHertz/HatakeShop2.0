@@ -58,7 +58,7 @@ export function ProductModal({ product, onClose }: { product: any, onClose: () =
           <h2 className="text-xl font-bold text-white line-clamp-1 pr-8">{product.title}</h2>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-slate-800 rounded-full transition-colors absolute right-4"
+            className="btn-ghost"
           >
             <X className="w-6 h-6 text-slate-400" />
           </button>
@@ -215,7 +215,7 @@ export function ProductModal({ product, onClose }: { product: any, onClose: () =
         <div className="p-4 flex justify-end gap-3 shrink-0 mt-2">
           <button 
             onClick={onClose}
-            className="px-6 py-2.5 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+            className="btn-ghost"
           >
             {t('Close')}
           </button>

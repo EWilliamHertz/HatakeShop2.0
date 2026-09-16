@@ -87,7 +87,7 @@ export function FeedbackModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
               <button 
                 type="submit" 
                 disabled={submitting || !message.trim()}
-                className="w-full flex justify-center items-center py-2.5 bg-ink text-white rounded-xl font-semibold hover:bg-ink-light disabled:opacity-50 transition-colors"
+                className="btn-primary w-full"
               >
                 {submitting ? 'Sending...' : <><Send className="w-4 h-4 mr-2" /> Submit</>}
               </button>
