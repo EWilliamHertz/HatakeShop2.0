@@ -179,7 +179,7 @@ const { data = {}, isLoading, error } = useQuery({
         <meta name="description" content="Discover wholesale products on Hatake Marketplace." />
       </Helmet>
       <div className="bg-slate-900 border-b border-slate-800 p-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row gap-4 justify-between items-center">
           <h1 className="text-3xl font-bold tracking-tight text-white">{t('Wholesale Marketplace')}</h1>
           <form onSubmit={handleSearch} className="flex-1 max-w-md flex relative">
             <input 
@@ -196,7 +196,7 @@ const { data = {}, isLoading, error } = useQuery({
         </div>
       </div>
       
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
+      <div className="max-w-[1920px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
         <aside className="w-full md:w-64 shrink-0 space-y-6 bg-slate-900 border border-slate-800 p-6 rounded-2xl h-fit">
           <div className="flex items-center space-x-2 text-white font-bold text-lg mb-2">
             <Filter className="w-5 h-5 text-[#ffcc00]" />
@@ -271,7 +271,7 @@ const { data = {}, isLoading, error } = useQuery({
                     <span className="w-2 h-6 bg-[#ffcc00] rounded-sm"></span>
                     Sponsored & Featured
                   </h2>
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
                     {groupedProducts.sponsored.map((p: any) => (
                        <ProductCard key={`sponsored-${p?.id || Math.random()}`} p={p} formatPrice={formatPrice} t={t} isSponsored={true} onSelect={setSelectedProduct} />
                     ))}
@@ -282,15 +282,21 @@ const { data = {}, isLoading, error } = useQuery({
               {isFiltering ? (
                 <div className="space-y-4">
                   <h2 className="text-xl font-bold text-white mb-6">Search Results</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
                     {groupedProducts.flatProducts.filter(p => !p.isSponsored).map((p: any) => (
                        <ProductCard key={p?.id || Math.random()} p={p} formatPrice={formatPrice} t={t} onSelect={setSelectedProduct} />
                     ))}
                   </div>
                 </div>
               ) : (
-                groupedProducts.companies.map((group, idx) => (
-                  <div key={idx} className="space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800/80">
+                (() => {
+                  const filteredCompanies = groupedProducts.companies.map(group => ({
+                    ...group,
+                    products: group.products.filter((p: any) => !p.isSponsored && !p.is_sponsored && !p.sponsored && !p.featured)
+                  })).filter(group => group.products.length > 0);
+
+                  return filteredCompanies.map((group, idx) => (
+                  <div key={idx} className="space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800/80 w-full">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-4">
                        <div className="flex items-center gap-4">
                          <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shrink-0">
@@ -302,13 +308,14 @@ const { data = {}, isLoading, error } = useQuery({
                          </div>
                        </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {group.products.filter(p => !p.isSponsored).map((p: any) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
+                      {group.products.map((p: any) => (
                          <ProductCard key={p?.id || Math.random()} p={p} formatPrice={formatPrice} t={t} onSelect={setSelectedProduct} />
                       ))}
                     </div>
                   </div>
-                ))
+                  ));
+                })()
               )}
             </div>
           )}

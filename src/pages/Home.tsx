@@ -370,7 +370,7 @@ export function Home() {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pt-12 space-y-12 flex-1">
+      <div className="px-4 sm:px-6 lg:px-8 max-w-[1920px] mx-auto w-full pt-12 space-y-12 flex-1">
         {!selectedCategoryId && !search ? (
           <div className="space-y-16">
             <div className="flex flex-col items-center justify-center gap-4 text-center">
@@ -420,7 +420,7 @@ export function Home() {
                           {t('Top Listings from')} {group.seller.companyName}
                         </h4>
                       )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 justify-center place-items-center">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full justify-start place-items-stretch">
                         {(group.products || []).map((item: any, pIdx: number) => {
                           const product = item.product || item;
                           const seller = item.seller || product.seller || group.seller || {};
@@ -431,7 +431,7 @@ export function Home() {
                             <div key={product.id || pIdx} onClick={() => {
                                 setSelectedProduct({ product, seller });
                                 setActiveImageIndex(0);
-                            }} className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full max-w-sm mx-auto">
+                            }} className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full">
                               <div className="relative aspect-[4/3] bg-slate-800 overflow-hidden">
                                 {product.productType === 'graded' ? (
                                   <div className="w-full h-full p-2 bg-slate-800">
@@ -622,11 +622,11 @@ export function Home() {
       ) : products.length === 0 ? (
         <div className="bg-slate-900 rounded-2xl border border-slate-800 text-center py-12 text-slate-400">{t('No products found.')}</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-center place-items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full justify-start place-items-stretch">
           {(Array.isArray(products) ? products : []).map((p, i) => (
             <div 
               key={p.product.id || i} 
-              className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full max-w-sm mx-auto"
+              className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full"
               onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}
             >
               <div className="aspect-[4/3] bg-slate-800 flex items-center justify-center overflow-hidden relative">

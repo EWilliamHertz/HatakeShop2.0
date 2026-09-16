@@ -783,7 +783,7 @@ app.get(["/marketplace/sneak-peek", "/api/marketplace/sneak-peek", "/api-v2/mark
             sellerMap.set(item.seller.id, { seller: item.seller, products: [] });
          }
          const group = sellerMap.get(item.seller.id);
-         if (group.products.length < 4) {
+         if (group.products.length < 12) {
             group.products.push(item);
          }
       }
