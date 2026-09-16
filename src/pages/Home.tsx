@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
+import { QuickSearchResults } from '../components/QuickSearchResults.tsx';
 import { useQuery } from '@tanstack/react-query';
 import { BadgeCheck, PackageSearch, Filter, MapPin, Building2, Package, Tag, X, ChevronRight, ChevronLeft, Star, Users, Store } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -239,7 +240,11 @@ export function Home() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearch(searchInput);
+    if (searchInput.trim()) {
+      navigate(`/marketplace?q=${encodeURIComponent(searchInput.trim())}`);
+    } else {
+      navigate(`/marketplace`);
+    }
   }
 
   return (
@@ -269,7 +274,8 @@ export function Home() {
             {/* Leads Teaser */}
             <Link
               to="/leads"
-              className="group inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left max-w-xl mx-auto shadow-[0_0_30px_rgba(99,102,241,0.1)]"
+              onClick={() => window.scrollTo(0, 0)}
+              className="relative z-50 group inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left max-w-xl mx-auto shadow-[0_0_30px_rgba(99,102,241,0.1)]"
             >
               <div className="shrink-0 w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
                 <span className="text-lg">📋</span>
@@ -302,8 +308,12 @@ export function Home() {
             </form>
           </div>
 
+          {/* Quick Search Results */}
+          <QuickSearchResults search={search} onSelectProduct={(p) => setSelectedProduct({ product: p, seller: p.seller })} />
+
           {/* Bento Box Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mx-auto mt-12">
+          {!search && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mx-auto mt-12">
             
             {/* Bento Card 1: Sponsored Products (Takes up 2 columns) */}
             <div className="md:col-span-2 relative group rounded-3xl bg-slate-900/40 backdrop-blur-xl border border-white/5 p-8 overflow-hidden hover:border-white/10 transition-all duration-500">
@@ -375,11 +385,13 @@ export function Home() {
             </div>
 
           </div>
+          )}
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 max-w-[1920px] mx-auto w-full pt-12 space-y-12 flex-1">
-        {!selectedCategoryId && !search ? (
+      {!search && (
+        <div className="px-4 sm:px-6 lg:px-8 max-w-[1920px] mx-auto w-full pt-12 space-y-12 flex-1">
+          {!selectedCategoryId ? (
           <div className="space-y-16">
             <div className="flex flex-col items-center justify-center gap-4 text-center">
               <h2 className="heading-xl">{t('Featured Categories')}</h2>
@@ -743,6 +755,7 @@ export function Home() {
 </>
       )}
       </div>
+      )}
       {selectedProduct && (
         <div 
            className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"

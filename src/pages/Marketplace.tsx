@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Filter, PackageSearch, Building2, MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { ProductModal } from '../components/ProductModal.tsx';
@@ -44,7 +44,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
         <div className="mt-auto space-y-3 pt-4 border-t border-slate-800">
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Est. Unit Price')}</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Est. PPU')}</span>
               <span className="text-xl font-extrabold text-white font-mono tracking-tight">{(() => {
                 const minPrice = Array.isArray(tiers) && tiers.length > 0 ? Math.min(...tiers.map((t: any) => parseFloat(t.price || t.unitPrice || '0'))) : (p.unitCost || p.unitPrice || 0);
                 return (!minPrice || Number(minPrice) === 0) ? <span className="text-sm font-semibold tracking-wide text-cyan-400">{t("Negotiate")}</span> : formatPrice(Number(minPrice));
@@ -63,8 +63,9 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
 export function Marketplace() {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('q') || "");
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || "");
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", sortBy: "newest" });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Star } from 'lucide-react';
-import { SpotlightGallery } from './SpotlightGallery';
+import { ReviewModal } from './ReviewModal';
 
 export function VendorReviews({ vendorId }: { vendorId: number }) {
-  const [spotlightOpen, setSpotlightOpen] = useState(false);
-  const [spotlightImages, setSpotlightImages] = useState<string[]>([]);
+  const [selectedReview, setSelectedReview] = useState<any>(null);
 
   const { data: reviews = [] } = useQuery({
     queryKey: ['vendorReviews', vendorId],
@@ -40,11 +39,11 @@ export function VendorReviews({ vendorId }: { vendorId: number }) {
 
       <div className="space-y-6">
         {reviews.map((r: any) => (
-          <div key={r.id} className="border-b border-slate-700/50 pb-6 last:border-0 last:pb-0">
-            <div className="flex justify-between items-start mb-2">
+          <div key={r.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-colors">
+            <div className="flex justify-between items-start mb-4">
               <div>
-                <h4 className="font-semibold text-slate-100">{r.title}</h4>
-                <p className="text-xs text-slate-400 mt-0.5">{r.reviewer?.companyName || r.reviewer?.displayName || 'Verified Buyer'}</p>
+                <span className="font-semibold text-white">{r.author?.displayName || 'Verified Buyer'}</span>
+                <div className="text-xs text-slate-500 mt-1">{new Date(r.createdAt).toLocaleDateString()}</div>
               </div>
               <div className="flex">
                 {[...Array(5)].map((_, i) => (
@@ -52,7 +51,12 @@ export function VendorReviews({ vendorId }: { vendorId: number }) {
                 ))}
               </div>
             </div>
-            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{r.comment}</p>
+            <p 
+              className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap cursor-pointer hover:text-white transition-colors"
+              onClick={() => setSelectedReview(r)}
+            >
+              {r.comment}
+            </p>
             
             {r.images && r.images.length > 0 && (
               <div className="flex gap-3 mt-4 overflow-x-auto pb-2">
@@ -62,10 +66,7 @@ export function VendorReviews({ vendorId }: { vendorId: number }) {
                     src={img} 
                     alt="Review Attachment" 
                     className="w-20 h-20 object-cover rounded-lg border border-slate-700 cursor-pointer hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all" 
-                    onClick={() => {
-                      setSpotlightImages(r.images);
-                      setSpotlightOpen(true);
-                    }}
+                    onClick={() => setSelectedReview(r)}
                   />
                 ))}
               </div>
@@ -74,12 +75,9 @@ export function VendorReviews({ vendorId }: { vendorId: number }) {
         ))}
       </div>
 
-      <SpotlightGallery 
-        isOpen={spotlightOpen} 
-        onClose={() => setSpotlightOpen(false)} 
-        images={spotlightImages} 
-        companyName="Review Gallery" 
-      />
+      {selectedReview && (
+        <ReviewModal review={selectedReview} onClose={() => setSelectedReview(null)} />
+      )}
     </div>
   );
 }

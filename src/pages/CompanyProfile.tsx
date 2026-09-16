@@ -42,6 +42,15 @@ export function CompanyProfile() {
     }
   });
 
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['vendorReviews', id],
+    queryFn: async () => {
+      const res = await fetch(`/api-v2/users/${id}/reviews`);
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
   if (isLoading) return <div className="min-h-screen bg-slate-950 flex justify-center items-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400"></div></div>;
 
   if (error || !data?.company) return (
@@ -120,16 +129,18 @@ export function CompanyProfile() {
           </div>
         </div>
 
-        {/* ── Reviews First ── */}
-        <section className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 bg-yellow-500/20 rounded-xl border border-yellow-500/30">
-              <Star className="w-5 h-5 text-yellow-400" />
+        {/* ── Reviews First (If any) ── */}
+        {reviews.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-yellow-500/20 rounded-xl border border-yellow-500/30">
+                <Star className="w-5 h-5 text-yellow-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Customer Reviews</h2>
             </div>
-            <h2 className="text-2xl font-bold text-white">Customer Reviews</h2>
-          </div>
-          <VendorReviews vendorId={company.id} />
-        </section>
+            <VendorReviews vendorId={company.id} />
+          </section>
+        )}
 
         {/* ── Main Grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -273,6 +284,20 @@ export function CompanyProfile() {
           </div>
         </div>
       </div>
+
+      {reviews.length === 0 && (
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-8 mt-12 relative z-10">
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-yellow-500/20 rounded-xl border border-yellow-500/30">
+                <Star className="w-5 h-5 text-yellow-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Customer Reviews</h2>
+            </div>
+            <VendorReviews vendorId={company.id} />
+          </section>
+        </div>
+      )}
 
       <SpotlightGallery isOpen={isSpotlightOpen} onClose={() => setIsSpotlightOpen(false)} images={allImages} companyName={company.companyName} />
       {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
