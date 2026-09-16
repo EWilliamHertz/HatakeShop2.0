@@ -37,8 +37,11 @@ router.get(["/users/:id", "/api/users/:id", "/api-v2/users/:id"], async (req, re
 router.get(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
-    const user = await getUserProfile(req.user.uid);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    let user = await getUserProfile(req.user.uid);
+    if (!user) {
+        const { getOrCreateUser } = await import('../db/users.js');
+        user = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
+    }
     res.json(user);
   } catch (err: any) {
     console.error(err);
@@ -107,7 +110,11 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
     let user;
     
     if (isCompanyUpdate) {
-       const currentUser = await getUserProfile(req.user.uid);
+       let currentUser = await getUserProfile(req.user.uid);
+       if (!currentUser) {
+           const { getOrCreateUser } = await import('../db/users.js');
+           currentUser = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
+       }
        const parentId = currentUser.teamOwnerId || currentUser.id;
        
        // Update parent row with company info
@@ -165,8 +172,11 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
 
 router.post(["/users/apply-seller", "/api/users/apply-seller", "/api-v2/users/apply-seller"], requireAuth, async (req: AuthRequest, res) => {
   try {
-    const userProfile = await getUserProfile(req.user!.uid);
-    if (!userProfile) return res.status(404).json({ error: "User not found" });
+    let userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) {
+        const { getOrCreateUser } = await import('../db/users.js');
+        userProfile = await getOrCreateUser(req.user!.uid, req.user!.email || "", req.user!.name);
+    }
 
     const parentId = userProfile.teamOwnerId || userProfile.id;
     const newRole = userProfile.role === 'admin' ? 'admin' : 'both';

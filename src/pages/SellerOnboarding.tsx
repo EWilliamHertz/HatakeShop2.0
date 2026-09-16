@@ -32,8 +32,7 @@ export function SellerOnboarding() {
           companyName: formData.companyName,
           vatNumber: formData.vatNumber,
           country: formData.country,
-          orgNumber: formData.orgNumber,
-          kybDocuments: formData.kybUrl ? [{ name: 'Business License', url: formData.kybUrl }] : undefined
+          orgNumber: formData.orgNumber
         })
       });
       if (!updateRes.ok) throw new Error("Failed to update profile");
@@ -109,19 +108,15 @@ export function SellerOnboarding() {
             <div className="space-y-4 animate-in fade-in">
               <h2 className="text-xl font-bold text-white mb-6">{t('Identity Verification (KYB)')}</h2>
               <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 mb-6">
-                <p className="text-sm text-slate-300 mb-4">{t('To maintain a trusted B2B network, we require proof of business registration. Please provide a link to your Business License, VAT Certificate, or Incorporation Document.')}</p>
+                <p className="text-sm text-slate-300 mb-4">{t('To maintain a trusted B2B network, we require proof of business registration. Please provide your VAT Number or Organization Number. We will automatically verify your business.')}</p>
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">{t('Document URL')}</label>
-                  <input type="text" value={formData.kybUrl} onChange={e => setFormData({...formData, kybUrl: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white focus:border-cyan-500 outline-none" placeholder="https://..." />
+                  <label className="block text-sm font-medium text-slate-400 mb-1">{t('VAT Number (Optional)')}</label>
+                  <input type="text" value={formData.vatNumber} onChange={e => setFormData({...formData, vatNumber: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white focus:border-cyan-500 outline-none" />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">{t('VAT Number (Optional)')}</label>
-                <input type="text" value={formData.vatNumber} onChange={e => setFormData({...formData, vatNumber: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white focus:border-cyan-500 outline-none" />
               </div>
               <div className="flex justify-between pt-6">
                 <button onClick={handlePrev} className="px-6 py-2.5 text-slate-400 hover:text-white font-semibold rounded-lg transition-colors">{t('Back')}</button>
-                <button onClick={handleNext} disabled={!formData.kybUrl} className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg transition-colors disabled:opacity-50">{t('Next Step')}</button>
+                <button onClick={handleNext} className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg transition-colors">{t('Next Step')}</button>
               </div>
             </div>
           )}
@@ -133,8 +128,7 @@ export function SellerOnboarding() {
                 <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-slate-400">Company Name</span><span className="text-white font-medium">{formData.companyName}</span></div>
                 <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-slate-400">Country</span><span className="text-white font-medium">{formData.country}</span></div>
                 <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-slate-400">Org Number</span><span className="text-white font-medium">{formData.orgNumber || 'N/A'}</span></div>
-                <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-slate-400">VAT Number</span><span className="text-white font-medium">{formData.vatNumber || 'N/A'}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">KYB Document</span><span className="text-cyan-400 font-medium truncate max-w-[200px]">{formData.kybUrl}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">VAT Number</span><span className="text-white font-medium">{formData.vatNumber || 'N/A'}</span></div>
               </div>
               <div className="flex justify-between pt-6">
                 <button onClick={handlePrev} className="px-6 py-2.5 text-slate-400 hover:text-white font-semibold rounded-lg transition-colors">{t('Back')}</button>
