@@ -269,8 +269,8 @@ export function Home() {
               {t('Next-Generation')} <br/>
               <span className="bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent filter drop-shadow-[0_0_20px_rgba(99,102,241,0.3)]">{t('B2B TCG Sourcing')}</span>
             </h1>
-            <p className="text-lg md:text-2xl text-slate-400 font-medium max-w-3xl mx-auto leading-relaxed">
-              {t('Discover verified suppliers, negotiate MOQ deals, and source directly from top manufacturers globally.')}
+            <p className="text-lg md:text-xl text-slate-400 font-medium max-w-3xl mx-auto leading-relaxed">
+              {t('We have secured an exclusive ledger containing thousands of verified emails for top TCG entrepreneurs. We are actively inviting 50 verified vendors to our enterprise daily, building the ultimate global supply chain.')}
             </p>
           </div>
 
@@ -403,7 +403,7 @@ export function Home() {
                   products: (group.products || []).filter((item: any) => {
                     const p = item.product || item;
                     return !(p.isSponsored || p.is_sponsored || p.sponsored || p.featured);
-                  })
+                  }).slice(0, 5)
                 })).filter((group: any) => group.products.length > 0);
 
                 if (filteredGroups.length === 0) {
