@@ -37,8 +37,8 @@ const mainNavItems = [
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col text-slate-100 selection:bg-accent/20 selection:text-[#ffcc00] font-sans">
-      <header className="sticky top-0 z-50 bg-slate-900 border-b border-slate-700 shadow-sm">
+    <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 font-sans">
+      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 sm:h-20 items-center">
             

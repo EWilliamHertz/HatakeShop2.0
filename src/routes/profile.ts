@@ -172,6 +172,25 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
   }
 });
 
+router.post(["/users/apply-seller", "/api/users/apply-seller", "/api-v2/users/apply-seller"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { getUserProfile } = require('../db/users.js');
+    const { db } = require('../db/index.js');
+    const { users } = require('../db/schema.js');
+    const { eq } = require('drizzle-orm');
+
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) return res.status(404).json({ error: "User not found" });
+
+    const newRole = userProfile.role === 'admin' ? 'admin' : 'both';
+    await db.update(users).set({ role: newRole, verificationStatus: 'pending' }).where(eq(users.id, userProfile.id));
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.patch(["/users/team/:id/role", "/api/users/team/:id/role", "/api-v2/users/team/:id/role"], requireAuth, async (req: AuthRequest, res) => {
   try {
     const userProfile = await getUserProfile(req.user!.uid);

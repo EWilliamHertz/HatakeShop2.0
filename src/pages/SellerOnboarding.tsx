@@ -25,8 +25,8 @@ export function SellerOnboarding() {
     if (!user) return;
     try {
       // 1. Update user profile details
-      const updateRes = await fetch('/api-v2/users/me', {
-        method: 'PUT',
+      const updateRes = await fetch('/api-v2/profile', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer \${await user.getIdToken()}` },
         body: JSON.stringify({
           companyName: formData.companyName,
@@ -52,15 +52,19 @@ export function SellerOnboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center py-12 px-4">
-      <div className="w-full max-w-3xl">
-        <h1 className="text-3xl font-extrabold text-white mb-2 text-center">{t('Become a Verified Seller')}</h1>
-        <p className="text-slate-400 text-center mb-10">{t('Join Hatake.Shop and reach thousands of wholesale buyers globally.')}</p>
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center py-12 px-4 relative overflow-hidden">
+      {/* Background glow effects */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px] -z-10"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] -z-10"></div>
+
+      <div className="w-full max-w-3xl relative z-10">
+        <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-3 text-center tracking-tight">{t('Become a Verified Seller')}</h1>
+        <p className="text-slate-400 text-center mb-12 text-lg">{t('Join Hatake.Shop and reach thousands of wholesale buyers globally.')}</p>
 
         {/* Progress Bar */}
-        <div className="flex items-center justify-between mb-12 relative">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-800 -z-10"></div>
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-cyan-500 transition-all duration-300 -z-10" style={{ width: `\${((step - 1) / 3) * 100}%` }}></div>
+        <div className="flex items-center justify-between mb-16 relative px-4">
+          <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-800 -z-10 rounded-full"></div>
+          <div className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-500 -z-10 rounded-full" style={{ width: `calc(\${((step - 1) / 3) * 100}% - 4rem)` }}></div>
           
           {[
             { icon: <Building2 className="w-5 h-5" />, label: "Company Info" },
@@ -68,16 +72,16 @@ export function SellerOnboarding() {
             { icon: <Store className="w-5 h-5" />, label: "Review" },
             { icon: <CheckCircle2 className="w-5 h-5" />, label: "Done" }
           ].map((item, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 \${step > i ? 'bg-cyan-600 border-slate-950 text-white' : step === i + 1 ? 'bg-slate-900 border-cyan-500 text-cyan-400' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
+            <div key={i} className="flex flex-col items-center relative">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 transition-all duration-300 shadow-lg \${step > i ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 border-slate-900 text-white shadow-cyan-500/30' : step === i + 1 ? 'bg-slate-800 border-cyan-500 text-cyan-400 shadow-cyan-500/20 scale-110' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
                 {item.icon}
               </div>
-              <span className={`text-xs font-semibold mt-2 \${step >= i + 1 ? 'text-white' : 'text-slate-500'}`}>{item.label}</span>
+              <span className={`text-xs font-bold mt-4 uppercase tracking-wider transition-colors \${step >= i + 1 ? 'text-white' : 'text-slate-600'}`}>{item.label}</span>
             </div>
           ))}
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
+        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 md:p-10 shadow-2xl shadow-black/50">
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in">
               <h2 className="text-xl font-bold text-white mb-6">{t('Company Information')}</h2>
