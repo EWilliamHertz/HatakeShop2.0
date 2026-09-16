@@ -374,3 +374,27 @@ export const wishlistsRelations = relations(wishlists, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+export const feedPosts = pgTable('feed_posts', {
+  id: serial('id').primaryKey(),
+  authorId: integer('author_id').notNull(),
+  type: text('type', { enum: ['info', 'listing', 'wtb'] }).notNull(),
+  content: text('content').notNull(),
+  tags: jsonb('tags').default(sql`'[]'::jsonb`),
+  budget: text('budget'),
+  productId: integer('product_id'),
+  likesCount: integer('likes_count').default(0),
+  commentsCount: integer('comments_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const feedPostsRelations = relations(feedPosts, ({ one }) => ({
+  author: one(users, {
+    fields: [feedPosts.authorId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [feedPosts.productId],
+    references: [products.id],
+  }),
+}));

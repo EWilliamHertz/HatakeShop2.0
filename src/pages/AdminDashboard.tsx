@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AdminListings } from '../components/AdminListings.tsx';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.tsx';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { ShieldAlert, Users, Package, Activity, Edit2, Trash2, X, ChevronDown } from 'lucide-react';
 import { ImageUploader } from '../components/ImageUploader.tsx';
 import Papa from 'papaparse';
@@ -741,11 +742,14 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                         u.role === 'seller' ? 'bg-slate-700 text-slate-100' :
                         u.role === 'both' ? 'bg-blue-50 text-blue-700' :
                         'bg-slate-900 text-slate-400'
-                      }`}>{u.role}</span>
+                      }`}>{u.role === "admin" ? "moderator" : u.role}</span>
                     </td>
                     <td className="px-4 py-3">{u.verificationStatus}</td>
                     <td className="px-4 py-3 space-x-2">
+                      
                       <button onClick={() => setEditingUser(u)} className="text-[#ffcc00] font-semibold tracking-tight hover:underline">Edit User</button>
+                      <button onClick={() => handleImpersonate(u.id)} className="text-cyan-400 font-semibold tracking-tight hover:underline ml-3">Impersonate</button>
+
                     </td>
                   </tr>
                 ))}

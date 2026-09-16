@@ -4,6 +4,7 @@ import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/se
 
 import { Router } from "express";
 import { db } from "../db/index.js";
+import { adminAuth } from "../lib/firebase-admin.js";
 import { users, products, feedback, leads, affiliates, marketing_logs, categories, inquiries, inquiryMessages, reviews } from "../db/schema.js";
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
@@ -696,6 +697,30 @@ router.post("/api-v2/admin/approvals/products/:id", requireAuth, requireAdmin, a
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+
+// Impersonate a user
+router.post(['/admin/impersonate/:id', '/api/admin/impersonate/:id', '/api-v2/admin/impersonate/:id'], requireAdmin, async (req, res) => {
+  try {
+    const { users } = await import('../db/schema.js');
+    const { eq } = await import('drizzle-orm');
+    
+    const targetUser = await db.select().from(users).where(eq(users.id, parseInt(req.params.id))).limit(1);
+    
+    if (!targetUser.length) return res.status(404).json({ error: 'User not found' });
+    
+    const customToken = await adminAuth.createCustomToken(targetUser[0].uid);
+    res.json({ token: customToken });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 

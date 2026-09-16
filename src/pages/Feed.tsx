@@ -3,49 +3,50 @@ import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { Building2, Package, Megaphone, Send, Image as ImageIcon, MapPin, BadgeCheck, Clock, MessageSquare, Heart, TrendingUp, Handshake, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../components/AuthContext.tsx';
+import { toast } from 'react-hot-toast';
+import { formatDistanceToNow } from 'date-fns';
 
-const MOCK_FEED = [
-  {
-    id: 1,
-    type: 'wtb',
-    author: { name: 'CardVault EU', verified: true, avatar: null },
-    content: 'URGENT: Looking for a supplier who can provide 500x One Piece OP-05 Booster Boxes by next Friday. Must be factory sealed and ready to ship to Germany.',
-    tags: ['One Piece', 'Sealed', 'WTB'],
-    budget: 'Negotiable (Target: $85/box)',
-    timeAgo: '2h ago',
-    likes: 12,
-    comments: 4
-  },
-  {
-    id: 2,
-    type: 'listing',
-    author: { name: 'TopBestPKG', verified: true, avatar: null },
-    content: 'Just received a massive shipment of Premium Toploaders (35pt). Check out the new listing! Special wholesale pricing for orders over 100,000 units.',
-    product: {
-      title: 'Premium Toploader 35pt (Clear)',
-      image: 'https://images.unsplash.com/photo-1605370392437-024097f5bc14?auto=format&fit=crop&w=400&q=80',
-      price: '$0.05 / unit',
-      moq: '5000 units'
-    },
-    timeAgo: '5h ago',
-    likes: 34,
-    comments: 2
-  },
-  {
-    id: 3,
-    type: 'info',
-    author: { name: 'TCG Distributors LLC', verified: false, avatar: null },
-    content: 'Market Update: We expect a massive delay on the upcoming Pokemon SV6 release due to port strikes. Advise all partners to secure their allocations early. We are currently fully booked but will open a waitlist tomorrow.',
-    timeAgo: '1d ago',
-    likes: 89,
-    comments: 15
-  }
-];
 
 export function Feed() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'info' | 'listing' | 'wtb'>('info');
   const [postContent, setPostContent] = useState('');
+  const [budget, setBudget] = useState('');
+
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ['feedPosts'],
+    queryFn: async () => {
+      const res = await fetch('/api-v2/feed');
+      if (!res.ok) throw new Error('Failed to load feed');
+      return res.json();
+    }
+  });
+
+  const createPost = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api-v2/feed', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user?.getIdToken()}`
+        },
+        body: JSON.stringify({ type: activeTab, content: postContent, budget, tags: activeTab === 'wtb' ? ['WTB'] : [] })
+      });
+      if (!res.ok) throw new Error('Failed to create post');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Posted successfully!');
+      setPostContent('');
+      setBudget('');
+      queryClient.invalidateQueries({ queryKey: ['feedPosts'] });
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 pb-24 pt-24">
@@ -124,6 +125,12 @@ export function Feed() {
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
               />
+              
+              {activeTab === 'wtb' && (
+                <div className="mt-3">
+                  <input type="text" placeholder="Target Budget (e.g., $100 / unit)" value={budget} onChange={e => setBudget(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500" />
+                </div>
+              )}
               <div className="flex items-center justify-between mt-4">
                 <div className="flex gap-2">
                   <button className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors">
@@ -135,7 +142,7 @@ export function Feed() {
                     </button>
                   )}
                 </div>
-                <button className={`px-6 py-2 rounded-xl font-bold text-white flex items-center gap-2 transition-transform active:scale-95 ${activeTab === 'wtb' ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/20' : activeTab === 'listing' ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-500/20'} shadow-lg`}>
+                <button onClick={() => createPost.mutate()} disabled={createPost.isPending || !postContent} className={`px-6 py-2 rounded-xl font-bold text-white flex items-center gap-2 transition-transform active:scale-95 ${activeTab === 'wtb' ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/20' : activeTab === 'listing' ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-500/20'} shadow-lg`}>
                   <Send className="w-4 h-4" />
                   Post
                 </button>
@@ -145,7 +152,7 @@ export function Feed() {
 
           {/* Feed Stream */}
           <div className="space-y-6">
-            {MOCK_FEED.map((post) => (
+            {posts.map((post) => (
               <div key={post.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20 hover:border-slate-700 transition-colors">
                 
                 {/* Post Header */}
@@ -160,7 +167,7 @@ export function Feed() {
                         {post.author.verified && <BadgeCheck className="w-4 h-4 text-cyan-500" />}
                       </div>
                       <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3" /> {post.timeAgo}
+                        <Clock className="w-3 h-3" /> {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
                       </div>
                     </div>
                   </div>
