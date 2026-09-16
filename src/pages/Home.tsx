@@ -423,7 +423,7 @@ export function Home() {
                   products: (group.products || []).filter((item: any) => {
                     const p = item.product || item;
                     return !(p.isSponsored || p.is_sponsored || p.sponsored || p.featured);
-                  }).slice(0, 5)
+                  }).slice(0, 3)
                 })).filter((group: any) => group.products.length > 0);
 
                 if (filteredGroups.length === 0) {
@@ -440,7 +440,7 @@ export function Home() {
                           {t('Top Listings from')} {group.seller.companyName}
                         </h4>
                       )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full justify-start place-items-stretch">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full justify-start place-items-stretch">
                         {(group.products || []).map((item: any, pIdx: number) => {
                           const product = item.product || item;
                           const seller = item.seller || product.seller || group.seller || {};

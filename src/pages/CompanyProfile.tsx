@@ -214,15 +214,17 @@ export function CompanyProfile() {
             </section>
 
             {/* About */}
-            <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2.5 bg-indigo-500/20 rounded-xl border border-indigo-500/30"><Building2 className="w-5 h-5 text-indigo-400" /></div>
-                <h2 className="text-2xl font-bold text-white">About Us</h2>
-              </div>
-              <div className="text-slate-400 leading-relaxed whitespace-pre-wrap">
-                {company.aboutUs || "This company hasn't added a description yet."}
-              </div>
-            </section>
+            {company.aboutUs && company.aboutUs.trim() !== "" && (
+              <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="p-2.5 bg-indigo-500/20 rounded-xl border border-indigo-500/30"><Building2 className="w-5 h-5 text-indigo-400" /></div>
+                  <h2 className="text-2xl font-bold text-white">About Us</h2>
+                </div>
+                <div className="text-slate-400 leading-relaxed whitespace-pre-wrap">
+                  {company.aboutUs}
+                </div>
+              </section>
+            )}
 
             {/* Portfolio */}
             {company.portfolio && company.portfolio.length > 0 && (

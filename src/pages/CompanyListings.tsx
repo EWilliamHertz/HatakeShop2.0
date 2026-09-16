@@ -30,25 +30,31 @@ export function CompanyListings() {
   );
 
   const { company, products = [] } = data || {};
+  const safeProducts = Array.isArray(products) ? products : [];
 
-  // Derive categories from products
+  // Derive categories from safeProducts
   const categories = useMemo(() => {
     const cats: Record<string, number> = {};
-    products.forEach((p: any) => {
-      const cat = p.category || p.categoryName || p.originType || 'Other';
+    safeProducts.forEach((p: any) => {
+      const cat = p?.category || p?.categoryName || p?.originType || 'Other';
       cats[cat] = (cats[cat] || 0) + 1;
     });
     return Object.entries(cats).sort((a, b) => b[1] - a[1]);
-  }, [products]);
+  }, [safeProducts]);
 
-  const filtered = useMemo(() => products.filter((p: any) => {
+  const filtered = useMemo(() => safeProducts.filter((p: any) => {
+    if (!p) return false;
+    const pTitle = String(p.title || '');
+    const pDesc = String(p.description || '');
+    const searchLower = String(search || '').toLowerCase();
+    
     const matchesSearch = !search ||
-      p.title?.toLowerCase().includes(search.toLowerCase()) ||
-      p.description?.toLowerCase().includes(search.toLowerCase());
+      pTitle.toLowerCase().includes(searchLower) ||
+      pDesc.toLowerCase().includes(searchLower);
     const matchesCategory = selectedCategory === 'all' ||
       (p.category || p.categoryName || p.originType || 'Other') === selectedCategory;
     return matchesSearch && matchesCategory;
-  }), [products, search, selectedCategory]);
+  }), [safeProducts, search, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-slate-950 pb-24">
@@ -68,7 +74,7 @@ export function CompanyListings() {
             <span className="text-white font-semibold text-sm">{company?.companyName}</span>
             {company?.verificationStatus === 'verified' && <BadgeCheck className="w-4 h-4 text-cyan-400" />}
           </div>
-          <span className="ml-auto text-xs text-slate-500 shrink-0">{filtered.length} of {products.length} listings</span>
+          <span className="ml-auto text-xs text-slate-500 shrink-0">{filtered.length} of {safeProducts.length} listings</span>
         </div>
       </div>
 
@@ -98,7 +104,7 @@ export function CompanyListings() {
                 onClick={() => setSelectedCategory('all')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategory === 'all' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
               >
-                All ({products.length})
+                All ({safeProducts.length})
               </button>
               {categories.map(([cat, count]) => (
                 <button
