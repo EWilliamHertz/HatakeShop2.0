@@ -60,25 +60,29 @@ export function Feed() {
         <div className="hidden lg:block lg:col-span-3">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sticky top-28 shadow-xl shadow-black/50">
             <div className="w-16 h-16 bg-gradient-to-tr from-cyan-500 to-indigo-500 rounded-full flex items-center justify-center mb-4">
-              <Building2 className="w-8 h-8 text-white" />
+              {dbUser?.profilePictureUrl ? (
+                <img src={dbUser.profilePictureUrl} alt="Logo" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <Building2 className="w-8 h-8 text-white" />
+              )}
             </div>
-            <h2 className="text-lg font-bold text-white mb-1">Your Company</h2>
+            <h2 className="text-lg font-bold text-white mb-1">{dbUser?.companyName || user?.displayName || 'Your Company'}</h2>
             <p className="text-sm text-slate-400 mb-4 flex items-center gap-1">
-              <BadgeCheck className="w-4 h-4 text-cyan-500" /> Verified Supplier
+              {dbUser?.verificationStatus === 'verified' && <BadgeCheck className="w-4 h-4 text-cyan-500" />} {dbUser?.verificationStatus === 'verified' ? 'Verified Supplier' : 'Unverified'}
             </p>
             <div className="h-px bg-slate-800 w-full my-4"></div>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-400">Following</span>
-                <span className="text-white font-semibold">124</span>
+                <span className="text-white font-semibold">{dbUser?.followersCount || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Connections</span>
-                <span className="text-white font-semibold">89</span>
+                <span className="text-white font-semibold">{dbUser?.connectionsCount || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Profile Views</span>
-                <span className="text-cyan-400 font-semibold">342</span>
+                <span className="text-cyan-400 font-semibold">{dbUser?.profileViews || 0}</span>
               </div>
             </div>
           </div>
@@ -184,9 +188,35 @@ export function Feed() {
                 </div>
 
                 {/* Post Content */}
-                <p className="text-slate-300 leading-relaxed mb-4">
-                  {post.content}
+                <p className="text-slate-300 leading-relaxed mb-4 whitespace-pre-wrap">
+                  {post.content.split(' ').map((word: string, i: number) => {
+                    if (word.includes('youtu.be/') || word.includes('youtube.com/watch')) {
+                       return <a key={i} href={word} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">{word} </a>;
+                    }
+                    return word + ' ';
+                  })}
                 </p>
+                
+                {/* Auto-embed YouTube */}
+                {(post.content.includes('youtu.be/') || post.content.includes('youtube.com/')) ? (() => {
+                  const match = post.content.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+                  if (match && match[1]) {
+                    return (
+                      <div className="mb-4 rounded-xl overflow-hidden border border-slate-800">
+                        <iframe 
+                          className="w-full aspect-video" 
+                          src={`https://www.youtube.com/embed/${match[1]}`} 
+                          title="YouTube video" 
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                    );
+                  }
+                  return null;
+                })() : null}
+
 
                 {/* Specific Attachments based on Type */}
                 {post.type === 'wtb' && post.budget && (
