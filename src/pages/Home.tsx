@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BadgeCheck, PackageSearch, Filter, MapPin, Building2, Package, Tag, X, ChevronRight, ChevronLeft, Star, Users } from 'lucide-react';
+import { BadgeCheck, PackageSearch, Filter, MapPin, Building2, Package, Tag, X, ChevronRight, ChevronLeft, Star, Users, Store } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DigitalSlab } from '../components/DigitalSlab.tsx';
 import { useAuth } from '../components/AuthContext.tsx';
@@ -244,157 +244,132 @@ export function Home() {
 
   return (
     <div className="bg-slate-950 min-h-screen pb-20 flex flex-col">
-      <div className="relative overflow-hidden bg-slate-900 text-white border-b border-slate-800 shadow-sm">
-        <div className="absolute top-0 right-0 p-12 opacity-20 pointer-events-none mix-blend-screen">
-          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className="w-96 h-96 blur-3xl fill-[#ffcc00]">
-            <path d="M47.7,-57.2C59.9,-46.8,66.6,-28.9,69.5,-10.8C72.5,7.3,71.6,25.6,63.1,41.2C54.7,56.8,38.6,69.8,20.4,74.9C2.1,79.9,-18.2,77,-34.5,67.6C-50.8,58.3,-63,42.5,-69.1,24.7C-75.2,6.9,-75.1,-12.9,-67.2,-29.4C-59.2,-45.9,-43.3,-59.1,-27.1,-63.9C-10.9,-68.7,5.5,-65.2,19.3,-61.2C33.1,-57.1,44.4,-52.4,47.7,-57.2Z" transform="translate(100 100)" />
-          </svg>
-        </div>
-        <div className="absolute bottom-0 left-0 p-12 opacity-10 pointer-events-none mix-blend-screen">
-          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className="w-64 h-64 blur-2xl fill-indigo-500">
-            <path d="M47.7,-57.2C59.9,-46.8,66.6,-28.9,69.5,-10.8C72.5,7.3,71.6,25.6,63.1,41.2C54.7,56.8,38.6,69.8,20.4,74.9C2.1,79.9,-18.2,77,-34.5,67.6C-50.8,58.3,-63,42.5,-69.1,24.7C-75.2,6.9,-75.1,-12.9,-67.2,-29.4C-59.2,-45.9,-43.3,-59.1,-27.1,-63.9C-10.9,-68.7,5.5,-65.2,19.3,-61.2C33.1,-57.1,44.4,-52.4,47.7,-57.2Z" transform="translate(100 100)" />
-          </svg>
-        </div>
-        <div className="relative p-10 md:p-20 max-w-4xl mx-auto flex flex-col space-y-8 z-10">
+      
+      <div className="relative overflow-hidden bg-[#020617] text-white border-b border-white/5">
+        {/* Massive Ambient Glow */}
+        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen"></div>
+        <div className="absolute top-10 left-10 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none mix-blend-screen"></div>
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none mix-blend-screen"></div>
+        
+        {/* Mesh Grid overlay for texture */}
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none"></div>
+
+        <div className="relative pt-24 pb-16 md:pt-36 md:pb-28 px-4 max-w-6xl mx-auto flex flex-col items-center z-10">
           
-          {/* Centered Text & Branding */}
-          <div className="text-center space-y-6">
-            <img src="/logo.png" alt="Hatake" className="h-24 md:h-32 mx-auto object-contain rounded-full shadow-lg shadow-white/10" />
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-white">
-              {t('Next-Generation')} <br/><span className="text-[#ffcc00] drop-shadow-sm">{t('B2B TCG Sourcing')}</span>
+          {/* Version Pill */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8 hover:bg-white/10 transition-all cursor-default shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+             <span className="text-sm font-semibold tracking-wide text-slate-300">Hatake 2.0 Launch Network</span>
+             <span className="bg-white/10 px-2 py-0.5 rounded-full text-xs font-bold text-white ml-2">{leadsProgress.sentCount.toLocaleString()} Invites Sent</span>
+          </div>
+
+          {/* Epic Typography */}
+          <div className="text-center space-y-8 max-w-5xl mx-auto">
+            <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 drop-shadow-sm">
+              {t('Next-Generation')} <br/>
+              <span className="bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent filter drop-shadow-[0_0_20px_rgba(99,102,241,0.3)]">{t('B2B TCG Sourcing')}</span>
             </h1>
-            <p className="text-xl text-slate-400 font-sans max-w-2xl mx-auto font-light leading-relaxed">
-              {t('Discover verified suppliers, negotiate MOQ deals, and source directly from top manufacturers.')}
+            <p className="text-lg md:text-2xl text-slate-400 font-medium max-w-3xl mx-auto leading-relaxed">
+              {t('Discover verified suppliers, negotiate MOQ deals, and source directly from top manufacturers globally.')}
             </p>
           </div>
 
-          {/* Reference Site Inspired Banner */}
-          <div className="w-full bg-slate-900 border-y border-slate-800 py-3 mt-8 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto flex flex-col items-center justify-center gap-2">
-              <div className="flex flex-col items-center justify-center gap-1 text-sm">
-                <span className="flex items-center gap-1.5 text-[#ffcc00] font-bold text-xs uppercase tracking-widest">
-                  <Users className="w-3.5 h-3.5" /> Launch Network
-                </span>
-                <span className="text-slate-400 text-xs font-medium">
-                  {t('Inviting up to')} <span className="text-white font-bold">50 TCG companies/day</span>
-                </span>
-                <span className="text-xs font-bold text-[#ffcc00] whitespace-nowrap mt-1">
-                  {leadsProgress.sentCount.toLocaleString()} / {leadsProgress.totalGoal.toLocaleString()}
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-center gap-3 w-full max-w-md mt-1">
-                <div className="flex-1 bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
-                  <div className="bg-[#ffcc00] h-full rounded-full transition-all duration-1000 relative overflow-hidden" style={{ width: `${Math.max(5, Math.min(100, (leadsProgress.sentCount / leadsProgress.totalGoal) * 100))}%` }}>
-                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-            
-          {/* Centered Search */}
-          <div className="flex flex-col items-center space-y-4 w-full mt-8">
-            <form onSubmit={handleSearch} className="flex w-full max-w-md bg-slate-800/80 border border-slate-700 p-2 flex-col sm:flex-row gap-2 shadow-lg backdrop-blur-xl relative z-10 rounded-2xl hover:border-slate-600 transition-colors">
+          {/* Command Palette Search */}
+          <div className="w-full max-w-2xl mt-12 mb-20 group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500 rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+            <form onSubmit={handleSearch} className="relative flex w-full bg-slate-900/60 border border-white/10 p-2 sm:p-3 flex-col sm:flex-row gap-2 shadow-2xl backdrop-blur-2xl rounded-[1.5rem] overflow-hidden">
               <div className="relative flex-1 flex items-center">
-                <SearchIcon className="absolute left-5 text-slate-400 w-5 h-5 pointer-events-none" />
+                <SearchIcon className="absolute left-6 text-slate-400 w-6 h-6 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder={t('Search products...')}
-                  className="w-full px-12 text-center bg-transparent text-white placeholder-slate-400 shadow-none focus:ring-0 focus:outline-none border-transparent h-12"
+                  placeholder={t('Search global inventory...')}
+                  className="w-full pl-16 pr-4 bg-transparent text-white placeholder-slate-400 focus:outline-none border-transparent h-14 text-lg font-medium tracking-wide"
                   value={searchInput}
                   onChange={e => setSearchInput(e.target.value)}
                 />
               </div>
-              <button type="submit" className="btn-primary w-full">
+              <button type="submit" className="bg-white text-slate-950 hover:bg-slate-200 font-bold px-8 h-14 rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)] active:scale-95 text-lg">
                 Search
               </button>
             </form>
           </div>
 
-            {/* Sponsored Products */}
-            <div className="w-full max-w-3xl mt-12 pt-8 animate-in fade-in">
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">{t('Sponsored Products')}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-              {[...homeProducts]
-                .sort((a: any, b: any) => {
-                  // Checks common database naming variations and pulls sponsored items to the front
-                  const aSponsored = a.isSponsored || a.is_sponsored || a.sponsored || a.featured ? 1 : 0;
-                  const bSponsored = b.isSponsored || b.is_sponsored || b.sponsored || b.featured ? 1 : 0;
-                  return bSponsored - aSponsored;
-                })
-                .slice(0, 3)
-                .map((sp: any, idx: number) => {
-                  let images = [];
-                  try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
-                  
-                  return (
-                  <div key={idx} onClick={() => { setSelectedProduct({ product: sp, seller: sp.seller }); setActiveImageIndex(0); }} className="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-col gap-3 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-900/20 transition-all cursor-pointer">
-                    <img src={images[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-32 object-cover rounded-md border border-slate-800" />
-                    <div>
-                      <h4 className="font-semibold text-slate-200 text-sm truncate">{sp.title}</h4>
-                      <p className="text-xs text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
-                        <span className="w-1 h-1 rounded-full bg-cyan-500"></span>
-                        {sp.seller?.companyName || sp.companyName || sp.brand || 'Verified Seller'}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-auto">
-                      <span className="bg-cyan-500/20 text-cyan-400 rounded-md text-[10px] py-0.5 px-1.5 font-medium border border-cyan-900/50">{sp.originType || 'Factory'}</span>
-                      <span className="bg-slate-800 text-slate-400 rounded-md text-[10px] py-0.5 px-1.5 font-medium border border-slate-700">MOQ: {sp.moq || 'Negotiable'}</span>
-                    </div>
+          {/* Bento Box Features */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mx-auto mt-12">
+            
+            {/* Bento Card 1: Sponsored Products (Takes up 2 columns) */}
+            <div className="md:col-span-2 relative group rounded-3xl bg-slate-900/40 backdrop-blur-xl border border-white/5 p-8 overflow-hidden hover:border-white/10 transition-all duration-500">
+               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
+               <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                       <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400"><Store className="w-5 h-5"/></span>
+                       {t('Sponsored Inventory')}
+                    </h3>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">Featured</span>
                   </div>
-                );
-              })}
-              </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 h-full">
+                    {[...homeProducts].sort((a: any, b: any) => {
+                        const aSponsored = a.isSponsored || a.is_sponsored || a.sponsored || a.featured ? 1 : 0;
+                        const bSponsored = b.isSponsored || b.is_sponsored || b.sponsored || b.featured ? 1 : 0;
+                        return bSponsored - aSponsored;
+                    }).slice(0, 3).map((sp: any, idx: number) => {
+                        let images = [];
+                        try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
+                        return (
+                          <div key={idx} onClick={() => { setSelectedProduct({ product: sp, seller: sp.seller }); setActiveImageIndex(0); }} className="bg-slate-950/50 border border-white/5 rounded-2xl p-3 flex flex-col gap-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all cursor-pointer group/card h-full">
+                            <div className="relative overflow-hidden rounded-xl">
+                              <img src={images[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-28 object-cover group-hover/card:scale-110 transition-transform duration-700" />
+                            </div>
+                            <div className="flex-1 flex flex-col">
+                              <h4 className="font-semibold text-slate-200 text-sm truncate">{sp.title}</h4>
+                              <p className="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,0.8)]"></span>
+                                {sp.seller?.companyName || sp.companyName || sp.brand || 'Verified Seller'}
+                              </p>
+                              <div className="mt-auto pt-2 flex flex-wrap gap-1.5">
+                                <span className="bg-indigo-500/20 text-indigo-300 rounded text-[9px] py-0.5 px-1.5 font-semibold tracking-wider uppercase border border-indigo-500/30">{sp.originType || 'Factory'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                    })}
+                  </div>
+               </div>
             </div>
 
-          <div className="mt-10 pt-8 border-t border-slate-700/50 max-w-5xl mx-auto flex flex-col items-center text-left gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-               <div className="rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 p-6 shadow-lg hover:shadow-cyan-500/10 transition-all duration-300">
-                 <div className="flex items-center gap-3 mb-3">
-                   <div className="p-2 bg-cyan-500/10 rounded-lg">
-                     <Package className="w-5 h-5 text-cyan-400" />
-                   </div>
-                   <h3 className="text-lg font-bold text-cyan-300">{t('Empowering Global B2B Trade at Any Scale')}</h3>
+            {/* Bento Card 2: Mission */}
+            <div className="relative group rounded-3xl bg-slate-900/40 backdrop-blur-xl border border-white/5 p-8 overflow-hidden hover:border-white/10 transition-all duration-500 flex flex-col justify-between">
+               <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
+               <div className="relative z-10 space-y-6">
+                 <div className="p-3 bg-cyan-500/20 rounded-2xl w-fit border border-cyan-500/30">
+                   <Package className="w-6 h-6 text-cyan-400" />
                  </div>
-                 <p className="text-slate-400 text-sm leading-relaxed">
-                   {t('Whether you are sourcing multi-tonne shipments for custom white-label manufacturing, or procuring smaller volumes of established, ready-to-ship brands, Hatake.Shop bridges the gap. Designed to empower vendors of all sizes—allowing you to seamlessly procure goods at massive scale, or distribute your existing inventory to a global network of buyers.')}
-                 </p>
-               </div>
-               <div className="rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 p-6 shadow-lg hover:shadow-cyan-500/10 transition-all duration-300">
-                 <div className="flex items-center gap-3 mb-3">
-                   <div className="p-2 bg-cyan-500/10 rounded-lg">
-                     <Users className="w-5 h-5 text-cyan-400" />
-                   </div>
-                   <h3 className="text-lg font-bold text-cyan-300">{t('Scaling the Verified Vendor Network Daily')}</h3>
+                 <div>
+                   <h3 className="text-2xl font-bold text-white mb-3 leading-tight">{t('Empowering Global B2B Trade')}</h3>
+                   <p className="text-slate-400 text-sm leading-relaxed">
+                     {t('Source multi-tonne shipments for custom white-label manufacturing, or procure established, ready-to-ship brands at wholesale prices. Hatake bridges the gap.')}
+                   </p>
                  </div>
-                 <p className="text-slate-400 text-sm leading-relaxed">
-                   {t('Our relentless B2B outreach engine actively onboards up to 50 TCG companies per day. This aggressive expansion guarantees our marketplace consistently delivers a massive influx of fresh inventory, driving highly competitive wholesale pricing and continually connecting new buyers with our network of approved sellers.')}
-                 </p>
                </div>
-             </div>
-             
-             <div className="flex gap-4 flex-col sm:flex-row w-full justify-center mt-4">
-                <div className="bg-slate-800/80 border border-slate-700 px-4 py-3 flex items-center gap-3 w-full max-w-[240px] justify-center backdrop-blur-sm rounded-2xl shadow-lg">
-                   <div className="p-2 bg-slate-900 text-slate-400 rounded-xl border border-slate-700/50"><Package className="w-5 h-5" /></div>
-                   <div>
-                     <div className="font-semibold tracking-tight text-slate-200 text-sm">{t('Wholesale OEM')}</div>
-                     <div className="text-xs text-slate-400 font-medium">{t('Tonnes & Containers')}</div>
-                   </div>
-                </div>
-                <div className="bg-slate-800/80 border border-slate-700 px-4 py-3 flex items-center gap-3 w-full max-w-[240px] justify-center backdrop-blur-sm rounded-2xl shadow-lg">
-                   <div className="p-2 bg-emerald-500/20 text-emerald-400 border border-emerald-900/50 rounded-xl"><Tag className="w-5 h-5" /></div>
-                   <div>
-                     <div className="font-semibold tracking-tight text-slate-200 text-sm">{t('Retail Stock')}</div>
-                     <div className="text-xs text-slate-400 font-medium">{t('Low Volume Brands')}</div>
-                   </div>
-                </div>
-             </div>
+               
+               <div className="relative z-10 mt-8 grid grid-cols-2 gap-3">
+                 <div className="bg-slate-950/50 border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                    <span className="text-lg font-bold text-white">OEM</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Tonnes</span>
+                 </div>
+                 <div className="bg-slate-950/50 border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                    <span className="text-lg font-bold text-white">Retail</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Stock</span>
+                 </div>
+               </div>
+            </div>
+
           </div>
         </div>
       </div>
 
-      
       <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pt-12 space-y-12 flex-1">
         {!selectedCategoryId && !search ? (
           <div className="space-y-16">
