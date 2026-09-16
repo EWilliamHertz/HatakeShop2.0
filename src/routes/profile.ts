@@ -13,10 +13,6 @@ router.get(["/users/:id", "/api/users/:id", "/api-v2/users/:id"], async (req, re
     const userId = parseInt(req.params.id, 10);
     if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
     
-    const { db } = require('../db/index.js');
-    const { users } = require('../db/schema.js');
-    const { eq } = require('drizzle-orm');
-
     const userQuery = await db.select({
       id: users.id,
       displayName: users.displayName,
@@ -111,11 +107,6 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
     let user;
     
     if (isCompanyUpdate) {
-       const { db } = require('../db/index.js');
-       const { users } = require('../db/schema.js');
-       const { eq, and } = require('drizzle-orm');
-       const { getUserProfile } = require('../db/users.js');
-       
        const currentUser = await getUserProfile(req.user.uid);
        const parentId = currentUser.teamOwnerId || currentUser.id;
        
@@ -174,16 +165,12 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
 
 router.post(["/users/apply-seller", "/api/users/apply-seller", "/api-v2/users/apply-seller"], requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { getUserProfile } = require('../db/users.js');
-    const { db } = require('../db/index.js');
-    const { users } = require('../db/schema.js');
-    const { eq } = require('drizzle-orm');
-
     const userProfile = await getUserProfile(req.user!.uid);
     if (!userProfile) return res.status(404).json({ error: "User not found" });
 
+    const parentId = userProfile.teamOwnerId || userProfile.id;
     const newRole = userProfile.role === 'admin' ? 'admin' : 'both';
-    await db.update(users).set({ role: newRole, verificationStatus: 'pending' }).where(eq(users.id, userProfile.id));
+    await db.update(users).set({ role: newRole, verificationStatus: 'pending' }).where(eq(users.id, parentId));
 
     res.json({ success: true });
   } catch (err: any) {
