@@ -39,10 +39,11 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
         
         <div className="flex flex-wrap gap-2 mb-4">
            {p.originType && <span className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded border border-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {p.originType}</span>}
+           <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 uppercase tracking-wider">MIN ORDER: {p.moq} units</span>
         </div>
         
         <div className="mt-auto space-y-3 pt-4 border-t border-slate-800">
-          <div className="flex justify-between items-end">
+          <div className="flex justify-between items-center">
             <div className="flex flex-col">
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Est. PPU')}</span>
               <span className="text-xl font-extrabold text-white font-mono tracking-tight">{(() => {
@@ -50,10 +51,9 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
                 return (!minPrice || Number(minPrice) === 0) ? <span className="text-sm font-semibold tracking-wide text-cyan-400">{t("Negotiate")}</span> : formatPrice(Number(minPrice));
               })()}</span>
             </div>
-            <div className="text-right flex flex-col items-end">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{t('Min Order')}</span>
-              <span className="text-sm font-semibold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">{p.moq} units</span>
-            </div>
+            <button className="text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg transition-colors border border-slate-700">
+              View Details
+            </button>
           </div>
         </div>
       </div>

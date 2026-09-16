@@ -9,6 +9,19 @@ interface ReviewModalProps {
 export function ReviewModal({ review, onClose }: ReviewModalProps) {
   const [activeImage, setActiveImage] = useState(review.images?.[0] || null);
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center p-4">
+        <button onClick={() => setIsFullscreen(false)} className="absolute top-6 right-6 p-2 bg-slate-800/50 hover:bg-slate-700/80 text-white rounded-full transition-colors z-10">
+          <X className="w-6 h-6" />
+        </button>
+        <img src={activeImage} alt="Review attachment fullscreen" className="w-full h-full object-contain cursor-zoom-out" onClick={() => setIsFullscreen(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
@@ -16,9 +29,14 @@ export function ReviewModal({ review, onClose }: ReviewModalProps) {
         
         {/* Left side: Gallery */}
         <div className="md:w-1/2 bg-slate-950 flex flex-col p-6 border-b md:border-b-0 md:border-r border-slate-800">
-          <div className="flex-1 min-h-[300px] bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-center overflow-hidden mb-4 relative">
+          <div className="flex-1 min-h-[300px] bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-center overflow-hidden mb-4 relative group">
             {activeImage ? (
-              <img src={activeImage} alt="Review attachment" className="w-full h-full object-contain" />
+              <img 
+                src={activeImage} 
+                alt="Review attachment" 
+                className="w-full h-full object-contain cursor-zoom-in group-hover:scale-105 transition-transform duration-300" 
+                onClick={() => setIsFullscreen(true)}
+              />
             ) : (
               <div className="text-slate-500">No Image Attached</div>
             )}
