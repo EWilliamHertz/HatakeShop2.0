@@ -28,7 +28,7 @@ router.get(['/feed', '/api/feed', '/api-v2/feed'], async (req, res) => {
         id: products.id,
         title: products.title,
         images: products.images,
-        price: products.unitPrice,
+        price: products.unitCost,
         moq: products.moq,
       }
     })
