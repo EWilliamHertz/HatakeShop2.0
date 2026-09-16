@@ -35,18 +35,24 @@ export function SellerOnboarding() {
           orgNumber: formData.orgNumber
         })
       });
-      if (!updateRes.ok) throw new Error("Failed to update profile");
+      if (!updateRes.ok) {
+        const text = await updateRes.text();
+        throw new Error(`Profile Update Failed: \${updateRes.status} \${text}`);
+      }
 
       // 2. Apply for seller status
       const applyRes = await fetch('/api-v2/users/apply-seller', {
         method: 'POST',
         headers: { 'Authorization': `Bearer \${await user.getIdToken()}` }
       });
-      if (!applyRes.ok) throw new Error("Failed to apply for seller status");
-
-      setStep(4); // Success step
+      if (!applyRes.ok) {
+        const text = await applyRes.text();
+        throw new Error(`Seller Apply Failed: \${applyRes.status} \${text}`);
+      }
+      
+      setStep(4);
     } catch (e: any) {
-      alert("Error: " + e.message);
+      alert("Error Details: " + e.message);
     }
   };
 

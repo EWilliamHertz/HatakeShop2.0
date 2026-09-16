@@ -3,7 +3,7 @@ import { db } from "../db/index.js";
 import { users, products, reviews, leads } from "../db/schema.js";
 import { eq, or, and, isNull } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
-import { getUserProfile, updateUserProfile } from "../db/users.js";
+import { getUserProfile, updateUserProfile, getOrCreateUser } from "../db/users.js";
 
 const router = Router();
 
@@ -39,7 +39,6 @@ router.get(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (
     if (!req.user) return res.status(401).send("Unauthorized");
     let user = await getUserProfile(req.user.uid);
     if (!user) {
-        const { getOrCreateUser } = await import('../db/users.js');
         user = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
     }
     res.json(user);
@@ -112,7 +111,6 @@ router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async
     if (isCompanyUpdate) {
        let currentUser = await getUserProfile(req.user.uid);
        if (!currentUser) {
-           const { getOrCreateUser } = await import('../db/users.js');
            currentUser = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
        }
        const parentId = currentUser.teamOwnerId || currentUser.id;
@@ -174,7 +172,6 @@ router.post(["/users/apply-seller", "/api/users/apply-seller", "/api-v2/users/ap
   try {
     let userProfile = await getUserProfile(req.user!.uid);
     if (!userProfile) {
-        const { getOrCreateUser } = await import('../db/users.js');
         userProfile = await getOrCreateUser(req.user!.uid, req.user!.email || "", req.user!.name);
     }
 
