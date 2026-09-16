@@ -333,7 +333,10 @@ export function Home() {
                     <img src={images[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-32 object-cover rounded-md border border-slate-800" />
                     <div>
                       <h4 className="font-semibold text-slate-200 text-sm truncate">{sp.title}</h4>
-                      <p className="text-xs text-slate-400 truncate">{sp.companyName || sp.brand || 'Premium Vendor'}</p>
+                      <p className="text-xs text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
+                        <span className="w-1 h-1 rounded-full bg-cyan-500"></span>
+                        {sp.seller?.companyName || sp.companyName || sp.brand || 'Verified Seller'}
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-1 mt-auto">
                       <span className="bg-cyan-500/20 text-cyan-400 rounded-md text-[10px] py-0.5 px-1.5 font-medium border border-cyan-900/50">{sp.originType || 'Factory'}</span>
@@ -419,11 +422,22 @@ export function Home() {
                 </div>
               </div>
               
-              {(!dataItem.groups || dataItem.groups.length === 0) ? (
-                 <div className="text-slate-400 text-sm py-4">{t('No products listed in this category yet.')}</div>
-              ) : (
-                <div className="space-y-8">
-                {(dataItem.groups || []).map((group: any, gIdx: number) => (
+              {(() => {
+                const filteredGroups = (dataItem.groups || []).map((group: any) => ({
+                  ...group,
+                  products: (group.products || []).filter((item: any) => {
+                    const p = item.product || item;
+                    return !(p.isSponsored || p.is_sponsored || p.sponsored || p.featured);
+                  })
+                })).filter((group: any) => group.products.length > 0);
+
+                if (filteredGroups.length === 0) {
+                  return <div className="text-slate-400 text-sm py-4">{t('No products listed in this category yet.')}</div>;
+                }
+                
+                return (
+                  <div className="space-y-8">
+                  {filteredGroups.map((group: any, gIdx: number) => (
                     <div key={gIdx} className="mb-8 border-b border-slate-800 pb-8 last:border-0 last:mb-0 last:pb-0">
                       {group.seller && (
                         <h4 className="text-md font-semibold tracking-tight text-slate-400 mb-4 flex items-center gap-2">
@@ -510,7 +524,8 @@ export function Home() {
                     </div>
                   ))}
                 </div>
-              )}
+                );
+              })()}
             </div>
           ))}
         </div>
