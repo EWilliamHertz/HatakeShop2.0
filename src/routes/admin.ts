@@ -718,10 +718,5 @@ router.post(['/admin/impersonate/:id', '/api/admin/impersonate/:id', '/api-v2/ad
     res.status(500).json({ error: err.message });
   }
 });
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
 
 export default router;
