@@ -26,7 +26,7 @@ export function SellerOnboarding() {
     try {
       // 1. Update user profile details
       const updateRes = await fetch('/api-v2/profile', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer \${await user.getIdToken()}` },
         body: JSON.stringify({
           companyName: formData.companyName,

@@ -99,7 +99,7 @@ router.get(["/company/:id", "/api/company/:id", "/api-v2/company/:id"], async (r
   }
 });
 
-router.patch(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (req: AuthRequest, res) => {
+router.all(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
     
