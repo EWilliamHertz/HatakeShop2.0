@@ -15,7 +15,7 @@ import { Video, Phone, PhoneIncoming, Check, X as XIcon } from 'lucide-react';
 
 
 import { CheckCheck } from 'lucide-react'; // Ensure this gets added to imports
-import { useCurrency } from '../components/CurrencyContext.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { ContractModal } from '../components/ContractModal.tsx';
 
 function ChatMessage({ msg, user, dbUser, onImageClick }: { msg: any, user: any, dbUser: any, onImageClick?: (url: string) => void }) {

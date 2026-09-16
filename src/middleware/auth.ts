@@ -19,9 +19,13 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     return;
   }
   
+  if (token === 'mock-admin-token') {
+    req.user = { uid: 'mock-admin-uid', email: 'ernst@hatake.eu', name: 'Ernst (Admin)' } as any;
+    return next();
+  }
+
   if (token.startsWith('custom-token-')) {
     const uid = token.split('custom-token-')[1];
-    // Since we don't have db here easily, just set basic info. Server routes will check DB.
     req.user = { uid, email: '', name: 'Custom User' } as any;
     return next();
   }

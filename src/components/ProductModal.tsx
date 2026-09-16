@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext.tsx';
 import { X, PackageSearch, Star, Building2, MapPin, Package, Clock, ShieldCheck, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useCurrency } from './CurrencyContext.tsx';
+import { useCurrency } from './CurrencyProvider.tsx';
 import { WishlistButton } from './WishlistButton.tsx';
 
 export function ProductModal({ product, onClose }: { product: any, onClose: () => void }) {

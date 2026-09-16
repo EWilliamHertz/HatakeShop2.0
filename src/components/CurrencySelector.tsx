@@ -1,5 +1,5 @@
 import React from 'react';
-import { useCurrency } from './CurrencyContext.tsx';
+import { useCurrency } from './CurrencyProvider.tsx';
 import { ChevronDown } from 'lucide-react';
 
 export function CurrencySelector() {

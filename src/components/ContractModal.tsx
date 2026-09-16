@@ -3,7 +3,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { X, Download, PenTool } from 'lucide-react';
-import { useCurrency } from './CurrencyContext.tsx';
+import { useCurrency } from './CurrencyProvider.tsx';
 
 interface ContractModalProps {
   inquiry: any;

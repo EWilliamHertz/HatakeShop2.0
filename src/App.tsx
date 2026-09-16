@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthContext.tsx';
 import { CartProvider } from './components/SampleCart.tsx';
-import { CurrencyProvider } from './components/CurrencyContext.tsx';
+import { CurrencyProvider } from './components/CurrencyProvider.tsx';
 import { Toaster } from 'sonner';
 import { Layout } from './components/Layout.tsx';
 import { CookieConsent } from './components/CookieConsent.tsx';

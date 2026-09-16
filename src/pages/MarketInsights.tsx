@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, AreaChart, Area } from 'recharts';
 import { TrendingUp, Activity, Users, Box, Globe, Filter } from 'lucide-react';
-import { useCurrency } from '../components/CurrencyContext.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 
 export function MarketInsights() {
   const { t } = useTranslation();

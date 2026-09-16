@@ -37,7 +37,7 @@ export function SellerOnboarding() {
       });
       if (!updateRes.ok) {
         const text = await updateRes.text();
-        throw new Error(`Profile Update Failed: \${updateRes.status} \${text}`);
+        throw new Error(`Profile Update Failed: ${updateRes.status} ${text}`);
       }
 
       // 2. Apply for seller status

@@ -7,7 +7,7 @@ import { DigitalSlab } from '../components/DigitalSlab.tsx';
 import { useAuth } from '../components/AuthContext.tsx';
 import { useCart } from '../components/SampleCart.tsx';
 import { cn } from '../components/Layout.tsx';
-import { useCurrency } from '../components/CurrencyContext.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { LandedCostEstimator } from '../components/LandedCostEstimator.tsx';
 import { ResponsiveContainer, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 

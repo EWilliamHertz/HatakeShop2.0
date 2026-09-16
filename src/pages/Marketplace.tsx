@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Filter, PackageSearch, Building2, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { useCurrency } from '../components/CurrencyContext.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { WishlistButton } from '../components/WishlistButton.tsx';
 const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) => {

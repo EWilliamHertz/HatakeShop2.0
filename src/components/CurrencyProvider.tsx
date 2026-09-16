@@ -19,13 +19,7 @@ const CurrencyContext = createContext<CurrencyContextType>({
 export const useCurrency = () => useContext(CurrencyContext);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currency, setCurrency] = useState<Currency>(() => {
-    try {
-      return (localStorage.getItem('preferredCurrency') as Currency) || 'USD';
-    } catch (e) {
-      return 'USD';
-    }
-  });
+  const [currency, setCurrency] = useState<Currency>('USD');
   const [rates, setRates] = useState<Record<string, number>>({
     USD: 1, EUR: 0.92, GBP: 0.79, JPY: 150.5
   });
@@ -71,9 +65,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   useEffect(() => {
-    try {
-      localStorage.setItem('preferredCurrency', currency);
-    } catch (e) {}
+    // Disabled localStorage
   }, [currency]);
 
   return (

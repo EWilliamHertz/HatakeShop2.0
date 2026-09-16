@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../components/AuthContext.tsx';
-import { useCurrency } from '../components/CurrencyContext.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { useTranslation } from 'react-i18next';
 import { PackageSearch, MapPin } from 'lucide-react';
 import { ProductModal } from '../components/ProductModal.tsx';

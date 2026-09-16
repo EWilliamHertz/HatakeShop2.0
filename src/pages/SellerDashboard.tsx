@@ -1,6 +1,6 @@
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { useTranslation } from 'react-i18next';
-import { useCurrency } from '../components/CurrencyContext.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../components/AuthContext.tsx';
 import { useQuery } from '@tanstack/react-query';
