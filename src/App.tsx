@@ -28,6 +28,7 @@ import { Login } from './pages/Login.tsx';
 import { AdminDashboard } from './pages/AdminDashboard.tsx';
 import { DatabaseViewer } from './pages/DatabaseViewer.tsx';
 import { AffiliateDashboard } from './pages/AffiliateDashboard.tsx';
+import { Feed } from './pages/Feed.tsx';
 import { Storefront } from './pages/Storefront.tsx';
 import { SellerDashboard } from './pages/SellerDashboard.tsx';
 import { Leads } from './pages/Leads.tsx';
@@ -120,6 +121,7 @@ export default function App() {
           } />
             <Route path="/join" element={<JoinCompany />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/feed" element={<Feed />} />
             <Route path="/insights" element={<MarketInsights />} />
           </Route>
         </Routes>

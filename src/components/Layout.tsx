@@ -26,8 +26,9 @@ export function Layout() {
 
 const mainNavItems = [
     { name: 'Home', path: '/', icon: Package },
-    { name: 'Directory', path: '/suppliers', icon: Users }, // Add this line!
+    { name: 'Directory', path: '/suppliers', icon: Users },
     { name: 'Marketplace', path: '/marketplace', icon: Store },
+    { name: 'Feed', path: '/feed', icon: Users },
     { name: 'Messages', path: '/rfq', icon: MessageSquare, protected: true },
   ];
 
