@@ -250,8 +250,11 @@ const mainNavItems = [
          <div className="text-center flex flex-col items-center">
             <p className="font-semibold text-slate-300">&copy; {new Date().getFullYear()} Hatake.Shop. {t('All rights reserved.')}</p>
             <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest">{t('International Wholesale B2B')}</p>
+            <Link to="/leads" className="mt-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest flex items-center gap-1">
+              📋 Launch Ledger
+            </Link>
             {dbUser?.role === 'admin' && (
-              <Link to="/admin" className="mt-2 text-xs font-bold text-cyan-500 hover:text-cyan-400 transition-colors uppercase tracking-widest">
+              <Link to="/admin" className="mt-1 text-xs font-bold text-cyan-500 hover:text-cyan-400 transition-colors uppercase tracking-widest">
                 {t('Admin Panel')}
               </Link>
             )}

@@ -299,14 +299,20 @@ const { data = {}, isLoading, error } = useQuery({
                   <div key={idx} className="space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800/80 w-full">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-4">
                        <div className="flex items-center gap-4">
-                         <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shrink-0">
+                         <Link to={`/company/${group.sellerId}`} className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shrink-0 hover:border-cyan-500/50 transition-colors">
                            <Building2 className="w-6 h-6 text-slate-400" />
-                         </div>
+                         </Link>
                          <div>
-                           <h2 className="text-xl font-bold text-white">{group.companyName}</h2>
-                           <p className="text-sm text-slate-400">Seller ID: {group.sellerId || 'Independent'}</p>
+                           <Link to={`/company/${group.sellerId}`} className="text-xl font-bold text-white hover:text-cyan-400 transition-colors">{group.companyName}</Link>
+                           <p className="text-sm text-slate-500">{group.products.length} product{group.products.length !== 1 ? 's' : ''} in this category</p>
                          </div>
                        </div>
+                       <Link
+                         to={`/company/${group.sellerId}/listings`}
+                         className="flex items-center gap-2 text-sm font-semibold text-cyan-400 border border-cyan-500/30 px-4 py-2 rounded-xl hover:bg-cyan-500/10 hover:border-cyan-400 transition-all shrink-0"
+                       >
+                         View All Listings →
+                       </Link>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
                       {group.products.map((p: any) => (

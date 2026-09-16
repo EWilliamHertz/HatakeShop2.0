@@ -42,4 +42,38 @@ router.get("/api-v2/leads/progress", async (req, res) => {
     }
   });
 
+router.get("/api-v2/leads/public", async (req, res) => {
+  try {
+    // Return anonymised leads — website domain only, no names or emails
+    const allLeads = await db
+      .select({
+        id: leads.id,
+        website: leads.website,
+        location: leads.location,
+        status: leads.status,
+        sentAt: leads.sentAt,
+        createdAt: leads.createdAt,
+      })
+      .from(leads)
+      .where(not(eq(leads.status, 'pending')))
+      .orderBy(sql`${leads.sentAt} DESC NULLS LAST, ${leads.createdAt} DESC`)
+      .limit(200);
+
+    const sanitised = allLeads.map(l => ({
+      id: l.id,
+      // Show only domain, never full email
+      website: l.website
+        ? l.website.replace(/^https?:\/\//, '').split('/')[0]
+        : null,
+      country: l.location || null,
+      status: l.status === 'recruited' ? 'registered' : l.status === 'clicked' || l.status === 'opened' ? 'responded' : 'invited',
+      sentAt: l.sentAt || l.createdAt,
+    }));
+
+    res.json({ leads: sanitised, total: sanitised.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

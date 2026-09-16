@@ -256,13 +256,6 @@ export function Home() {
 
         <div className="relative pt-24 pb-16 md:pt-36 md:pb-28 px-4 max-w-6xl mx-auto flex flex-col items-center z-10">
           
-          {/* Version Pill */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8 hover:bg-white/10 transition-all cursor-default shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-             <span className="text-sm font-semibold tracking-wide text-slate-300">Hatake 2.0 Launch Network</span>
-             <span className="bg-white/10 px-2 py-0.5 rounded-full text-xs font-bold text-white ml-2">{leadsProgress.sentCount.toLocaleString()} Invites Sent</span>
-          </div>
-
           {/* Epic Typography */}
           <div className="text-center space-y-8 max-w-5xl mx-auto">
             <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 drop-shadow-sm">
@@ -272,6 +265,21 @@ export function Home() {
             <p className="text-lg md:text-xl text-slate-400 font-medium max-w-3xl mx-auto leading-relaxed">
               {t('We have secured an exclusive ledger containing thousands of verified emails for top TCG entrepreneurs. We are actively inviting 50 verified vendors to our enterprise daily, building the ultimate global supply chain.')}
             </p>
+
+            {/* Leads Teaser */}
+            <Link
+              to="/leads"
+              className="group inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left max-w-xl mx-auto shadow-[0_0_30px_rgba(99,102,241,0.1)]"
+            >
+              <div className="shrink-0 w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                <span className="text-lg">📋</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-white font-semibold text-sm">Launching October 1st — See who's on the list</div>
+                <div className="text-slate-400 text-xs mt-0.5 truncate">Our verified outreach ledger is growing. {leadsProgress.sentCount.toLocaleString()} companies reached so far. →</div>
+              </div>
+              <div className="shrink-0 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+            </Link>
           </div>
 
           {/* Command Palette Search */}

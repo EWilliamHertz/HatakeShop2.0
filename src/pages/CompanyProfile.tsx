@@ -9,11 +9,13 @@ import { SpotlightGallery } from '../components/SpotlightGallery.tsx';
 import { Maximize2 } from 'lucide-react';
 import { VendorReviews } from '../components/VendorReviews.tsx';
 import { toast } from 'sonner';
+import { ProductModal } from '../components/ProductModal.tsx';
 
 export function CompanyProfile() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isContacting, setIsContacting] = useState(false);
@@ -144,7 +146,7 @@ export function CompanyProfile() {
                   <span className="text-sm text-slate-500">({products?.length || 0} total)</span>
                 </div>
                 {products && products.length > 4 && (
-                  <Link to={`/company/${id}/listings`} className="flex items-center gap-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 px-4 py-2 rounded-xl hover:bg-cyan-500/10 transition-all">
+                  <Link to={`/company/${id}/listings`} onClick={() => window.scrollTo(0, 0)} className="flex items-center gap-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 px-4 py-2 rounded-xl hover:bg-cyan-500/10 transition-all">
                     View All <ArrowRight className="w-4 h-4" />
                   </Link>
                 )}
@@ -160,7 +162,7 @@ export function CompanyProfile() {
                       try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch {}
                       const lowestPrice = tiers.length > 0 ? Math.min(...tiers.map((t: any) => Number(t.unitPrice))) : null;
                       return (
-                        <div key={p.id} onClick={() => navigate('/marketplace')} className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer flex flex-col">
+                        <div key={p.id} onClick={() => setSelectedProduct(p)} className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer flex flex-col">
                           <div className="aspect-[4/3] bg-slate-800 overflow-hidden relative">
                             {images[0]
                               ? <img src={images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -185,7 +187,7 @@ export function CompanyProfile() {
 
                   {products && products.length > 4 && (
                     <div className="mt-6 flex justify-center">
-                      <Link to={`/company/${id}/listings`} className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-800/80 transition-all duration-300 text-slate-300 hover:text-white font-semibold">
+                      <Link to={`/company/${id}/listings`} onClick={() => window.scrollTo(0, 0)} className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-800/80 transition-all duration-300 text-slate-300 hover:text-white font-semibold">
                         <span>View all {products.length} products from {company.companyName}</span>
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </Link>
@@ -273,6 +275,7 @@ export function CompanyProfile() {
       </div>
 
       <SpotlightGallery isOpen={isSpotlightOpen} onClose={() => setIsSpotlightOpen(false)} images={allImages} companyName={company.companyName} />
+      {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
     </div>
   );
 }
