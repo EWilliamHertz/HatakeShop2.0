@@ -27,7 +27,7 @@ export function SellerOnboarding() {
       // 1. Update user profile details
       const updateRes = await fetch('/api-v2/profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer \${await user.getIdToken()}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user.getIdToken()}` },
         body: JSON.stringify({
           companyName: formData.companyName,
           vatNumber: formData.vatNumber,
@@ -43,11 +43,11 @@ export function SellerOnboarding() {
       // 2. Apply for seller status
       const applyRes = await fetch('/api-v2/users/apply-seller', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer \${await user.getIdToken()}` }
+        headers: { 'Authorization': `Bearer ${await user.getIdToken()}` }
       });
       if (!applyRes.ok) {
         const text = await applyRes.text();
-        throw new Error(`Seller Apply Failed: \${applyRes.status} \${text}`);
+        throw new Error(`Seller Apply Failed: ${applyRes.status} ${text}`);
       }
       
       setStep(4);
@@ -69,7 +69,7 @@ export function SellerOnboarding() {
         {/* Progress Bar */}
         <div className="flex items-center justify-between mb-16 relative px-4">
           <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-800 -z-10 rounded-full"></div>
-          <div className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-500 -z-10 rounded-full" style={{ width: `calc(\${((step - 1) / 3) * 100}% - 4rem)` }}></div>
+          <div className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-500 -z-10 rounded-full" style={{ width: `calc(${((step - 1) / 3) * 100}% - 4rem)` }}></div>
           
           {[
             { icon: <Building2 className="w-5 h-5" />, label: "Company Info" },
@@ -78,10 +78,10 @@ export function SellerOnboarding() {
             { icon: <CheckCircle2 className="w-5 h-5" />, label: "Done" }
           ].map((item, i) => (
             <div key={i} className="flex flex-col items-center relative">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 transition-all duration-300 shadow-lg \${step > i ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 border-slate-900 text-white shadow-cyan-500/30' : step === i + 1 ? 'bg-slate-800 border-cyan-500 text-cyan-400 shadow-cyan-500/20 scale-110' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 transition-all duration-300 shadow-lg ${step > i ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 border-slate-900 text-white shadow-cyan-500/30' : step === i + 1 ? 'bg-slate-800 border-cyan-500 text-cyan-400 shadow-cyan-500/20 scale-110' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
                 {item.icon}
               </div>
-              <span className={`text-xs font-bold mt-4 uppercase tracking-wider transition-colors \${step >= i + 1 ? 'text-white' : 'text-slate-600'}`}>{item.label}</span>
+              <span className={`text-xs font-bold mt-4 uppercase tracking-wider transition-colors ${step >= i + 1 ? 'text-white' : 'text-slate-600'}`}>{item.label}</span>
             </div>
           ))}
         </div>
