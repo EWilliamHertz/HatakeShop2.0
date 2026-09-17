@@ -480,6 +480,18 @@ export function Feed() {
                       <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
                         <Send className="w-4 h-4" /> {t('Share')}
                       </button>
+                      
+                      {post.type === 'wtb' && (
+                        <Link to="/rfq" className="flex items-center gap-2 text-sm text-amber-500 hover:text-amber-400 font-bold ml-auto transition-colors">
+                          <Handshake className="w-4 h-4" /> Fulfill Bounty
+                        </Link>
+                      )}
+                      
+                      {post.type === 'listing' && (
+                        <Link to="/rfq" className="flex items-center gap-2 text-sm text-indigo-500 hover:text-indigo-400 font-bold ml-auto transition-colors">
+                          <MessageSquare className="w-4 h-4" /> Contact Seller
+                        </Link>
+                      )}
                     </div>
                   </div>
                   

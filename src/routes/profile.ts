@@ -341,6 +341,14 @@ router.post(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/
       res.json({ following: false });
     } else {
       await db.insert(userFollowers).values({ followerId: userProfile.id, followingId: targetUserId });
+      // Trigger Notification
+      const { notifications } = await import('../db/schema.js');
+      await db.insert(notifications).values({
+        userId: targetUserId,
+        title: "New Follower!",
+        message: `${userProfile.companyName || userProfile.displayName} has followed your company and wants to connect.`,
+        link: `/company/${userProfile.id}`
+      });
       await db.execute(sql`UPDATE users SET followers_count = followers_count + 1 WHERE id = ${targetUserId}`);
       
       // Check if mutual connection

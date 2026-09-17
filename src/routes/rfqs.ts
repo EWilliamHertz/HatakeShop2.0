@@ -47,13 +47,17 @@ router.post(["/inquiries", "/api/inquiries", "/api-v2/inquiries"], requireAuth, 
           sellerUid: sellerUid
         });
         
-        await adminDb.collection('users').doc(sellerUid).collection('notifications').add({
-          title: 'New RFQ Received',
-          body: `You have received a new RFQ for ${quantity} units.`,
-          read: false,
-          createdAt: new Date(),
-          link: `/rfq/${newInquiry.id}`
-        });
+        try {
+          const sellerDb = await db.select().from(users).where(eq(users.uid, sellerUid)).limit(1);
+          if (sellerDb.length > 0) {
+            await db.insert(notifications).values({
+              userId: sellerDb[0].id,
+              title: "New Order!",
+              message: "You have a new order waiting.",
+              link: "/orders"
+            });
+          }
+        } catch(e) { console.error("Failed to insert order notification", e); }
         
         const io = (req as any).io;
         if (io) {

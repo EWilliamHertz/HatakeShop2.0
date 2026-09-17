@@ -278,6 +278,7 @@ app.get(["/products", "/api/products", "/api-v2/products"], async (req, res) => 
 
 // --- ROUTE MOUNTING (Supporting both /api/ and /api-v2/ prefixes to prevent 404s) ---
 import feedRouter from "./src/routes/feed.js";
+import notificationsRouter from "./src/routes/notifications.js";
 const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter];
 
 for (const router of routers) {
@@ -539,68 +540,13 @@ app.post(["/wishlists/toggle", "/api/wishlists/toggle", "/api-v2/wishlists/toggl
 });
 
 // Notifications API (Firestore-backed)
-app.get(["/notifications", "/api/notifications", "/api-v2/notifications"], requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const snapshot = await adminDb
-      .collection('users')
-      .doc(req.user!.uid)
-      .collection('notifications')
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get();
 
-    const notifications = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        title: data.title,
-        message: data.body,
-        read: !!data.read,
-        link: data.link || null,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
-      };
-    });
 
-    res.json(notifications);
-  } catch (err: any) {
-    if (err.code !== 5) console.error("Error fetching notifications:", err);
-    res.json([]);
+
   }
 });
 
-app.patch(["/notifications/:id/read", "/api/notifications/:id/read", "/api-v2/notifications/:id/read"], requireAuth, async (req: AuthRequest, res) => {
-  try {
-    await adminDb
-      .collection('users')
-      .doc(req.user!.uid)
-      .collection('notifications')
-      .doc(req.params.id)
-      .update({ read: true });
 
-    res.json({ success: true });
-  } catch (err: any) {
-    console.error("Error marking notification read:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post(["/notifications/read-all", "/api/notifications/read-all", "/api-v2/notifications/read-all"], requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const snapshot = await adminDb
-      .collection('users')
-      .doc(req.user!.uid)
-      .collection('notifications')
-      .where('read', '==', false)
-      .get();
-
-    const batch = adminDb.batch();
-    snapshot.docs.forEach(doc => batch.update(doc.ref, { read: true }));
-    await batch.commit();
-
-    res.json({ success: true });
-  } catch (err: any) {
-    console.error("Error marking all notifications read:", err);
-    res.status(500).json({ error: err.message });
   }
 });
 
@@ -1320,13 +1266,21 @@ app.post(["/cart/rfq", "/api/cart/rfq", "/api-v2/cart/rfq"], requireAuth, async 
             buyerUid: req.user.uid,
             sellerUid: seller.uid
           });
-          await adminDb.collection('users').doc(seller.uid).collection('notifications').add({
-            title: 'New Cart RFQ',
-            body: `You have received a new bulk quote request for multiple products.`,
-            read: false,
-            createdAt: new Date(),
-            link: `/rfq/${newInquiry.id}`
-          });
+          // Trigger Notification via Postgres
+          try {
+            const { db } = await import('./src/db/index.js');
+            const { users, notifications } = await import('./src/db/schema.js');
+            const { eq } = await import('drizzle-orm');
+            const sellerDb = await db.select().from(users).where(eq(users.uid, seller.uid)).limit(1);
+            if (sellerDb.length > 0) {
+              await db.insert(notifications).values({
+                userId: sellerDb[0].id,
+                title: "New Inquiry!",
+                message: `You received a new inquiry from ${req.user!.email}`,
+                link: '/rfq'
+              });
+            }
+          } catch(e) { console.error("Error inserting notification", e); }
 
           if (seller.email) {
             try {

@@ -134,6 +134,17 @@ router.post(['/feed/:id/like', '/api/feed/:id/like', '/api-v2/feed/:id/like'], r
       res.json({ liked: false });
     } else {
       await db.insert(feedLikes).values({ postId, userId });
+      // Trigger Notification
+      const { notifications } = await import('../db/schema.js');
+      const postOwner = await db.select({ authorId: feedPosts.authorId }).from(feedPosts).where(eq(feedPosts.id, postId));
+      if (postOwner.length > 0 && postOwner[0].authorId !== userId) {
+        await db.insert(notifications).values({
+          userId: postOwner[0].authorId,
+          title: "New Like",
+          message: "Someone liked your post on the B2B Network.",
+          link: "/feed"
+        });
+      }
       await db.execute(sql`UPDATE feed_posts SET likes_count = likes_count + 1 WHERE id = ${postId}`);
       res.json({ liked: true });
     }
@@ -178,6 +189,16 @@ router.post(['/feed/:id/comments', '/api/feed/:id/comments', '/api-v2/feed/:id/c
     const { content } = req.body;
     
     const newComment = await db.insert(feedComments).values({ postId, authorId, content }).returning();
+    const { notifications } = await import('../db/schema.js');
+    const postOwner = await db.select({ authorId: feedPosts.authorId }).from(feedPosts).where(eq(feedPosts.id, postId));
+    if (postOwner.length > 0 && postOwner[0].authorId !== authorId) {
+      await db.insert(notifications).values({
+        userId: postOwner[0].authorId,
+        title: "New Comment",
+        message: "Someone commented on your post.",
+        link: "/feed"
+      });
+    }
     await db.execute(sql`UPDATE feed_posts SET comments_count = comments_count + 1 WHERE id = ${postId}`);
     
     res.json(newComment[0]);

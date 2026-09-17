@@ -1,13 +1,35 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Building2, Search, MapPin, BadgeCheck, ShieldCheck } from 'lucide-react';
+import { Building2, Search, MapPin, BadgeCheck, ShieldCheck, UserPlus } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { getAuth } from 'firebase/auth';
+import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
 export function Suppliers() {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   
+  const queryClient = useQueryClient();
+  const followMutation = useMutation({
+    mutationFn: async (targetId: number) => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) throw new Error("Must be logged in to connect");
+      const res = await fetch(`/api-v2/company/${targetId}/follow`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${await user.getIdToken()}` }
+      });
+      if (!res.ok) throw new Error("Failed to follow");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Connection updated!");
+      queryClient.invalidateQueries({ queryKey: ['publicPartners'] });
+    }
+  });
+
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ['publicPartners'],
     queryFn: async () => {
@@ -104,7 +126,13 @@ export function Suppliers() {
                    )}
                  </div>
               </div>
-            </Wrapper>
+              <button 
+                  onClick={(e) => { e.preventDefault(); followMutation.mutate(partner.id); }}
+                  className="mt-4 w-full py-2 bg-slate-950 border border-slate-700 text-slate-300 rounded-lg text-sm font-bold hover:bg-cyan-900/30 hover:border-cyan-500 hover:text-cyan-400 transition-colors flex items-center justify-center gap-2"
+                >
+                  <UserPlus className="w-4 h-4" /> Connect
+                </button>
+              </Wrapper>
           )})}
         </div>
       )}
