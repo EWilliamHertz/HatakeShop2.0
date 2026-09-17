@@ -238,7 +238,7 @@ export function Feed() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-400">Following</span>
-                <span className="text-white font-semibold">{dbUser?.followersCount || 0}</span>
+                <span className="text-white font-semibold">{dbUser?.followingCount || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Connections</span>
@@ -469,13 +469,13 @@ export function Feed() {
                         onClick={() => handleLike(post.id)}
                         className={`flex items-center gap-2 text-sm transition-colors ${likedPosts.has(post.id) ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400'}`}
                       >
-                        <Heart className={`w-4 h-4 ${likedPosts.has(post.id) ? 'fill-rose-500' : ''}`} />
+                        <Heart className={`w-4 h-4 ${likedPosts.has(post.id) ? 'fill-rose-500' : ''}`} /> {post.likesCount || 0}
                       </button>
                       <button 
                         onClick={() => setActiveCommentPost(activeCommentPost === post.id ? null : post.id)}
                         className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
                       >
-                        <MessageSquare className="w-4 h-4" />
+                        <MessageSquare className="w-4 h-4" /> {post.commentsCount || 0}
                       </button>
                       <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
                         <Send className="w-4 h-4" /> {t('Share')}

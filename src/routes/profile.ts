@@ -14,6 +14,7 @@ router.get(["/users/:id", "/api/users/:id", "/api-v2/users/:id"], async (req, re
     const userId = parseInt(req.params.id, 10);
     if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
     
+    await db.execute(sql`UPDATE users SET profile_views = profile_views + 1 WHERE id = ${userId}`);
     const userQuery = await db.select({
       id: users.id,
       displayName: users.displayName,
@@ -42,7 +43,11 @@ router.get(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (
     if (!user) {
         user = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
     }
-    res.json(user);
+    
+    const { userFollowers } = await import('../db/schema.js');
+    const following = await db.select({ count: sql`count(*)` }).from(userFollowers).where(eq(userFollowers.followerId, user.id));
+    res.json({ ...user, followingCount: Number(following[0].count) });
+
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -205,6 +210,55 @@ router.patch(["/users/team/:id/role", "/api/users/team/:id/role", "/api-v2/users
   }
 });
 
+
+router.post("/api-v2/users/:id/follow", requireAuth, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id, 10);
+    const userProfile = await getUserProfile(req.user.uid);
+    if (!userProfile) return res.status(404).send("User not found");
+    if (targetId === userProfile.id) return res.status(400).send("Cannot follow yourself");
+
+    // Check if already following
+    const { userFollowers, users } = await import('../db/schema.js');
+    const existing = await db.select().from(userFollowers).where(sql`follower_id = ${userProfile.id} AND following_id = ${targetId}`);
+    
+    if (existing.length > 0) {
+      // Unfollow
+      await db.delete(userFollowers).where(eq(userFollowers.id, existing[0].id));
+      await db.execute(sql`UPDATE users SET followers_count = GREATEST(followers_count - 1, 0) WHERE id = ${targetId}`);
+      return res.json({ following: false });
+    } else {
+      // Follow
+      await db.insert(userFollowers).values({ followerId: userProfile.id, followingId: targetId });
+      await db.execute(sql`UPDATE users SET followers_count = followers_count + 1 WHERE id = ${targetId}`);
+      
+      // Check if mutual (Connection)
+      const mutual = await db.select().from(userFollowers).where(sql`follower_id = ${targetId} AND following_id = ${userProfile.id}`);
+      if (mutual.length > 0) {
+        await db.execute(sql`UPDATE users SET connections_count = connections_count + 1 WHERE id = ${targetId} OR id = ${userProfile.id}`);
+      }
+      return res.json({ following: true });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/api-v2/users/:id/follow-status", requireAuth, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id, 10);
+    const userProfile = await getUserProfile(req.user.uid);
+    if (!userProfile) return res.json({ following: false });
+    const { userFollowers } = await import('../db/schema.js');
+    const existing = await db.select().from(userFollowers).where(sql`follower_id = ${userProfile.id} AND following_id = ${targetId}`);
+    res.json({ following: existing.length > 0 });
+  } catch (err) {
+    res.json({ following: false });
+  }
+});
+
+// Increment profile views hook inside GET /users/:id
+
 router.get(["/users/team", "/api/users/team", "/api-v2/users/team"], requireAuth, async (req: AuthRequest, res) => {
   try {
     const userProfile = await getUserProfile(req.user!.uid);
@@ -283,9 +337,17 @@ router.post(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/
     const existing = await db.select().from(userFollowers).where(and(eq(userFollowers.followerId, userProfile.id), eq(userFollowers.followingId, targetUserId)));
     if (existing.length > 0) {
       await db.delete(userFollowers).where(eq(userFollowers.id, existing[0].id));
+      await db.execute(sql`UPDATE users SET followers_count = GREATEST(followers_count - 1, 0) WHERE id = ${targetUserId}`);
       res.json({ following: false });
     } else {
       await db.insert(userFollowers).values({ followerId: userProfile.id, followingId: targetUserId });
+      await db.execute(sql`UPDATE users SET followers_count = followers_count + 1 WHERE id = ${targetUserId}`);
+      
+      // Check if mutual connection
+      const mutual = await db.select().from(userFollowers).where(and(eq(userFollowers.followerId, targetUserId), eq(userFollowers.followingId, userProfile.id)));
+      if (mutual.length > 0) {
+        await db.execute(sql`UPDATE users SET connections_count = connections_count + 1 WHERE id = ${targetUserId} OR id = ${userProfile.id}`);
+      }
       res.json({ following: true });
     }
   } catch (err) {
