@@ -215,6 +215,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res.ok) {
         console.error("Failed to sync new user to db");
       }
+      
+      // Auto-send beautiful verification email
+      try {
+        await fetch('/api-v2/auth/send-verification', {
+           method: 'POST',
+           headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (e) { console.error("Failed to send verification", e); }
     } catch (error) {
       console.error('Error registering with Email', error);
       throw error;

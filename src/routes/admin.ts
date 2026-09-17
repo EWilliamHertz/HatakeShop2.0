@@ -153,7 +153,13 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
     try {
       const { limit = 50 } = req.body || {};
       const numLimit = Math.max(1, parseInt(limit, 10) || 50);
-      const pendingLeads = await db.select().from(leads).where(eq(leads.status, 'pending')).limit(numLimit);
+      let pendingLeads = [];
+      const { leadIds } = req.body || {};
+      if (leadIds && Array.isArray(leadIds) && leadIds.length > 0) {
+        pendingLeads = await db.select().from(leads).where(inArray(leads.id, leadIds));
+      } else {
+        pendingLeads = await db.select().from(leads).where(eq(leads.status, 'pending')).limit(numLimit);
+      }
       
       if (pendingLeads.length === 0) {
         return res.json({ success: true, sent: 0, message: "No pending leads found to send" });

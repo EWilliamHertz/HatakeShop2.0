@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, products, reviews, leads } from "../db/schema.js";
 import { eq, or, and, isNull } from "drizzle-orm";
+import { userFollowers } from "../db/schema.js";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { getUserProfile, updateUserProfile, getOrCreateUser } from "../db/users.js";
 
@@ -268,6 +269,39 @@ router.post(["/users/team/join", "/api/users/team/join", "/api-v2/users/team/joi
     res.json({ success: true, user: updatedUser[0] });
   } catch (err: any) {
     console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+router.post(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/:id/follow"], requireAuth, async (req, res) => {
+  try {
+    const targetUserId = parseInt(req.params.id, 10);
+    const userProfile = await getUserProfile(req.user.uid);
+    if (!userProfile) return res.status(401).json({ error: "User not found" });
+
+    const existing = await db.select().from(userFollowers).where(and(eq(userFollowers.followerId, userProfile.id), eq(userFollowers.followingId, targetUserId)));
+    if (existing.length > 0) {
+      await db.delete(userFollowers).where(eq(userFollowers.id, existing[0].id));
+      res.json({ following: false });
+    } else {
+      await db.insert(userFollowers).values({ followerId: userProfile.id, followingId: targetUserId });
+      res.json({ following: true });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/:id/follow"], requireAuth, async (req, res) => {
+  try {
+    const targetUserId = parseInt(req.params.id, 10);
+    const userProfile = await getUserProfile(req.user.uid);
+    if (!userProfile) return res.status(401).json({ error: "User not found" });
+
+    const existing = await db.select().from(userFollowers).where(and(eq(userFollowers.followerId, userProfile.id), eq(userFollowers.followingId, targetUserId)));
+    res.json({ following: existing.length > 0 });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

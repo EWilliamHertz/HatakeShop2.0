@@ -386,6 +386,7 @@ export const feedPosts = pgTable('feed_posts', {
   content: text('content').notNull(),
   tags: jsonb('tags').default(sql`'[]'::jsonb`),
   budget: text('budget'),
+  imageUrl: text('image_url'),
   productId: integer('product_id'),
   likesCount: integer('likes_count').default(0),
   commentsCount: integer('comments_count').default(0),
@@ -415,5 +416,12 @@ export const feedComments = pgTable('feed_comments', {
   postId: integer('post_id').notNull().references(() => feedPosts.id),
   authorId: integer('author_id').notNull().references(() => users.id),
   content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const userFollowers = pgTable('user_followers', {
+  id: serial('id').primaryKey(),
+  followerId: integer('follower_id').references(() => users.id).notNull(),
+  followingId: integer('following_id').references(() => users.id).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });

@@ -39,12 +39,77 @@ import { CookieBanner } from './components/CookieBanner.tsx';
 import { Wishlist } from './pages/Wishlist.tsx';
 import { Suppliers } from './pages/Suppliers.tsx';
 
+
+function VerificationOverlay({ user }: { user: any }) {
+  const { logOut } = useAuth();
+  const [sending, setSending] = React.useState(false);
+  const [sent, setSent] = React.useState(false);
+
+  const resendVerification = async () => {
+     setSending(true);
+     try {
+       const token = await user.getIdToken();
+       const res = await fetch('/api-v2/auth/send-verification', {
+         method: 'POST',
+         headers: { 'Authorization': `Bearer ${token}` }
+       });
+       if (!res.ok) throw new Error('Failed to send');
+       setSent(true);
+     } catch (e: any) {
+       console.error(e);
+       alert("Error sending verification email.");
+     } finally {
+       setSending(false);
+     }
+  };
+
+  const handleRefresh = async () => {
+    await user.reload();
+    window.location.reload();
+  };
+
+  return (
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4">
+       <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-indigo-500"></div>
+          
+          <div className="w-16 h-16 bg-slate-800 rounded-2xl border border-slate-700 flex items-center justify-center mx-auto mb-6 shadow-xl">
+             <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          </div>
+          
+          <h2 className="text-2xl font-extrabold text-white mb-2">Verify your email</h2>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+            Welcome to Hatake B2B! We've sent a verification link to <strong className="text-slate-200">{user.email}</strong>. Please verify your email to unlock access to the marketplace and feed.
+          </p>
+
+          <div className="space-y-3">
+             <button onClick={handleRefresh} className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl transition-colors">
+               I've verified my email
+             </button>
+             
+             <button onClick={resendVerification} disabled={sending || sent} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-colors border border-slate-700">
+               {sending ? 'Sending...' : sent ? 'Verification Sent!' : 'Resend Verification Link'}
+             </button>
+             
+             <button onClick={() => logOut().then(() => window.location.href='/login')} className="w-full py-3 text-slate-500 hover:text-slate-300 font-medium text-sm transition-colors">
+               Sign in with a different account
+             </button>
+          </div>
+       </div>
+    </div>
+  );
+}
+
 function ProtectedRoute({ children, requireAdmin, requireSeller }: { children: React.ReactNode, requireAdmin?: boolean, requireSeller?: boolean }) {
   const { user, dbUser, loading } = useAuth();
   const location = useLocation();
   if (loading) return <div className="p-8 text-center text-slate-400">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   
+  if (!user.emailVerified) {
+     return <VerificationOverlay user={user} />;
+  }
+
   if (dbUser && dbUser.verificationStatus === 'pending' && location.pathname !== '/settings') {
      return <Navigate to="/settings" />;
   }

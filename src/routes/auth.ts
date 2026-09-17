@@ -96,4 +96,59 @@ router.post("/api-v2/auth/sync", requireAuth, async (req: AuthRequest, res) => {
     }
   });
 
+
+import { adminAuth } from '../lib/firebase-admin.js';
+
+router.post("/api-v2/auth/send-verification", requireAuth, async (req: AuthRequest, res) => {
+    try {
+        if (!req.user || !req.user.email) return res.status(400).json({ error: "No email associated with account." });
+        
+        // Generate link using Admin SDK
+        const actionCodeSettings = {
+           url: (process.env.APP_URL || 'https://hatake.shop') + '/feed' // Redirect here after verification
+        };
+        const link = await adminAuth.generateEmailVerificationLink(req.user.email, actionCodeSettings);
+
+        // Send customized email via Resend
+        const appName = "Hatake B2B";
+        const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #020617; color: #ffffff; border-radius: 12px; border: 1px solid #1e293b;">
+           <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; tracking: -1px;">${appName}</h1>
+              <div style="height: 2px; width: 60px; background-color: #38bdf8; margin: 15px auto;"></div>
+           </div>
+           
+           <h2 style="color: #f8fafc; font-size: 20px; margin-bottom: 20px;">Verify your email address</h2>
+           
+           <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6; margin-bottom: 25px;">
+              Welcome to ${appName}! To complete your registration and unlock full access to our B2B network, please verify your email address by clicking the button below.
+           </p>
+           
+           <div style="text-align: center; margin-bottom: 35px;">
+              <a href="${link}" style="display: inline-block; background-color: #38bdf8; color: #020617; text-decoration: none; font-weight: bold; font-size: 16px; padding: 14px 28px; border-radius: 8px;">
+                 Verify Email
+              </a>
+           </div>
+           
+           <p style="color: #64748b; font-size: 13px; text-align: center; border-top: 1px solid #1e293b; padding-top: 20px;">
+              If you didn't create an account, you can safely ignore this email.<br/>
+              &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
+           </p>
+        </div>
+        `;
+
+        await resend.emails.send({
+            from: "Hatake B2B <b2b@hatake.shop>",
+            to: req.user.email,
+            subject: `Verify your email for ${appName}`,
+            html: emailHtml
+        });
+
+        res.json({ success: true });
+    } catch (err: any) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 export default router;

@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/AuthContext.tsx';
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
-import { Building2, MapPin, Globe2, BadgeCheck, ExternalLink, Mail, Package, ChevronRight, Star, ArrowRight, User } from 'lucide-react';
+import { Building2, MapPin, Globe2, BadgeCheck, ExternalLink, Mail, Package, ChevronRight, Star, ArrowRight, User, UserPlus, UserMinus } from 'lucide-react';
 import { SpotlightGallery } from '../components/SpotlightGallery.tsx';
 import { Maximize2 } from 'lucide-react';
 import { VendorReviews } from '../components/VendorReviews.tsx';
@@ -19,6 +19,7 @@ export function CompanyProfile() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isContacting, setIsContacting] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleContact = async () => {
     if (!user) { toast.error('Please log in to contact the supplier'); navigate('/login'); return; }
@@ -32,6 +33,33 @@ export function CompanyProfile() {
     } catch (err: any) { toast.error(err.message || 'Network error'); }
     finally { setIsContacting(false); }
   };
+
+
+  const { data: followData } = useQuery({
+    queryKey: ['companyFollow', id],
+    queryFn: async () => {
+      if (!user) return { following: false };
+      const res = await fetch(`/api-v2/company/${id}/follow`, {
+        headers: { 'Authorization': `Bearer ${await user.getIdToken()}` }
+      });
+      if (!res.ok) return { following: false };
+      return res.json();
+    },
+    enabled: !!user
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api-v2/company/${id}/follow`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${await user?.getIdToken()}` }
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyFollow', id] });
+    }
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['companyProfile', id],
@@ -121,6 +149,17 @@ export function CompanyProfile() {
             {allImages.length > 0 && (
               <button onClick={() => setIsSpotlightOpen(true)} className="btn-secondary">
                 <Maximize2 className="w-4 h-4 mr-2" /> Gallery
+              </button>
+            )}
+
+            {user && (
+              <button 
+                onClick={() => followMutation.mutate()} 
+                disabled={followMutation.isPending}
+                className={`btn-secondary flex items-center gap-2 ${followData?.following ? 'border-cyan-500 text-cyan-400' : ''}`}
+              >
+                {followData?.following ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                {followData?.following ? 'Connected' : 'Connect / Follow'}
               </button>
             )}
             <button onClick={handleContact} disabled={isContacting} className="btn-primary disabled:opacity-50">

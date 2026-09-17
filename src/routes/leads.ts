@@ -44,28 +44,26 @@ router.get("/api-v2/leads/progress", async (req, res) => {
 
 router.get("/api-v2/leads/public", async (req, res) => {
   try {
-    // Return anonymised leads — website domain only, no names or emails
     const allLeads = await db
       .select({
         id: leads.id,
+        companyName: leads.companyName,
         website: leads.website,
         location: leads.location,
+        socialLinks: leads.socialLinks,
         status: leads.status,
         sentAt: leads.sentAt,
         createdAt: leads.createdAt,
       })
       .from(leads)
-      .where(not(eq(leads.status, 'pending')))
-      .orderBy(sql`${leads.sentAt} DESC NULLS LAST, ${leads.createdAt} DESC`)
-      .limit(200);
+      .orderBy(sql`${leads.sentAt} DESC NULLS LAST, ${leads.createdAt} DESC`);
 
     const sanitised = allLeads.map(l => ({
       id: l.id,
-      // Show only domain, never full email
-      website: l.website
-        ? l.website.replace(/^https?:\/\//, '').split('/')[0]
-        : null,
-      country: l.location || null,
+      companyName: l.companyName || 'Unknown Company',
+      website: l.website ? l.website : null,
+      location: l.location || null,
+      socialLinks: l.socialLinks || [],
       status: l.status === 'recruited' ? 'registered' : l.status === 'clicked' || l.status === 'opened' ? 'responded' : 'invited',
       sentAt: l.sentAt || l.createdAt,
     }));
@@ -74,6 +72,23 @@ router.get("/api-v2/leads/public", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+
+router.put("/api-v2/admin/leads/:id", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    try {
+       const { email, companyName, website, socialLinks } = req.body;
+       const { id } = req.params;
+       await db.update(leads).set({ 
+         email: email || undefined,
+         companyName,
+         website,
+         socialLinks
+       }).where(eq(leads.id, parseInt(id)));
+       res.json({ success: true });
+    } catch (err: any) {
+       res.status(500).json({ error: err.message });
+    }
 });
 
 export default router;

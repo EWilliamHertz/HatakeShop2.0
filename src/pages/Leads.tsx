@@ -101,40 +101,62 @@ export function Leads() {
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-400"></div>
           </div>
         ) : leads.length > 0 ? (
-          <div className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Verified Outreach Log</h2>
-            {leads.map((lead: any, idx: number) => (
-              <div
-                key={lead.id || idx}
-                className="flex items-center gap-4 bg-white/3 border border-white/5 rounded-xl px-5 py-4 hover:bg-white/6 transition-colors group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700">
-                  <Globe2 className="w-4 h-4 text-slate-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-slate-200 truncate">
-                    {lead.website || lead.email?.split('@')[1] || 'Unknown domain'}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                      lead.status === 'registered' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/20' :
-                      lead.status === 'responded' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' :
-                      'bg-slate-800 text-slate-400 border border-slate-700'
-                    }`}>
-                      {lead.status === 'registered' ? '✓ Joined' : lead.status === 'responded' ? '↩ Responded' : 'Invited'}
-                    </span>
-                    {lead.country && <span>{lead.country}</span>}
-                    {lead.sentAt && <span>{new Date(lead.sentAt).toLocaleDateString()}</span>}
-                  </div>
-                </div>
-                {lead.website && (
-                  <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer"
-                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-white/10">
-                    <ExternalLink className="w-4 h-4 text-slate-400" />
-                  </a>
-                )}
-              </div>
-            ))}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden backdrop-blur-xl">
+             <div className="overflow-x-auto">
+               <table className="w-full text-left text-sm whitespace-nowrap">
+                 <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800">
+                   <tr>
+                     <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Company</th>
+                     <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Website</th>
+                     <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Location</th>
+                     <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Socials</th>
+                     <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Status</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-800/60">
+                   {leads.map((lead: any, idx: number) => (
+                     <tr key={lead.id || idx} className="hover:bg-white/5 transition-colors group">
+                       <td className="px-6 py-4 font-bold text-white flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0">
+                           <Building2 className="w-4 h-4 text-slate-400" />
+                         </div>
+                         {lead.companyName}
+                       </td>
+                       <td className="px-6 py-4">
+                         {lead.website ? (
+                           <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline flex items-center gap-1">
+                             {lead.website.replace(/^https?:\/\//, '')} <ExternalLink className="w-3 h-3 opacity-50"/>
+                           </a>
+                         ) : <span className="text-slate-600">-</span>}
+                       </td>
+                       <td className="px-6 py-4 text-slate-400">
+                         {lead.location || <span className="text-slate-600">-</span>}
+                       </td>
+                       <td className="px-6 py-4">
+                         {lead.socialLinks && lead.socialLinks.length > 0 ? (
+                           <div className="flex gap-2">
+                             {lead.socialLinks.map((link:string, i:number) => (
+                               <a key={i} href={link} target="_blank" rel="noreferrer" className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded transition-colors">
+                                 Link
+                               </a>
+                             ))}
+                           </div>
+                         ) : <span className="text-slate-600">-</span>}
+                       </td>
+                       <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase ${
+                            lead.status === 'registered' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/20' :
+                            lead.status === 'responded' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' :
+                            'bg-slate-800/80 text-slate-400 border border-slate-700'
+                          }`}>
+                            {lead.status === 'registered' ? '✓ Joined' : lead.status === 'responded' ? '↩ Responded' : 'Invited'}
+                          </span>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
           </div>
         ) : (
           <div className="text-center py-20 space-y-4">
