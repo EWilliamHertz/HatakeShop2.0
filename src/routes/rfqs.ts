@@ -35,13 +35,13 @@ router.post(["/inquiries", "/api/inquiries", "/api-v2/inquiries"], requireAuth, 
     const newInquiry = result[0];
     
     if (targetProductId) {
-      const productInfo = await db.select({ sellerUid: users.uid, sellerEmail: users.email, productTitle: products.title })
+      const productInfo = await db.select({ sellerUid: users.uid, sellerEmail: users.email, productTitle: products.title, notificationEmails: users.notificationEmails })
         .from(products)
         .innerJoin(users, eq(products.sellerId, users.id))
         .where(eq(products.id, targetProductId));
         
       if (productInfo.length > 0) {
-        const { sellerUid, sellerEmail, productTitle } = productInfo[0];
+        const { sellerUid, sellerEmail, productTitle, notificationEmails } = productInfo[0];
         await adminDb.collection('inquiries').doc(newInquiry.id.toString()).set({
           buyerUid: req.user.uid,
           sellerUid: sellerUid
@@ -71,7 +71,7 @@ router.post(["/inquiries", "/api/inquiries", "/api-v2/inquiries"], requireAuth, 
 
             await resend.emails.send({
               from: "Hatake.Shop <notifications@hatake.shop>",
-              to: sellerEmail,
+              to: Array.from(new Set([sellerEmail, ...(notificationEmails || [])])).filter(Boolean).slice(0, 5),
               subject: `New RFQ Received: ${quantity}x ${productTitle}`,
               html: htmlBody
             });

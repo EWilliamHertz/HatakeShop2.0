@@ -133,6 +133,7 @@ router.all(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (
          shippingCity: req.body.shippingCity,
          shippingZip: req.body.shippingZip,
          restrictedShippingCountries: req.body.restrictedShippingCountries,
+         notificationEmails: req.body.notificationEmails,
          kybDocuments: req.body.kybDocuments,
          verificationStatus: req.body.verificationStatus
        };
@@ -147,6 +148,7 @@ router.all(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (
            companyName: req.body.companyName,
            country: req.body.country,
            restrictedShippingCountries: req.body.restrictedShippingCountries,
+         notificationEmails: req.body.notificationEmails,
            verificationStatus: req.body.verificationStatus
        };
        Object.keys(sharedFields).forEach(key => sharedFields[key] === undefined && delete sharedFields[key]);

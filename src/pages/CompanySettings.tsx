@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useAuth } from '../components/AuthContext.tsx';
 import { toast } from 'sonner';
-import { ShieldCheck, Building2, FileText, Globe2, Loader2, Save, Languages, MapPin, CreditCard, BadgeCheck, Users, UploadCloud, Upload, Store, Share2 } from 'lucide-react';
+import { ShieldCheck, Building2, FileText, Globe2, Loader2, Save, Languages, MapPin, CreditCard, BadgeCheck, Users, UploadCloud, Upload, Store, Share2, Bell, X, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AffiliateDashboard } from './AffiliateDashboard.tsx';
 
@@ -38,6 +38,7 @@ export function CompanySettings() {
     restrictedShippingCountries: dbUser?.restrictedShippingCountries || [],
     stripeAccountId: dbUser?.stripeAccountId || '',
     kybDocuments: dbUser?.kybDocuments || [],
+    notificationEmails: dbUser?.notificationEmails || [],
   });
 
   React.useEffect(() => {
@@ -53,6 +54,7 @@ export function CompanySettings() {
         bannerUrl: dbUser.bannerUrl || '',
         country: dbUser.country || '',
         region: dbUser.region || '',
+        notificationEmails: dbUser.notificationEmails || [],
         companyFocus: dbUser.companyFocus || '',
         vatNumber: dbUser.vatNumber || '',
         role: dbUser.role || 'buyer',
@@ -178,6 +180,7 @@ export function CompanySettings() {
     { id: 'general', name: 'Company Profile', icon: Building2 },
     { id: 'verification', name: 'Verification & KYB', icon: ShieldCheck },
     { id: 'logistics', name: 'Logistics & Payments', icon: MapPin },
+    { id: 'notifications', name: 'Notifications', icon: Bell },
   ];
 
   return (
@@ -430,6 +433,55 @@ export function CompanySettings() {
                   </div>
                 )}
 
+                {activeTab === 'notifications' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-xl font-bold text-white mb-1">{t('Notification Emails')}</h2>
+                      <p className="text-sm text-slate-400 mb-6">{t('Add up to 5 email addresses to receive important notifications like leads, orders, and inquiries.')}</p>
+                      
+                      <div className="space-y-3">
+                        {formData.notificationEmails.map((email: string, idx: number) => (
+                          <div key={idx} className="flex gap-2">
+                            <input 
+                              type="email" 
+                              value={email}
+                              onChange={(e) => {
+                                const newEmails = [...formData.notificationEmails];
+                                newEmails[idx] = e.target.value;
+                                setFormData({ ...formData, notificationEmails: newEmails });
+                              }}
+                              className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                              placeholder={t('team@yourcompany.com')}
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newEmails = formData.notificationEmails.filter((_: string, i: number) => i !== idx);
+                                setFormData({ ...formData, notificationEmails: newEmails });
+                              }}
+                              className="p-2 text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-700 rounded-xl transition-colors"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {formData.notificationEmails.length < 5 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, notificationEmails: [...formData.notificationEmails, ''] });
+                            }}
+                            className="flex items-center gap-2 text-sm text-cyan-400 font-semibold hover:text-cyan-300 transition-colors"
+                          >
+                            <Plus className="w-4 h-4" /> {t('Add Email')} ({formData.notificationEmails.length}/5)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {activeTab === 'logistics' && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                     <h3 className="text-2xl font-bold text-white border-b border-[var(--color-hairline)] pb-2">{t('Logistics & Shipping')}</h3>

@@ -51,6 +51,7 @@ export const users = pgTable('users', {
   socialLinks: jsonb('social_links').default(sql`'[]'::jsonb`),
   portfolio: jsonb('portfolio').default(sql`'[]'::jsonb`),
   profilePictureUrl: text('profile_picture_url'),
+  notificationEmails: jsonb('notification_emails').default(sql`'[]'::jsonb`),
   bannerUrl: text('banner_url'),
   createdAt: timestamp('created_at').defaultNow(),
 });
