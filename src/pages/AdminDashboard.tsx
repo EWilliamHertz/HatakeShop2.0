@@ -244,7 +244,12 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
       if (affData) setAffiliates(affData);
 
       const leadsData = await safeFetch('/api-v2/admin/leads');
-      if (leadsData) { setLeads(leadsData.leads); setSentCount(leadsData.sentCount); }
+      if (leadsData) { 
+        // API returns { leads: [...], sentCount: N } — guard both shapes
+        const leadsArr = Array.isArray(leadsData) ? leadsData : (leadsData.leads || []);
+        setLeads(leadsArr); 
+        setSentCount(leadsData.sentCount || 0); 
+      }
 
       const approvalsData = await safeFetch('/api-v2/admin/approvals');
       if (approvalsData) setApprovals(approvalsData);

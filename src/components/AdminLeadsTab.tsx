@@ -5,7 +5,8 @@ import { ExternalLink, Edit2, Check, X, CheckSquare, Square, UserCheck, Send, Ey
 
 type LeadView = 'to-send' | 'sent' | 'recruited' | 'all';
 
-export function AdminLeadsTab({ leads, user, fetchAdminData, setPreviewingHtml }: any) {
+export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPreviewingHtml }: any) {
+  const leads: any[] = Array.isArray(leadsProp) ? leadsProp : [];
   const [view, setView] = useState<LeadView>('to-send');
   const [emailStatusFilter, setEmailStatusFilter] = useState('all');
   const [uploading, setUploading] = useState(false);
