@@ -526,33 +526,13 @@ export function Feed() {
 
         {/* Right Sidebar (Trending) */}
         <div className="hidden xl:block lg:col-span-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sticky top-28 shadow-xl shadow-black/50">
-            <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-amber-500" /> Trending Bounties
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sticky top-28 shadow-xl shadow-black/50 text-center">
+            <h3 className="font-bold text-white mb-2 flex items-center justify-center gap-2">
+              <TrendingUp className="w-5 h-5 text-amber-500" /> Market Activity
             </h3>
-            
-            <div className="space-y-4">
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 cursor-pointer transition-colors">
-                <div className="text-xs text-cyan-400 font-bold mb-1">WTB • 500 units</div>
-                <div className="text-sm font-semibold text-slate-200 line-clamp-2 mb-2">Pokemon 151 JP Booster Boxes</div>
-                <div className="text-xs text-slate-500 flex justify-between items-center">
-                  <span>Target: $120/ea</span>
-                  <span className="text-slate-600">4 bids</span>
-                </div>
-              </div>
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 cursor-pointer transition-colors">
-                <div className="text-xs text-cyan-400 font-bold mb-1">WTB • 1 Pallet</div>
-                <div className="text-sm font-semibold text-slate-200 line-clamp-2 mb-2">Paldea Evolved ETBs</div>
-                <div className="text-xs text-slate-500 flex justify-between items-center">
-                  <span>Target: $28/ea</span>
-                  <span className="text-slate-600">12 bids</span>
-                </div>
-              </div>
-            </div>
-
-            <button className="w-full mt-4 py-2 border border-slate-700 text-slate-400 rounded-xl text-sm font-semibold hover:bg-slate-800 hover:text-white transition-colors">
-              View All Bounties
-            </button>
+            <p className="text-sm text-slate-500">
+              Live marketplace activity will appear here as the network grows.
+            </p>
           </div>
         </div>
 
