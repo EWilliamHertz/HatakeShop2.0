@@ -137,14 +137,18 @@ router.post("/api-v2/auth/send-verification", requireAuth, async (req: AuthReque
         </div>
         `;
 
-        await resend.emails.send({
+        const resendResponse = await resend.emails.send({
             from: "Hatake B2B <noreply@hatake.shop>",
             to: req.user.email,
             subject: `Verify your email for ${appName}`,
             html: emailHtml
         });
+        
+        if (resendResponse.error) {
+           throw new Error("Resend API Error: " + resendResponse.error.message);
+        }
 
-        res.json({ success: true });
+        res.json({ success: true, id: resendResponse.data?.id });
     } catch (err: any) {
         console.error(err);
         res.status(500).json({ error: err.message });
