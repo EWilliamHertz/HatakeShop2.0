@@ -138,7 +138,7 @@ router.post("/api-v2/auth/send-verification", requireAuth, async (req: AuthReque
         `;
 
         await resend.emails.send({
-            from: "Hatake B2B <b2b@hatake.shop>",
+            from: "Hatake B2B <noreply@hatake.shop>",
             to: req.user.email,
             subject: `Verify your email for ${appName}`,
             html: emailHtml
