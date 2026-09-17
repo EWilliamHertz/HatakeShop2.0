@@ -6,7 +6,10 @@ import { ExternalLink, Edit2, Check, X, CheckSquare, Square, UserCheck, Send, Ey
 type LeadView = 'to-send' | 'sent' | 'recruited' | 'all';
 
 export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPreviewingHtml }: any) {
-  const leads: any[] = Array.isArray(leadsProp) ? leadsProp : [];
+  const leads: any[] = (Array.isArray(leadsProp) ? leadsProp : []).map(l => ({
+    ...l,
+    socialLinks: Array.isArray(l.socialLinks) ? l.socialLinks : (typeof l.socialLinks === 'string' ? [l.socialLinks] : [])
+  }));
   const [view, setView] = useState<LeadView>('to-send');
   const [emailStatusFilter, setEmailStatusFilter] = useState('all');
   const [uploading, setUploading] = useState(false);
@@ -277,13 +280,14 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                     </td>
                     <td className="px-4 py-3">
                       {isEditing
-                        ? <input type="text" placeholder="URLs, comma sep." className="bg-slate-950 border border-slate-600 rounded px-2 py-1 w-full text-sm" value={(editData.socialLinks || []).join(', ')} onChange={e => setEditData({...editData, socialLinks: e.target.value.split(',').map((s: string) => s.trim())})}/>
-                        : (lead.socialLinks && lead.socialLinks.length > 0)
+                        ? <input type="text" placeholder="URLs, comma sep." className="bg-slate-950 border border-slate-600 rounded px-2 py-1 w-full text-sm" value={(Array.isArray(editData.socialLinks) ? editData.socialLinks : []).join(', ')} onChange={e => setEditData({...editData, socialLinks: e.target.value.split(',').map((s: string) => s.trim())})}/>
+                        : (Array.isArray(lead.socialLinks) && lead.socialLinks.length > 0)
                           ? <div className="flex gap-1">
                               {lead.socialLinks.map((link: string, i: number) => (
-                                <a key={i} href={link} target="_blank" rel="noreferrer" className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
+                                typeof link === 'string' ? 
+                                <a key={i} href={link.startsWith('http') ? link : `https://${link}`} target="_blank" rel="noreferrer" className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
                                   Social {i+1}
-                                </a>
+                                </a> : null
                               ))}
                             </div>
                           : <span className="text-slate-600">-</span>}
