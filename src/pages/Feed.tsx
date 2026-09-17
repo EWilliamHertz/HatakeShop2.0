@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export function Feed() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, dbUser } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'info' | 'listing' | 'wtb'>('info');
   const [postContent, setPostContent] = useState('');
@@ -167,11 +167,11 @@ export function Feed() {
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-200">{post.author.name}</span>
-                        {post.author.verified && <BadgeCheck className="w-4 h-4 text-cyan-500" />}
+                        <span className="font-bold text-slate-200">{post?.author?.name || "Unknown"}</span>
+                        {post?.author?.verified && <BadgeCheck className="w-4 h-4 text-cyan-500" />}
                       </div>
                       <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3" /> {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                        <Clock className="w-3 h-3" /> {formatDistanceToNow((post.createdAt ? new Date(post.createdAt) : new Date()), { addSuffix: true })}
                       </div>
                     </div>
                   </div>
@@ -189,7 +189,7 @@ export function Feed() {
 
                 {/* Post Content */}
                 <p className="text-slate-300 leading-relaxed mb-4 whitespace-pre-wrap">
-                  {post.content.split(' ').map((word: string, i: number) => {
+                  {(post.content || "").split(' ').map((word: string, i: number) => {
                     if (word.includes('youtu.be/') || word.includes('youtube.com/watch')) {
                        return <a key={i} href={word} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">{word} </a>;
                     }
@@ -198,8 +198,8 @@ export function Feed() {
                 </p>
                 
                 {/* Auto-embed YouTube */}
-                {(post.content.includes('youtu.be/') || post.content.includes('youtube.com/')) ? (() => {
-                  const match = post.content.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+                {((post.content || "").includes('youtu.be/') || (post.content || "").includes('youtube.com/')) ? (() => {
+                  const match = (post.content || "").match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
                   if (match && match[1]) {
                     return (
                       <div className="mb-4 rounded-xl overflow-hidden border border-slate-800">
