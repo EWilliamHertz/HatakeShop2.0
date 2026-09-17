@@ -1,12 +1,12 @@
 import { db } from './index.js';
 import { users } from './schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 
 export async function getOrCreateUser(uid: string, email: string, displayName?: string) {
   const isAdmin = email === 'ewilliamhe@gmail.com' || email === 'ernst@hatake.eu' || email.toLowerCase() === 'phoebe@topbestpkg.com';
 
   // First check by uid OR email to prevent duplicates
-  const { or } = await import('drizzle-orm');
+  
   const existing = await db.select().from(users).where(or(eq(users.uid, uid), eq(users.email, email))).limit(1);
   if (existing.length > 0) {
     const updated = await db.update(users).set({
