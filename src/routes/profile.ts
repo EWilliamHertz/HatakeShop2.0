@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, products, reviews, leads } from "../db/schema.js";
-import { eq, or, and, isNull } from "drizzle-orm";
+import { eq, or, and, isNull, sql } from 'drizzle-orm';
 import { userFollowers } from "../db/schema.js";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { getUserProfile, updateUserProfile, getOrCreateUser } from "../db/users.js";
 
 const router = Router();
 
-router.get(["/users/:id", "/api/users/:id", "/api-v2/users/:id"], async (req, res) => {
+router.get(["/users/:id", "/api/users/:id", "/api-v2/users/:id"], async (req: any, res: any) => {
   if (req.params.id === 'team') return; // Skip /users/team route
   try {
     const userId = parseInt(req.params.id, 10);
@@ -39,9 +39,9 @@ router.get(["/users/:id", "/api/users/:id", "/api-v2/users/:id"], async (req, re
 router.get(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
-    let user = await getUserProfile(req.user.uid);
+    let user = await getUserProfile(req.user?.uid);
     if (!user) {
-        user = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
+        user = await getOrCreateUser(req.user?.uid, req.user.email || "", req.user.name);
     }
     
     const { userFollowers } = await import('../db/schema.js');
@@ -54,7 +54,7 @@ router.get(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (
   }
 });
 
-router.get(["/company/:id", "/api/company/:id", "/api-v2/company/:id"], async (req, res) => {
+router.get(["/company/:id", "/api/company/:id", "/api-v2/company/:id"], async (req: any, res: any) => {
   try {
     const companyId = parseInt(req.params.id, 10);
     const company = await db.select({
@@ -115,9 +115,9 @@ router.all(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (
     let user;
     
     if (isCompanyUpdate) {
-       let currentUser = await getUserProfile(req.user.uid);
+       let currentUser = await getUserProfile(req.user?.uid);
        if (!currentUser) {
-           currentUser = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
+           currentUser = await getOrCreateUser(req.user?.uid, req.user.email || "", req.user.name);
        }
        const parentId = currentUser.teamOwnerId || currentUser.id;
        
@@ -162,10 +162,10 @@ router.all(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (
            await db.update(users).set(sharedFields).where(eq(users.teamOwnerId, parentId));
        }
        
-       user = await getUserProfile(req.user.uid);
+       user = await getUserProfile(req.user?.uid);
     } else {
        // Personal update
-       user = await updateUserProfile(req.user.uid, req.body);
+       user = await updateUserProfile(req.user?.uid, req.body);
     }
     
     res.json(user);
@@ -211,10 +211,10 @@ router.patch(["/users/team/:id/role", "/api/users/team/:id/role", "/api-v2/users
 });
 
 
-router.post("/api-v2/users/:id/follow", requireAuth, async (req, res) => {
+router.post("/api-v2/users/:id/follow", requireAuth, async (req: any, res: any) => {
   try {
     const targetId = parseInt(req.params.id, 10);
-    const userProfile = await getUserProfile(req.user.uid);
+    const userProfile = await getUserProfile(req.user?.uid);
     if (!userProfile) return res.status(404).send("User not found");
     if (targetId === userProfile.id) return res.status(400).send("Cannot follow yourself");
 
@@ -244,10 +244,10 @@ router.post("/api-v2/users/:id/follow", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/api-v2/users/:id/follow-status", requireAuth, async (req, res) => {
+router.get("/api-v2/users/:id/follow-status", requireAuth, async (req: any, res: any) => {
   try {
     const targetId = parseInt(req.params.id, 10);
-    const userProfile = await getUserProfile(req.user.uid);
+    const userProfile = await getUserProfile(req.user?.uid);
     if (!userProfile) return res.json({ following: false });
     const { userFollowers } = await import('../db/schema.js');
     const existing = await db.select().from(userFollowers).where(sql`follower_id = ${userProfile.id} AND following_id = ${targetId}`);
@@ -328,10 +328,10 @@ router.post(["/users/team/join", "/api/users/team/join", "/api-v2/users/team/joi
 });
 
 
-router.post(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/:id/follow"], requireAuth, async (req, res) => {
+router.post(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/:id/follow"], requireAuth, async (req: any, res: any) => {
   try {
     const targetUserId = parseInt(req.params.id, 10);
-    const userProfile = await getUserProfile(req.user.uid);
+    const userProfile = await getUserProfile(req.user?.uid);
     if (!userProfile) return res.status(401).json({ error: "User not found" });
 
     const existing = await db.select().from(userFollowers).where(and(eq(userFollowers.followerId, userProfile.id), eq(userFollowers.followingId, targetUserId)));
@@ -363,10 +363,10 @@ router.post(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/
   }
 });
 
-router.get(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/:id/follow"], requireAuth, async (req, res) => {
+router.get(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/:id/follow"], requireAuth, async (req: any, res: any) => {
   try {
     const targetUserId = parseInt(req.params.id, 10);
-    const userProfile = await getUserProfile(req.user.uid);
+    const userProfile = await getUserProfile(req.user?.uid);
     if (!userProfile) return res.status(401).json({ error: "User not found" });
 
     const existing = await db.select().from(userFollowers).where(and(eq(userFollowers.followerId, userProfile.id), eq(userFollowers.followingId, targetUserId)));

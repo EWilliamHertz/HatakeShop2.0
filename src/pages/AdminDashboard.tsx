@@ -754,7 +754,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                     <td className="px-4 py-3 space-x-2">
                       
                       <button onClick={() => setEditingUser(u)} className="text-[#ffcc00] font-semibold tracking-tight hover:underline">Edit User</button>
-                      <button onClick={() => handleImpersonate(u.id)} className="text-cyan-400 font-semibold tracking-tight hover:underline ml-3">Impersonate</button>
+                      
 
                     </td>
                   </tr>

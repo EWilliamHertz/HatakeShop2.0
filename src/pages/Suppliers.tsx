@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { Building2, Search, MapPin, BadgeCheck, ShieldCheck, UserPlus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAuth } from 'firebase/auth';
-import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
 export function Suppliers() {
@@ -25,7 +24,7 @@ export function Suppliers() {
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Connection updated!");
+      alert("Connection updated!");
       queryClient.invalidateQueries({ queryKey: ['publicPartners'] });
     }
   });

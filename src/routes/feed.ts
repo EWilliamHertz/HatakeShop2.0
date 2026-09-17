@@ -33,6 +33,7 @@ router.get(['/feed', '/api/feed', '/api-v2/feed'], async (req, res) => {
     }
 
     let query = db.select({
+
       id: feedPosts.id,
       type: feedPosts.type,
       content: feedPosts.content,
@@ -57,7 +58,7 @@ router.get(['/feed', '/api/feed', '/api-v2/feed'], async (req, res) => {
       }
     })
     .from(feedPosts)
-    .leftJoin(users, eq(feedPosts.authorId, users.id))
+    .leftJoin(users, eq(feedPosts.authorId, users.id)).$dynamic()
     .leftJoin(products, eq(feedPosts.productId, products.id));
     
     if (allowedAuthorIds) {
@@ -88,12 +89,12 @@ router.get(['/feed', '/api/feed', '/api-v2/feed'], async (req, res) => {
 });
 
 // Create Feed Post
-router.post(['/feed', '/api/feed', '/api-v2/feed'], requireAuth, async (req: any, res) => {
+router.post(['/feed', '/api/feed', '/api-v2/feed'], requireAuth, async (req: any, res: any) => {
   try {
     const { type, content, tags, budget, productId, imageUrl } = req.body;
     // req.user has the current logged in user OR the impersonated user (if we intercept)
     
-    const dbUserRes = await db.select({ id: users.id }).from(users).where(eq(users.uid, req.user.uid));
+    const dbUserRes = await db.select({ id: users.id }).from(users).where(eq(users.uid, (req as any).user?.uid));
     if(dbUserRes.length === 0) return res.status(401).json({error: "User not found"});
     const authorId = dbUserRes[0].id;
  
@@ -117,11 +118,11 @@ router.post(['/feed', '/api/feed', '/api-v2/feed'], requireAuth, async (req: any
 
 
 // Toggle Like
-router.post(['/feed/:id/like', '/api/feed/:id/like', '/api-v2/feed/:id/like'], requireAuth, async (req: any, res) => {
+router.post(['/feed/:id/like', '/api/feed/:id/like', '/api-v2/feed/:id/like'], requireAuth, async (req: any, res: any) => {
   try {
     const postId = parseInt(req.params.id);
     
-    const dbUserRes = await db.select({ id: users.id }).from(users).where(eq(users.uid, req.user.uid));
+    const dbUserRes = await db.select({ id: users.id }).from(users).where(eq(users.uid, (req as any).user?.uid));
     if(dbUserRes.length === 0) return res.status(401).json({error: "User not found"});
     const userId = dbUserRes[0].id;
 
@@ -178,11 +179,11 @@ router.get(['/feed/:id/comments', '/api/feed/:id/comments', '/api-v2/feed/:id/co
 });
 
 // Add Comment
-router.post(['/feed/:id/comments', '/api/feed/:id/comments', '/api-v2/feed/:id/comments'], requireAuth, async (req: any, res) => {
+router.post(['/feed/:id/comments', '/api/feed/:id/comments', '/api-v2/feed/:id/comments'], requireAuth, async (req: any, res: any) => {
   try {
     const postId = parseInt(req.params.id);
     
-    const dbUserRes = await db.select({ id: users.id }).from(users).where(eq(users.uid, req.user.uid));
+    const dbUserRes = await db.select({ id: users.id }).from(users).where(eq(users.uid, (req as any).user?.uid));
     if(dbUserRes.length === 0) return res.status(401).json({error: "User not found"});
     const authorId = dbUserRes[0].id;
 
@@ -212,7 +213,7 @@ router.post(['/feed/:id/comments', '/api/feed/:id/comments', '/api-v2/feed/:id/c
 router.delete(['/feed/:id', '/api/feed/:id', '/api-v2/feed/:id'], requireAuth, async (req, res) => {
   try {
     const postId = parseInt(req.params.id);
-    const dbUserRes = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.uid, req.user.uid));
+    const dbUserRes = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.uid, (req as any).user?.uid));
     if(dbUserRes.length === 0) return res.status(401).json({error: "User not found"});
     const user = dbUserRes[0];
     
@@ -239,7 +240,7 @@ router.delete(['/feed/:id', '/api/feed/:id', '/api-v2/feed/:id'], requireAuth, a
 router.delete(['/feed/comments/:id', '/api/feed/comments/:id', '/api-v2/feed/comments/:id'], requireAuth, async (req, res) => {
   try {
     const commentId = parseInt(req.params.id);
-    const dbUserRes = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.uid, req.user.uid));
+    const dbUserRes = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.uid, (req as any).user?.uid));
     if(dbUserRes.length === 0) return res.status(401).json({error: "User not found"});
     const user = dbUserRes[0];
     

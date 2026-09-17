@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, products, inquiries, inquiryMessages, leads, reviews } from "../db/schema.js";
+import { users, products, inquiries, inquiryMessages, leads, reviews, notifications } from '../db/schema.js';
 import { not, eq, or, and, isNull, desc, inArray, asc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { getUserProfile } from "../db/users.js";
@@ -75,7 +75,7 @@ router.post(["/inquiries", "/api/inquiries", "/api-v2/inquiries"], requireAuth, 
 
             await resend.emails.send({
               from: "Hatake.Shop <notifications@hatake.shop>",
-              to: Array.from(new Set([sellerEmail, ...(notificationEmails || [])])).filter(Boolean).slice(0, 5),
+              to: Array.from(new Set([sellerEmail, ...((notificationEmails as string[]) || [])])).filter(Boolean).slice(0, 5),
               subject: `New RFQ Received: ${quantity}x ${productTitle}`,
               html: htmlBody
             });
