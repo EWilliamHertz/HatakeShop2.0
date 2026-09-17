@@ -4,58 +4,128 @@ export function generateB2BEmailHtml(
   unsubscribeUrl: string,
   segment: string = 'TCG'
 ) {
-  const firstName = companyNameStr.split(' ')[0] || "Partner";
-  
-  const displayCategory = segment === 'Sports' ? 'sports cards and memorabilia' : (segment === 'General' ? 'trading cards and collectibles' : 'trading card games');
-  const acronym = segment === 'Sports' ? 'Sports Cards' : (segment === 'General' ? 'Collectibles' : 'TCG');
-  const profType = segment === 'Sports' ? 'sports card' : 'trading card game';
+  const firstName = companyNameStr.split(' ')[0] || 'Partner';
 
-  // Determine base URL for absolute image paths (defaulting to production if not set)
-  const appUrl = typeof process !== 'undefined' && process.env.APP_URL 
-    ? process.env.APP_URL 
-    : 'https://hatake.shop';
+  const displayCategory =
+    segment === 'Sports'
+      ? 'sports cards & memorabilia'
+      : segment === 'General'
+      ? 'trading cards & collectibles'
+      : 'trading card games';
 
-  return `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <img src="${appUrl}/logo.png" alt="Hatake Logo" style="max-height: 60px; margin-bottom: 10px;" />
-      </div>
-      <h2 style="color: #4f46e5;">Buy and sell ${acronym} in wholesale — worldwide</h2>
-      <p>You're invited to join Hatake.Shop B2B, the global marketplace built for ${profType} professionals.</p>
-      <p>Hi ${firstName},</p>
-      <p>We'd like to welcome <strong>${companyNameStr}</strong> to Hatake.Shop B2B — the wholesale platform where retailers, distributors, and stores source and move ${acronym} inventory at scale, across borders, with confidence.</p>
-      
-      <h3>What you can do on Hatake.Shop B2B</h3>
-      <ul>
-        <li><strong>Buy wholesale:</strong> Access sealed product, singles, and accessories from verified sellers around the world.</li>
-        <li><strong>Sell wholesale:</strong> List your inventory once and reach thousands of qualified B2B buyers globally.</li>
-        <li><strong>Trade with confidence:</strong> Vetted partners, transparent pricing, and secure payments in multiple currencies.</li>
-        <li><strong>Ship globally:</strong> Integrated logistics tools to move product across regions without the usual friction.</li>
-      </ul>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${registrationUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Activate your B2B account</a>
-      </div>
-      
-      <p style="font-size: 14px;">Onboarding takes minutes. A dedicated partner manager will help you get set up.</p>
-      
-      <hr style="border: none; border-top: 1px solid #eaeaea; margin: 30px 0;" />
-      
-      <h3>Why partners choose Hatake.Shop</h3>
-      <ul style="padding-left: 20px;">
-        <li><strong>Global reach:</strong> Buyers and sellers across Europe, North America, and Asia — all in one marketplace.</li>
-        <li><strong>Better margins:</strong> Cut out the middlemen and trade directly with verified wholesale partners.</li>
-        <li><strong>Real-time inventory:</strong> Live stock levels and pricing so you always know what's available.</li>
-        <li><strong>Secure transactions:</strong> Escrow-backed payments and buyer/seller protection on every order.</li>
-      </ul>
-      
-      <p>Questions before you sign up? Just reply to this email and our team will get back to you within one business day.</p>
-      <p>Looking forward to trading with you,<br/>The Hatake.Shop B2B Team</p>
-      
-      <div style="margin-top: 40px; font-size: 12px; color: #888; text-align: center;">
-        <p>If you no longer wish to receive these emails, you can <a href="${unsubscribeUrl}" style="color: #888; text-decoration: underline;">unsubscribe here</a>.</p>
-        <p>Hatake.Shop B2B • <a href="https://hatake.shop" style="color: #888;">hatake.shop</a><br/>© 2026 Hatake.Shop. All rights reserved.</p>
-      </div>
-    </div>
-  `;
+  const acronym =
+    segment === 'Sports' ? 'Sports Cards' : segment === 'General' ? 'Collectibles' : 'TCG';
+
+  const appUrl =
+    typeof process !== 'undefined' && process.env.APP_URL
+      ? process.env.APP_URL
+      : 'https://hatake.shop';
+
+  const logoUrl = 'https://i.imgur.com/B06rBhI.png';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background-color:#0d1117;font-family:Arial,Helvetica,sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0d1117;padding:48px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#0f172a;border-radius:20px;border:1px solid #1e293b;overflow:hidden;">
+
+  <!-- Top accent bar -->
+  <tr><td style="background:linear-gradient(90deg,#0ea5e9 0%,#6366f1 50%,#8b5cf6 100%);height:4px;font-size:0;">&nbsp;</td></tr>
+
+  <!-- Logo & brand header -->
+  <tr><td align="center" style="padding:44px 40px 28px 40px;">
+    <img src="${logoUrl}" alt="Hatake" width="100" height="100"
+      style="display:block;border-radius:50%;border:3px solid #1e293b;margin-bottom:18px;" />
+    <div style="font-size:26px;font-weight:800;color:#f8fafc;letter-spacing:-0.5px;margin-bottom:4px;">Hatake B2B</div>
+    <div style="font-size:11px;color:#38bdf8;letter-spacing:4px;text-transform:uppercase;">International ${acronym} Enterprise Network</div>
+  </td></tr>
+
+  <!-- Divider -->
+  <tr><td style="padding:0 40px;"><div style="height:1px;background:#1e293b;"></div></td></tr>
+
+  <!-- Hero body -->
+  <tr><td style="padding:36px 40px 0 40px;">
+    <h2 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#f8fafc;line-height:1.3;">
+      ${companyNameStr}, you're invited.
+    </h2>
+    <p style="margin:0 0 24px 0;font-size:15px;color:#64748b;line-height:1.6;">
+      Hi ${firstName}, we'd like to invite <strong style="color:#94a3b8;">${companyNameStr}</strong> to join 
+      <strong style="color:#38bdf8;">Hatake B2B</strong> — the wholesale platform where ${displayCategory} 
+      businesses source and move inventory at scale, worldwide.
+    </p>
+
+    <!-- Value props -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td width="50%" valign="top" style="padding:0 8px 12px 0;">
+          <div style="background:#0ea5e910;border:1px solid #0ea5e920;border-radius:12px;padding:16px;">
+            <div style="font-size:20px;margin-bottom:6px;">🌍</div>
+            <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">Global Buyers</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5;">Reach verified wholesale buyers across Europe, North America & Asia.</div>
+          </div>
+        </td>
+        <td width="50%" valign="top" style="padding:0 0 12px 8px;">
+          <div style="background:#6366f110;border:1px solid #6366f120;border-radius:12px;padding:16px;">
+            <div style="font-size:20px;margin-bottom:6px;">📦</div>
+            <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">Wholesale Listings</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5;">List sealed product, singles & accessories with real-time stock & pricing.</div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td width="50%" valign="top" style="padding:0 8px 0 0;">
+          <div style="background:#8b5cf610;border:1px solid #8b5cf620;border-radius:12px;padding:16px;">
+            <div style="font-size:20px;margin-bottom:6px;">🔒</div>
+            <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">Secure Transactions</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5;">Vetted partners, transparent pricing, and buyer/seller protection.</div>
+          </div>
+        </td>
+        <td width="50%" valign="top" style="padding:0 0 0 8px;">
+          <div style="background:#10b98110;border:1px solid #10b98120;border-radius:12px;padding:16px;">
+            <div style="font-size:20px;margin-bottom:6px;">🚀</div>
+            <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">Fast Onboarding</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5;">Set up your company profile in minutes. A partner manager will assist you.</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- CTA button -->
+  <tr><td align="center" style="padding:8px 40px 36px 40px;">
+    <a href="${registrationUrl}"
+      style="display:inline-block;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;font-size:16px;padding:18px 48px;border-radius:12px;letter-spacing:0.3px;">
+      → &nbsp; Create Your Company Profile
+    </a>
+    <p style="margin:16px 0 0 0;font-size:12px;color:#334155;">
+      This invitation is personal to ${companyNameStr}. It expires in 30 days.
+    </p>
+  </td></tr>
+
+  <!-- Divider -->
+  <tr><td style="padding:0 40px;"><div style="height:1px;background:#1e293b;"></div></td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:28px 40px 36px 40px;">
+    <p style="margin:0 0 12px 0;font-size:13px;color:#475569;line-height:1.7;">
+      Questions before signing up? Simply reply to this email and our team will get back to you within one business day.
+    </p>
+    <p style="margin:0;font-size:12px;color:#334155;line-height:1.8;text-align:center;">
+      &copy; ${new Date().getFullYear()} Hatake B2B &mdash; International ${acronym} Enterprise Network<br/>
+      <a href="${appUrl}" style="color:#38bdf8;text-decoration:none;">hatake.shop</a>
+      &nbsp;&middot;&nbsp;
+      <a href="mailto:b2b@hatake.shop" style="color:#38bdf8;text-decoration:none;">b2b@hatake.shop</a>
+      &nbsp;&middot;&nbsp;
+      <a href="${unsubscribeUrl}" style="color:#475569;text-decoration:underline;">Unsubscribe</a>
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }

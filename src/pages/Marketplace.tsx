@@ -51,9 +51,6 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
                 return (!minPrice || Number(minPrice) === 0) ? <span className="text-sm font-semibold tracking-wide text-cyan-400">{t("Negotiate")}</span> : formatPrice(Number(minPrice));
               })()}</span>
             </div>
-            <button className="text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg transition-colors border border-slate-700">
-              View Details
-            </button>
           </div>
         </div>
       </div>

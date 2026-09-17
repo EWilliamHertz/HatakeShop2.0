@@ -140,8 +140,8 @@ router.post("/api-v2/admin/leads/upload", requireAuth, requireAdmin, async (req,
 router.get("/api-v2/admin/leads/preview", requireAuth, requireAdmin, async (req, res) => {
     try {
       const appUrl = process.env.APP_URL || 'https://hatake.shop';
-      const registrationUrl = `${appUrl}/login?invite=mock-token-123`;
-      const unsubscribeUrl = `${appUrl}/api/unsubscribe?email=mock@example.com`;
+      const registrationUrl = `${appUrl}/register?invite=preview-token-demo`;
+      const unsubscribeUrl = `${appUrl}/api/unsubscribe?email=demo@example.com`;
       const htmlContent = generateB2BEmailHtml("Acme TCG Corp", registrationUrl, unsubscribeUrl, "TCG");
       res.json({ html: htmlContent });
     } catch (err: any) {
@@ -165,16 +165,16 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
         return res.json({ success: true, sent: 0, message: "No pending leads found to send" });
       }
 
-      const rawFrom = process.env.RESEND_FROM_EMAIL || "Hatake B2B <b2b@hatake.social>";
-      const primaryFrom = rawFrom.includes('<') ? rawFrom : `Hatake B2B <${rawFrom}>`;
+      const primaryFrom = "Hatake B2B <b2b@hatake.shop>";
       const fallbackFrom = "Hatake B2B <hello@hatake.shop>";
       const replyToAddress = process.env.RESEND_REPLY_TO || "ernst@hatake.eu";
       const appUrl = process.env.APP_URL || 'https://hatake.shop';
 
       const emailPayloads = pendingLeads.map(lead => {
+        // Always generate a fresh opaque token — store only the hash
         const rawToken = crypto.randomUUID();
-        const tokenHash = lead.inviteTokenHash || crypto.createHash('sha256').update(rawToken).digest('hex');
-        const registrationUrl = `${appUrl}/login?invite=${rawToken}`;
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const registrationUrl = `${appUrl}/register?invite=${rawToken}`;
         const unsubscribeUrl = `${appUrl}/api/unsubscribe?email=${encodeURIComponent(lead.email)}`;
         const htmlContent = generateB2BEmailHtml(lead.companyName || "Partner", registrationUrl, unsubscribeUrl, lead.segment || "TCG");
         const subject = `${lead.companyName || 'Partner'}, join Hatake.Shop B2B`;
