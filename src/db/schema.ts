@@ -402,3 +402,18 @@ export const feedPostsRelations = relations(feedPosts, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+export const feedLikes = pgTable('feed_likes', {
+  id: serial('id').primaryKey(),
+  postId: integer('post_id').notNull().references(() => feedPosts.id),
+  userId: integer('user_id').notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const feedComments = pgTable('feed_comments', {
+  id: serial('id').primaryKey(),
+  postId: integer('post_id').notNull().references(() => feedPosts.id),
+  authorId: integer('author_id').notNull().references(() => users.id),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});

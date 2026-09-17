@@ -13,6 +13,39 @@ export function Feed() {
   const { t } = useTranslation();
   const { user, dbUser } = useAuth();
   const queryClient = useQueryClient();
+  const [activeCommentPost, setActiveCommentPost] = useState<number | null>(null);
+  const [commentText, setCommentText] = useState("");
+
+  const likeMutation = useMutation({
+    mutationFn: async (postId: number) => {
+      const res = await fetch(`/api-v2/feed/${postId}/like`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${await user?.getIdToken()}` }
+      });
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feedPosts'] })
+  });
+  
+  const commentMutation = useMutation({
+    mutationFn: async ({ postId, content }: { postId: number, content: string }) => {
+      const res = await fetch(`/api-v2/feed/${postId}/comments`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${await user?.getIdToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content })
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feedPosts'] });
+      setCommentText("");
+      setActiveCommentPost(null);
+    }
+  });
+
   const [activeTab, setActiveTab] = useState<'info' | 'listing' | 'wtb'>('info');
   const [postContent, setPostContent] = useState('');
   const [budget, setBudget] = useState('');
@@ -162,8 +195,12 @@ export function Feed() {
                 {/* Post Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700">
-                      <Building2 className="w-6 h-6 text-slate-500" />
+                    <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 overflow-hidden">
+                      {post?.author?.avatar ? (
+                        <img src={post.author.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <Building2 className="w-6 h-6 text-slate-500" />
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5">
