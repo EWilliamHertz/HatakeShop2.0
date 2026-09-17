@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdminListings } from '../components/AdminListings.tsx';
+import { AdminLeadsTab } from '../components/AdminLeadsTab.tsx';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.tsx';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
