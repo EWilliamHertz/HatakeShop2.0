@@ -541,15 +541,6 @@ app.post(["/wishlists/toggle", "/api/wishlists/toggle", "/api-v2/wishlists/toggl
 
 // Notifications API (Firestore-backed)
 
-
-
-  }
-});
-
-
-  }
-});
-
 app.post(["/feedback", "/api/feedback", "/api-v2/feedback"], async (req: AuthRequest, res) => {
   try {
     const { type, message } = req.body;
