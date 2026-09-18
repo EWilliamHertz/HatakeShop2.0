@@ -88,18 +88,27 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
     } catch(e: any) { toast.error(e.message || 'Send failed'); }
     finally { setSending(false); }
   };
-const [isManualAddModalOpen, setIsManualAddModalOpen] = useState(false);
-  const [manualEmails, setManualEmails] = useState('');
+  const [isManualAddModalOpen, setIsManualAddModalOpen] = useState(false);
+  const [manualLead, setManualLead] = useState({
+    businessName: '', email: '', website: '', facebook: '', instagram: '', city: '', state: ''
+  });
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
 
   const handleManualAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingManual(true);
     try {
-      const emails = manualEmails.split(/[\n,]+/).map((e: string) => e.trim()).filter(Boolean);
-      if (emails.length === 0) return;
+      if (!manualLead.email || !manualLead.businessName) return;
 
-      const newLeads = emails.map((email: string) => ({ email }));
+      const newLeads = [{
+        "Business Name": manualLead.businessName,
+        "Email": manualLead.email,
+        "Website": manualLead.website,
+        "Facebook": manualLead.facebook,
+        "Instagram": manualLead.instagram,
+        "City": manualLead.city,
+        "State": manualLead.state,
+      }];
 
       let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error('Auth error'); }
       const res = await fetch('/api-v2/admin/leads/upload', {
@@ -109,13 +118,13 @@ const [isManualAddModalOpen, setIsManualAddModalOpen] = useState(false);
       });
       
       const data = await res.json();
-      toast.success(`Added ${data.added || 0} new leads.`);
+      toast.success(`Added new lead successfully.`);
       setIsManualAddModalOpen(false);
-      setManualEmails('');
+      setManualLead({ businessName: '', email: '', website: '', facebook: '', instagram: '', city: '', state: '' });
       if (fetchAdminData) fetchAdminData();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to add leads manually");
+      toast.error("Failed to add lead manually");
     } finally {
       setIsSubmittingManual(false);
     }
@@ -167,8 +176,76 @@ const [isManualAddModalOpen, setIsManualAddModalOpen] = useState(false);
         {/* Import */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col justify-between gap-4">
           <div>
-            <h3 className="font-bold text-slate-100 text-base mb-1">Import Leads</h3>
-            <p className="text-xs text-slate-500">CSV maps to: Business Name, Email, Website, Facebook, Instagram, City, State.</p>
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="font-bold text-slate-100 text-base">Import Leads</h3>
+              <button 
+                onClick={() => setIsManualAddModalOpen(true)}
+                className="bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600/30 border border-cyan-500/30 px-3 py-1 rounded text-xs font-bold transition-colors"
+              >
+                + Add Manually
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mb-2">CSV maps to: Business Name, Email, Website, Facebook, Instagram, City, State.</p>
+
+            {isManualAddModalOpen && (
+               <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+                 <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+                   <h2 className="text-xl font-bold text-white mb-4">Add Lead Manually</h2>
+                   <form onSubmit={handleManualAdd} className="space-y-4">
+                     <div>
+                       <label className="block text-sm font-medium text-slate-400 mb-1">Company Name</label>
+                       <input type="text" value={manualLead.businessName} onChange={e => setManualLead({...manualLead, businessName: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none" required />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-slate-400 mb-1">Email</label>
+                       <input type="email" value={manualLead.email} onChange={e => setManualLead({...manualLead, email: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none" required />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-slate-400 mb-1">Website</label>
+                       <input type="text" value={manualLead.website} onChange={e => setManualLead({...manualLead, website: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none" />
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                       <div>
+                         <label className="block text-sm font-medium text-slate-400 mb-1">City</label>
+                         <input type="text" value={manualLead.city} onChange={e => setManualLead({...manualLead, city: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none" />
+                       </div>
+                       <div>
+                         <label className="block text-sm font-medium text-slate-400 mb-1">State</label>
+                         <input type="text" value={manualLead.state} onChange={e => setManualLead({...manualLead, state: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none" />
+                       </div>
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                       <div>
+                         <label className="block text-sm font-medium text-slate-400 mb-1">Facebook</label>
+                         <input type="text" value={manualLead.facebook} onChange={e => setManualLead({...manualLead, facebook: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none" />
+                       </div>
+                       <div>
+                         <label className="block text-sm font-medium text-slate-400 mb-1">Instagram</label>
+                         <input type="text" value={manualLead.instagram} onChange={e => setManualLead({...manualLead, instagram: e.target.value})} className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none" />
+                       </div>
+                     </div>
+                     
+                     <div className="flex justify-end gap-3 pt-2">
+                       <button 
+                         type="button" 
+                         onClick={() => setIsManualAddModalOpen(false)}
+                         className="px-4 py-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-colors"
+                         disabled={isSubmittingManual}
+                       >
+                         Cancel
+                       </button>
+                       <button 
+                         type="submit"
+                         className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                         disabled={isSubmittingManual}
+                       >
+                         {isSubmittingManual ? 'Adding...' : 'Add Lead'}
+                       </button>
+                     </div>
+                   </form>
+                 </div>
+               </div>
+             )}
           </div>
           <label className="cursor-pointer self-start text-slate-900 bg-cyan-400 hover:bg-cyan-300 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
             {uploading ? 'Parsing…' : '↑ Upload CSV'}
