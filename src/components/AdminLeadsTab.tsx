@@ -14,6 +14,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
   const [emailStatusFilter, setEmailStatusFilter] = useState('all');
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, show: false });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
@@ -133,20 +134,36 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
   const sendNext50 = async () => {
     if (!confirm('Send to the next 50 pending leads?')) return;
     setSending(true);
+    setSendProgress({ current: 0, total: 50, show: true });
     try {
       let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error('Auth Error'); }
+      // Simulate progress for better UX before the request completes
+      const interval = setInterval(() => {
+        setSendProgress(prev => prev.current < 45 ? { ...prev, current: prev.current + Math.floor(Math.random() * 5) + 1 } : prev);
+      }, 300);
+      
       const res = await fetch('/api-v2/admin/leads/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ limit: 50 })
       });
+      clearInterval(interval);
+      
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Send failed');
-      toast.success(`Sent ${data.sent} invitations!`);
+      
+      setSendProgress({ current: data.sent, total: data.sent, show: true });
+      setTimeout(() => setSendProgress(p => ({ ...p, show: false })), 2000);
+      
+      toast.success(`Successfully dispatched ${data.sent} invitations.`);
       setSelectedIds(new Set());
       fetchAdminData();
-    } catch(e: any) { toast.error(e.message || 'Send failed'); }
-    finally { setSending(false); }
+    } catch(e: any) { 
+      toast.error(e.message || 'Send failed');
+      setSendProgress(p => ({ ...p, show: false }));
+    } finally { 
+      setSending(false); 
+    }
   };
 
   const statusBadge = (status: string) => {
@@ -188,7 +205,11 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
             <p className="text-xs text-slate-500 mb-2">CSV maps to: Business Name, Email, Website, Facebook, Instagram, City, State.</p>
 
             {isManualAddModalOpen && (
-               <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+               <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4" 
+                    onKeyDown={(e) => { if (e.key === 'Escape') setIsManualAddModalOpen(false); }} 
+                    tabIndex={-1} 
+                    ref={el => el?.focus()}>
+               
                  <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
                    <h2 className="text-xl font-bold text-white mb-4">Add Lead Manually</h2>
                    <form onSubmit={handleManualAdd} className="space-y-4">
@@ -294,8 +315,11 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
             </button>
           </div>
           <button disabled={sending} onClick={sendNext50}
-            className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-lg transition-colors border border-slate-600">
-            ⚡ Send to Next 50 Pending
+            className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-lg transition-colors border border-slate-600 relative overflow-hidden">
+            {sendProgress.show ? (
+              <div className="absolute inset-0 bg-indigo-500 transition-all duration-300" style={{ width: `${Math.min(100, (sendProgress.current / sendProgress.total) * 100)}%` }}></div>
+            ) : null}
+            <span className="relative z-10">{sendProgress.show ? `Sending... (${sendProgress.current}/${sendProgress.total})` : '⚡ Send to Next 50 Pending'}</span>
           </button>
         </div>
       </div>
@@ -352,9 +376,24 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
               {filteredLeads.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-600">
-                  {view === 'recruited' ? '🎉 No recruited companies yet — send invites to get started!' : 'No leads match these filters.'}
-                </td></tr>
+                <tr>
+                  <td colSpan={8} className="px-4 py-16 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                         <span className="text-2xl">🔍</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-white">No Leads Found</h3>
+                      <p className="text-sm max-w-sm mx-auto">
+                        {view === 'recruited' ? 'You haven\'t recruited any companies yet. Try sending some invitations!' : 'We couldn\'t find any leads matching your current filters.'}
+                      </p>
+                      {view !== 'recruited' && (
+                        <button onClick={() => setIsManualAddModalOpen(true)} className="mt-2 bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-lg shadow-cyan-900/20">
+                          + Add Your First Lead Manually
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
               )}
               {filteredLeads.map((lead: any) => {
                 const isSelected = selectedIds.has(lead.id);
