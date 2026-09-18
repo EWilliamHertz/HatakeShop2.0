@@ -57,6 +57,7 @@ router.get("/api-v2/leads/public", async (req, res) => {
         createdAt: leads.createdAt,
       })
       .from(leads)
+      .where(not(eq(leads.status, 'pending')))
       .orderBy(sql`${leads.sentAt} DESC NULLS LAST, ${leads.createdAt} DESC`);
 
     const sanitised = allLeads.map(l => ({
