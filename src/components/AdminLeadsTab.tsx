@@ -88,6 +88,38 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
     } catch(e: any) { toast.error(e.message || 'Send failed'); }
     finally { setSending(false); }
   };
+const [isManualAddModalOpen, setIsManualAddModalOpen] = useState(false);
+  const [manualEmails, setManualEmails] = useState('');
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+
+  const handleManualAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingManual(true);
+    try {
+      const emails = manualEmails.split(/[\n,]+/).map((e: string) => e.trim()).filter(Boolean);
+      if (emails.length === 0) return;
+
+      const newLeads = emails.map((email: string) => ({ email }));
+
+      let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error('Auth error'); }
+      const res = await fetch('/api-v2/admin/leads/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ leads: newLeads })
+      });
+      
+      const data = await res.json();
+      toast.success(`Added ${data.added || 0} new leads.`);
+      setIsManualAddModalOpen(false);
+      setManualEmails('');
+      if (fetchAdminData) fetchAdminData();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to add leads manually");
+    } finally {
+      setIsSubmittingManual(false);
+    }
+  };
 
   const sendNext50 = async () => {
     if (!confirm('Send to the next 50 pending leads?')) return;
