@@ -178,14 +178,14 @@ export function Home() {
   const totalPages = data.totalPages || 1;
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  const { data: leadsProgress = { sentCount: 0, totalGoal: 20000 } } = useQuery({
+  const { data: leadsProgress = { sentCount: 0, totalGoal: 0 } } = useQuery({
     queryKey: ['leadsProgress'],
     queryFn: async () => {
       try {
         const res = await fetch('/api-v2/leads/progress');
         const json = await res.json();
-        return json && typeof json.sentCount === 'number' ? json : { sentCount: 0, totalGoal: 20000 };
-      } catch { return { sentCount: 0, totalGoal: 20000 }; }
+        return json && typeof json.sentCount === 'number' ? json : { sentCount: 0, totalGoal: 0 };
+      } catch { return { sentCount: 0, totalGoal: 0 }; }
     }
   });
     const [activeImageIndex, setActiveImageIndex] = useState(0);

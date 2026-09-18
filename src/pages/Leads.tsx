@@ -14,14 +14,14 @@ export function Leads() {
     refetchInterval: 15000, // auto-refresh every 15s
   });
 
-  const { data: progress = { sentCount: 0, totalGoal: 20000 } } = useQuery({
+  const { data: progress = { sentCount: 0, totalGoal: 0 } } = useQuery({
     queryKey: ['leadsProgress'],
     queryFn: async () => {
       try {
         const res = await fetch('/api-v2/leads/progress');
         const json = await res.json();
-        return json && typeof json.sentCount === 'number' ? json : { sentCount: 0, totalGoal: 20000 };
-      } catch { return { sentCount: 0, totalGoal: 20000 }; }
+        return json && typeof json.sentCount === 'number' ? json : { sentCount: 0, totalGoal: 0 };
+      } catch { return { sentCount: 0, totalGoal: 0 }; }
     },
     refetchInterval: 15000,
   });

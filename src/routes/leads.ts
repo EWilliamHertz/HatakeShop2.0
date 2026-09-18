@@ -36,7 +36,8 @@ router.patch("/api-v2/leads/:id", requireAuth, requireAdmin, async (req, res) =>
 router.get("/api-v2/leads/progress", async (req, res) => {
     try {
       const sentCount = await db.select({ count: sql`count(*)` }).from(leads).where(not(eq(leads.status, 'pending')));
-      res.json({ sentCount: Number(sentCount[0].count), totalGoal: 20000 });
+      const totalCount = await db.select({ count: sql`count(*)` }).from(leads);
+      res.json({ sentCount: Number(sentCount[0].count), totalGoal: Number(totalCount[0].count) });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
