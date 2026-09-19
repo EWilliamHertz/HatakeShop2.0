@@ -14,6 +14,15 @@ import { getTranslatedProduct } from "../lib/translate.js";
 
 const router = Router();
 
+router.get("/api-v2/origins", async (req, res) => {
+  try {
+    const availableOrigins = await db.selectDistinct({ originType: products.originType }).from(products).where(isNotNull(products.originType));
+    res.json(availableOrigins.map(o => o.originType).filter(Boolean));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 async function getDescendantCategoryIds(db: any, parentId: number): Promise<number[]> {
   const allCats = await db.select().from(categories);
   const ids = new Set<number>();
