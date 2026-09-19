@@ -38,7 +38,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
         <p className="text-xs text-slate-400 line-clamp-2 mb-3 h-8">{p.description}</p>
         
         <div className="flex flex-wrap gap-2 mb-4">
-           {(p.originType || p?.seller?.country) && <span className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded border border-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {p.originType || p?.seller?.country}</span>}
+           {(p?.seller?.country || p.originType) && <span className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded border border-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {p?.seller?.country || p.originType}</span>}
            <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 uppercase tracking-wider">MIN ORDER: {p.moq} units</span>
         </div>
         
@@ -64,7 +64,7 @@ export function Marketplace() {
   const [search, setSearch] = useState(searchParams.get('q') || "");
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || "");
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", sortBy: "newest" });
+  const [filters, setFilters] = useState({ includeCountries: [] as string[], excludeCountries: [] as string[], includeRegions: [] as string[], excludeRegions: [] as string[], category: "", minMoq: "", maxPrice: "", sortBy: "newest" });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
@@ -77,11 +77,11 @@ export function Marketplace() {
     }
   });
 
-  const { data: originsData = [] } = useQuery({
-    queryKey: ['origins'],
+  const { data: locationsData = { countries: [], regions: [] } } = useQuery({
+    queryKey: ['countries'],
     queryFn: async () => {
-      const res = await fetch('/api-v2/origins');
-      if (!res.ok) return [];
+      const res = await fetch('/api-v2/countries');
+      if (!res.ok) return { countries: [], regions: [] };
       return res.json();
     }
   });
@@ -111,7 +111,10 @@ const { data = {}, isLoading, error } = useQuery({
     const params = new URLSearchParams({
       q: search,
       page: page.toString(),
-      origin: filters.origin,
+      ...(filters.includeCountries.length ? { includeCountries: filters.includeCountries.join(',') } : {}),
+      ...(filters.excludeCountries.length ? { excludeCountries: filters.excludeCountries.join(',') } : {}),
+      ...(filters.includeRegions.length ? { includeRegions: filters.includeRegions.join(',') } : {}),
+      ...(filters.excludeRegions.length ? { excludeRegions: filters.excludeRegions.join(',') } : {}),
       minMoq: filters.minMoq,
       maxPrice: filters.maxPrice,
       category: selectedCategoryId ? selectedCategoryId.toString() : filters.category,
@@ -137,7 +140,7 @@ const { data = {}, isLoading, error } = useQuery({
   };
 
 
-  const isFiltering = Boolean(search || selectedCategoryId || filters.origin || filters.minMoq || filters.maxPrice || filters.sortBy !== 'newest' );
+  const isFiltering = Boolean(search || selectedCategoryId || filters.includeCountries.length || filters.excludeCountries.length || filters.includeRegions.length || filters.excludeRegions.length || filters.minMoq || filters.maxPrice || filters.sortBy !== 'newest' );
 
   const groupedProducts = React.useMemo(() => {
     const groups: { [key: string]: { companyName: string, sellerId: number, products: any[] } } = {};
@@ -246,11 +249,34 @@ const { data = {}, isLoading, error } = useQuery({
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Country/Origin')}</label>
-              <select value={filters.origin} onChange={e => setFilters({...filters, origin: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4">
-                <option value="">{t('All Countries')}</option>
-                {Array.isArray(originsData) && originsData.map((origin: string) => (
-                  <option key={origin} value={origin}>{origin}</option>
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Include Countries')}</label>
+              <select multiple value={filters.includeCountries} onChange={e => setFilters({...filters, includeCountries: Array.from(e.target.selectedOptions, option => option.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4 h-24 custom-scrollbar">
+                {Array.isArray(locationsData?.countries) && locationsData.countries.map((country: string) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Exclude Countries')}</label>
+              <select multiple value={filters.excludeCountries} onChange={e => setFilters({...filters, excludeCountries: Array.from(e.target.selectedOptions, option => option.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4 h-24 custom-scrollbar">
+                {Array.isArray(locationsData?.countries) && locationsData.countries.map((country: string) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Include Regions')}</label>
+              <select multiple value={filters.includeRegions} onChange={e => setFilters({...filters, includeRegions: Array.from(e.target.selectedOptions, option => option.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4 h-24 custom-scrollbar">
+                {Array.isArray(locationsData?.regions) && locationsData.regions.map((region: string) => (
+                  <option key={region} value={region}>{region}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Exclude Regions')}</label>
+              <select multiple value={filters.excludeRegions} onChange={e => setFilters({...filters, excludeRegions: Array.from(e.target.selectedOptions, option => option.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4 h-24 custom-scrollbar">
+                {Array.isArray(locationsData?.regions) && locationsData.regions.map((region: string) => (
+                  <option key={region} value={region}>{region}</option>
                 ))}
               </select>
             </div>

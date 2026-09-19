@@ -14,10 +14,23 @@ import { getTranslatedProduct } from "../lib/translate.js";
 
 const router = Router();
 
-router.get("/api-v2/origins", async (req, res) => {
+router.get("/api-v2/countries", async (req, res) => {
   try {
-    const availableOrigins = await db.selectDistinct({ originType: products.originType }).from(products).where(isNotNull(products.originType));
-    res.json(availableOrigins.map(o => o.originType).filter(Boolean));
+    const sellersWithProducts = await db.selectDistinct({ 
+      country: users.country,
+      region: users.region
+    })
+    .from(products)
+    .innerJoin(users, eq(products.sellerId, users.id))
+    .where(isNotNull(users.country));
+    
+    // Create an object grouping countries by region, or simply return countries and regions.
+    // The user wants a dropdown with regions and countries.
+    // Let's just return unique countries for now, and handle regions if needed.
+    const countries = Array.from(new Set(sellersWithProducts.map(s => s.country).filter(Boolean)));
+    const regions = Array.from(new Set(sellersWithProducts.map(s => s.region).filter(Boolean)));
+    
+    res.json({ countries, regions });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -90,12 +103,30 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
       .leftJoin(users, eq(products.sellerId, users.id))
       .leftJoin(categories, eq(products.categoryId, categories.id));
       
-      let countQuery = db.select({ count: sql`count(*)` }).from(products);
+      let countQuery = db.select({ count: sql`count(*)` }).from(products).leftJoin(users, eq(products.sellerId, users.id));
 
       const conditions = [eq(products.approvalStatus, 'approved'), (productType === 'graded' ? eq(products.productType, 'graded') : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`)];
       
-      if (origin) {
-         conditions.push(eq(products.originType, origin));
+      const includeCountries = req.query.includeCountries as string;
+      const excludeCountries = req.query.excludeCountries as string;
+      const includeRegions = req.query.includeRegions as string;
+      const excludeRegions = req.query.excludeRegions as string;
+
+      if (includeCountries) {
+         const arr = includeCountries.split(',').filter(Boolean);
+         if (arr.length > 0) conditions.push(inArray(users.country, arr));
+      }
+      if (excludeCountries) {
+         const arr = excludeCountries.split(',').filter(Boolean);
+         if (arr.length > 0) conditions.push(not(inArray(users.country, arr)));
+      }
+      if (includeRegions) {
+         const arr = includeRegions.split(',').filter(Boolean);
+         if (arr.length > 0) conditions.push(inArray(users.region, arr));
+      }
+      if (excludeRegions) {
+         const arr = excludeRegions.split(',').filter(Boolean);
+         if (arr.length > 0) conditions.push(not(inArray(users.region, arr)));
       }
       
       if (categoryId) {
