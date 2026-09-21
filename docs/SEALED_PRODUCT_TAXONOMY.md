@@ -81,3 +81,19 @@ shared and the back button works.
   (`sortBy`: `newest | price_asc | price_desc | lowest_moq`)
 * Admin `PATCH /api-v2/admin/products/:id` and `PATCH /api-v2/admin/products/bulk` accept `language` and `sealedType`.
 * Seller `POST/PATCH /api-v2/seller/products` accept `language` and `sealedType`.
+
+## Database column self-healing (2026-09-21)
+
+PR #2 added two `products` columns (`language`, `sealed_type`) via
+`drizzle/0006_sealed_taxonomy.sql`. When that migration has **not** been applied
+to a database yet, every query that reads `products` (marketplace, sneak-peek,
+seller/admin dashboards) fails with `column "language" does not exist`, which
+made the storefront show no products and no companies at all.
+
+`src/db/index.ts` now exports `ensureSealedTaxonomySchema()`, which applies the
+same **idempotent** DDL as the 0006 migration (`ADD COLUMN IF NOT EXISTS` /
+`CREATE INDEX IF NOT EXISTS`). It runs automatically once per process on boot
+and is awaited by the routes that touch those columns, so a deploy heals the
+database on its first cold start — no manual migration step required. Running
+`drizzle/0006_sealed_taxonomy.sql` manually is still fine and remains a no-op
+afterwards.

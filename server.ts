@@ -21,7 +21,7 @@ import { createServer } from "http";
 import { adminDb, adminAuth } from "./src/lib/firebase-admin.js";
 import { requireAuth, AuthRequest } from "./src/middleware/auth.js";
 import { getOrCreateUser, getUserProfile, updateUserProfile } from "./src/db/users.js";
-import { db } from "./src/db/index.js";
+import { db, ensureSealedTaxonomySchema } from "./src/db/index.js";
 import { products, categories, inquiries, inquiryMessages, users, marketing_logs, affiliates, leads, reviews, feedback, wishlists } from "./src/db/schema.js";
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc, gte, lte } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
@@ -110,6 +110,7 @@ app.use(express.json({ limit: '50mb' }));
 // --- FORCE OVERRIDES FOR ADMIN CATEGORY ASSIGNMENT & MARKETPLACE FILTERS ---
 app.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/products/:id"], requireAuth, async (req: AuthRequest, res) => {
   try {
+    await ensureSealedTaxonomySchema();
     const userProfile = await getUserProfile(req.user!.uid);
     if (userProfile?.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
 
@@ -566,6 +567,7 @@ app.get(["/affiliates/stats", "/api/affiliates/stats", "/api-v2/affiliates/stats
 
 app.get(["/marketplace/sneak-peek", "/api/marketplace/sneak-peek", "/api-v2/marketplace/sneak-peek"], async (req, res) => {
   try {
+    await ensureSealedTaxonomySchema();
     const topCategories = await db.select().from(categories).where(sql`parent_id IS NULL`).orderBy(categories.sortOrder);
     const result = [];
     for (const cat of topCategories) {
