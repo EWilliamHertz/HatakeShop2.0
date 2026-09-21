@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Edit, CheckSquare, Square, Check, X, Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext.tsx';
+import { PRODUCT_LANGUAGES, SEALED_TYPES, languageLabel, sealedTypeLabel } from '../lib/productTaxonomy.ts';
 
 export function AdminListings() {
   const { t } = useTranslation();
@@ -12,8 +13,12 @@ export function AdminListings() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkCategoryIds, setBulkCategoryIds] = useState<number[]>([]);
   const [bulkSponsored, setBulkSponsored] = useState<string>('');
+  const [bulkLanguage, setBulkLanguage] = useState<string>('');
+  const [bulkSealedType, setBulkSealedType] = useState<string>('');
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('');
+  const [filterLanguage, setFilterLanguage] = useState<string>('');
+  const [filterSealedType, setFilterSealedType] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('newest');
   
@@ -57,6 +62,8 @@ export function AdminListings() {
       setSelectedIds([]);
       setBulkCategoryIds([]);
       setBulkSponsored('');
+      setBulkLanguage('');
+      setBulkSealedType('');
     }
   });
 
@@ -64,7 +71,9 @@ export function AdminListings() {
     const matchesSearch = p.title?.toLowerCase().includes(search.toLowerCase()) || p.seller?.companyName?.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = filterCategory === '' || p.categoryId?.toString() === filterCategory || (Array.isArray(p.categoryIds) && p.categoryIds.includes(parseInt(filterCategory)));
     const matchesStatus = filterStatus === '' || p.approvalStatus === filterStatus;
-    return matchesSearch && matchesCategory && matchesStatus;
+    const matchesLanguage = filterLanguage === '' || (filterLanguage === '__unset' ? !p.language : p.language === filterLanguage);
+    const matchesSealedType = filterSealedType === '' || (filterSealedType === '__unset' ? !p.sealedType : p.sealedType === filterSealedType);
+    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType;
   }).sort((a: any, b: any) => {
     if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -94,6 +103,8 @@ export function AdminListings() {
     const updates: any = {};
     if (bulkCategoryIds.length > 0) updates.categoryIds = bulkCategoryIds;
     if (bulkSponsored !== '') updates.isSponsored = bulkSponsored === 'true';
+    if (bulkLanguage !== '') updates.language = bulkLanguage === '__clear' ? null : bulkLanguage;
+    if (bulkSealedType !== '') updates.sealedType = bulkSealedType === '__clear' ? null : bulkSealedType;
     
     if (Object.keys(updates).length > 0) {
       bulkUpdateMutation.mutate(updates);
@@ -110,7 +121,7 @@ export function AdminListings() {
           <p className="text-sm text-slate-400 mt-1">Manage and bulk edit products from all sellers.</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
           <div className="relative flex-1 md:w-64">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input 
@@ -131,6 +142,26 @@ export function AdminListings() {
             {Array.isArray(categoriesData) && categoriesData.map((c: any) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
+          </select>
+          
+          <select 
+            value={filterLanguage} 
+            onChange={e => setFilterLanguage(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
+          >
+            <option value="">All Languages</option>
+            {PRODUCT_LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+            <option value="__unset">⚠ No language set</option>
+          </select>
+
+          <select 
+            value={filterSealedType} 
+            onChange={e => setFilterSealedType(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
+          >
+            <option value="">All Product Types</option>
+            {SEALED_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            <option value="__unset">⚠ No type set</option>
           </select>
           
           <select 
@@ -158,9 +189,9 @@ export function AdminListings() {
       </div>
 
       {selectedIds.length > 0 && (
-        <div className="bg-cyan-900/20 border-b border-cyan-800 p-3 flex items-center justify-between px-5">
+        <div className="bg-cyan-900/20 border-b border-cyan-800 p-3 flex flex-wrap items-center justify-between gap-3 px-5">
           <span className="text-sm font-semibold text-cyan-400">{selectedIds.length} listings selected</span>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             
             <div className="flex flex-col relative group">
               <button type="button" onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)} className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none min-w-[200px] text-left flex justify-between items-center">
@@ -205,9 +236,27 @@ export function AdminListings() {
               <option value="true">Mark as Sponsored</option>
               <option value="false">Remove Sponsored</option>
             </select>
+            <select 
+              value={bulkLanguage} 
+              onChange={e => setBulkLanguage(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">-- Set Language --</option>
+              {PRODUCT_LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+              <option value="__clear">Clear language</option>
+            </select>
+            <select 
+              value={bulkSealedType} 
+              onChange={e => setBulkSealedType(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">-- Set Product Type --</option>
+              {SEALED_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              <option value="__clear">Clear type</option>
+            </select>
             <button 
               onClick={handleBulkUpdate}
-              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '') || bulkUpdateMutation.isPending}
+              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkLanguage === '' && bulkSealedType === '') || bulkUpdateMutation.isPending}
               className="btn-primary"
             >
               {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}
@@ -228,6 +277,8 @@ export function AdminListings() {
               <th className="p-4">Product</th>
               <th className="p-4">Seller</th>
               <th className="p-4">Category</th>
+              <th className="p-4">Language</th>
+              <th className="p-4">Type</th>
               <th className="p-4">Status</th>
             </tr>
           </thead>
@@ -268,6 +319,13 @@ export function AdminListings() {
                       })}
                     </div>
                   ) : p.categoryId ? (Array.isArray(categoriesData) ? categoriesData : []).find((c: any) => c.id === p.categoryId)?.name || 'Unknown' : <span className="text-slate-500 italic">None</span>}
+                </td>
+
+                <td className="p-4 text-sm">
+                  {p.language ? <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded text-xs">{languageLabel(p.language)}</span> : <span className="text-amber-400/80 text-xs italic">Not set</span>}
+                </td>
+                <td className="p-4 text-sm">
+                  {p.sealedType ? <span className="bg-slate-700 px-2 py-0.5 rounded text-xs">{sealedTypeLabel(p.sealedType)}</span> : <span className="text-amber-400/80 text-xs italic">Not set</span>}
                 </td>
 
                 <td className="p-4">

@@ -437,6 +437,8 @@ router.get("/api-v2/admin/stats", requireAuth, requireAdmin, async (req: AuthReq
           leadTimeDays: products.leadTimeDays,
           shippingOptions: products.shippingOptions,
           images: products.images,
+          language: products.language,
+          sealedType: products.sealedType,
           approvalStatus: products.approvalStatus,
           createdAt: products.createdAt
       }).from(products).orderBy(desc(products.createdAt)).limit(100);
@@ -592,8 +594,8 @@ router.delete("/api-v2/admin/users/:id", requireAuth, requireAdmin, async (req: 
 router.patch("/api-v2/admin/products/:id", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
       const productId = parseInt(req.params.id, 10);
-      const { title, description, moq, oemMoq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, certifications, isSponsored } = req.body;
-      const updateData: any = {}; if(title) updateData.title = title; if(description) updateData.description = description; if(moq) updateData.moq = moq; if(oemMoq !== undefined) updateData.oemMoq = oemMoq; if(originType) updateData.originType = originType; if(sellerId) updateData.sellerId = sellerId; if(shippingOptions) updateData.shippingOptions = shippingOptions; if(images) updateData.images = images; if(certifications) updateData.certifications = certifications; if(approvalStatus) updateData.approvalStatus = approvalStatus; if(categoryId !== undefined) updateData.categoryId = categoryId; if(isSponsored !== undefined) updateData.isSponsored = isSponsored; await db.update(products).set(updateData).where(eq(products.id, productId));
+      const { title, description, moq, oemMoq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, certifications, isSponsored, language, sealedType } = req.body;
+      const updateData: any = {}; if(title) updateData.title = title; if(description) updateData.description = description; if(moq) updateData.moq = moq; if(oemMoq !== undefined) updateData.oemMoq = oemMoq; if(originType) updateData.originType = originType; if(sellerId) updateData.sellerId = sellerId; if(shippingOptions) updateData.shippingOptions = shippingOptions; if(images) updateData.images = images; if(certifications) updateData.certifications = certifications; if(approvalStatus) updateData.approvalStatus = approvalStatus; if(categoryId !== undefined) updateData.categoryId = categoryId; if(isSponsored !== undefined) updateData.isSponsored = isSponsored; if(language !== undefined) updateData.language = language || null; if(sealedType !== undefined) updateData.sealedType = sealedType || null; await db.update(products).set(updateData).where(eq(products.id, productId));
       return res.json({ success: true });
 
     } catch (err: any) {
@@ -651,6 +653,8 @@ router.patch("/api-v2/admin/products/bulk", requireAuth, requireAdmin, async (re
     if (updates.categoryIds !== undefined) updateData.categoryIds = updates.categoryIds;
     if (updates.isSponsored !== undefined) updateData.isSponsored = updates.isSponsored;
     if (updates.approvalStatus !== undefined) updateData.approvalStatus = updates.approvalStatus;
+    if (updates.language !== undefined) updateData.language = updates.language || null;
+    if (updates.sealedType !== undefined) updateData.sealedType = updates.sealedType || null;
     
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: "No valid updates provided" });

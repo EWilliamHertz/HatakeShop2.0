@@ -4,6 +4,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ImageUploader } from './ImageUploader.tsx';
+import { PRODUCT_LANGUAGES, SEALED_TYPES, classifyProduct } from '../lib/productTaxonomy.ts';
 
 export const productSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -28,6 +29,8 @@ export const productSchema = z.object({
     unitPrice: z.coerce.number().min(0, "Price must be >= 0")
   })).default([]),
   productType: z.string().default('sealed'),
+  language: z.string().optional().nullable(),
+  sealedType: z.string().optional().nullable(),
   gradingCompany: z.string().optional().nullable(),
   grade: z.string().optional().nullable(),
   certNumber: z.string().optional().nullable(),
@@ -52,7 +55,7 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
     fetch('/api-v2/categories').then(res => res.json()).then(data => setCategories(data)).catch(console.error);
   }, []);
   const [step, setStep] = React.useState(1);
-  const { register, watch, control, handleSubmit, trigger, formState: { errors } } = useForm<any>({
+  const { register, watch, control, handleSubmit, trigger, setValue, getValues, formState: { errors } } = useForm<any>({
     resolver: zodResolver(productSchema),
     mode: 'onTouched',
     defaultValues: {
@@ -65,6 +68,8 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
       unitCost: initialValues?.unitCost || 0,
       originType: initialValues?.originType || 'Direct Factory',
       categoryId: initialValues?.categoryId || null,
+      language: initialValues?.language || '',
+      sealedType: initialValues?.sealedType || '',
       leadTimeDays: initialValues?.leadTimeDays || 7,
       images: initialValues?.images || [],
       certifications: initialValues?.certifications || [],
@@ -72,6 +77,12 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
       tieredPricing: initialValues?.tieredPricing || []
     }
   });
+
+  const suggestFromTitle = () => {
+    const guess = classifyProduct({ title: getValues('title'), description: getValues('description') });
+    if (!getValues('language') && guess.language) setValue('language', guess.language, { shouldDirty: true });
+    if (!getValues('sealedType') && guess.sealedType) setValue('sealedType', guess.sealedType, { shouldDirty: true });
+  };
 
   const { fields: shippingFields, append: appendShipping, remove: removeShipping } = useFieldArray({
     control,
@@ -104,8 +115,23 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Product Title</label>
-              <input {...register("title")} className="w-full bg-slate-900 text-slate-100 px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" />
+              <input {...register("title", { onBlur: suggestFromTitle })} className="w-full bg-slate-900 text-slate-100 px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" />
               {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message as string}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Product Language <span className="text-slate-500 font-normal">(edition printed on the box)</span></label>
+              <select {...register("language")} className="w-full bg-slate-900 text-slate-100 px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
+                <option value="">Select language…</option>
+                {PRODUCT_LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.flag} {l.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Sealed Product Type</label>
+              <select {...register("sealedType")} className="w-full bg-slate-900 text-slate-100 px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
+                <option value="">Select type…</option>
+                {SEALED_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+              <p className="text-[11px] text-slate-500 mt-1">Auto-suggested from the title — please double-check.</p>
             </div>
             <div>
               <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Origin Facility Type</label>

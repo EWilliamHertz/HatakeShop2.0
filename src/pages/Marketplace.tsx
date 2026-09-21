@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, PackageSearch, Building2, MapPin } from 'lucide-react';
+import { Filter, PackageSearch, Building2, MapPin, ChevronDown, X, SlidersHorizontal } from 'lucide-react';
+import { languageLabel, sealedTypeLabel, PRODUCT_LANGUAGES } from '../lib/productTaxonomy.ts';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
@@ -37,9 +38,11 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
         <h3 className="text-lg font-bold text-white line-clamp-1 mb-1">{p.title}</h3>
         <p className="text-xs text-slate-400 line-clamp-2 mb-3 h-8">{p.description}</p>
         
-        <div className="flex flex-wrap gap-2 mb-4">
-           {(p?.seller?.country || p.originType) && <span className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded border border-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {p?.seller?.country || p.originType}</span>}
-           <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 uppercase tracking-wider">MIN ORDER: {p.moq} units</span>
+        <div className="flex flex-wrap gap-1.5 mb-4">
+           {p.language && (() => { const l = PRODUCT_LANGUAGES.find(x => x.value === p.language); return <span title={languageLabel(p.language)} className="bg-[#ffcc00]/10 text-[#ffcc00] border border-[#ffcc00]/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1">{l?.flag} {l?.short || p.language}</span>; })()}
+           {p.sealedType && <span className="bg-slate-800 text-slate-200 text-[10px] px-2 py-1 rounded border border-slate-700 font-semibold">{sealedTypeLabel(p.sealedType)}</span>}
+           {p?.seller?.country && <span className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded border border-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {p.seller.country}</span>}
+           <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 uppercase tracking-wider">MOQ {p.moq}</span>
         </div>
         
         <div className="mt-auto space-y-3 pt-4 border-t border-slate-800">
@@ -57,16 +60,73 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
     </div>
   );
 };
+/* ---------- Sidebar building blocks ---------- */
+const FilterSection = ({ title, count, defaultOpen = true, children }: { title: string; count?: number; defaultOpen?: boolean; children: React.ReactNode }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-b border-slate-800 last:border-b-0 pb-4 last:pb-0">
+      <button type="button" onClick={() => setOpen(!open)} className="w-full flex items-center justify-between py-2 text-left group">
+        <span className="text-xs font-bold text-slate-300 uppercase tracking-wider group-hover:text-white transition-colors flex items-center gap-2">
+          {title}
+          {count ? <span className="bg-[#ffcc00] text-black text-[10px] px-1.5 py-0.5 rounded-full font-black leading-none">{count}</span> : null}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="mt-1 space-y-1">{children}</div>}
+    </div>
+  );
+};
+
+const FacetCheckbox = ({ label, count, checked, onChange, prefix }: { label: string; count?: number; checked: boolean; onChange: () => void; prefix?: string }) => (
+  <label className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-sm transition-colors ${checked ? 'bg-[#ffcc00]/10 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}>
+    <span className="flex items-center gap-2 min-w-0">
+      <input type="checkbox" checked={checked} onChange={onChange} className="rounded border-slate-600 bg-slate-800 text-[#ffcc00] focus:ring-[#ffcc00] focus:ring-offset-0 shrink-0" />
+      {prefix && <span className="shrink-0">{prefix}</span>}
+      <span className="truncate">{label}</span>
+    </span>
+    {typeof count === 'number' && <span className={`text-[11px] tabular-nums shrink-0 ${checked ? 'text-[#ffcc00]' : 'text-slate-500'}`}>{count}</span>}
+  </label>
+);
+
+const Chip = ({ label, onRemove }: { label: string; onRemove: () => void }) => (
+  <button type="button" onClick={onRemove} className="inline-flex items-center gap-1 bg-slate-800 border border-slate-700 hover:border-red-500/50 hover:bg-red-500/10 text-slate-200 text-xs px-2.5 py-1 rounded-full transition-colors">
+    {label} <X className="w-3 h-3" />
+  </button>
+);
+
+const parseList = (v: string | null) => (v ? v.split(',').filter(Boolean) : []);
+
 export function Marketplace() {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
-  const [searchParams] = useSearchParams();
-  const [search, setSearch] = useState(searchParams.get('q') || "");
-  const [searchInput, setSearchInput] = useState(searchParams.get('q') || "");
-  const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ includeCountries: [] as string[], excludeCountries: [] as string[], includeRegions: [] as string[], excludeRegions: [] as string[], category: "", minMoq: "", maxPrice: "", sortBy: "newest" });
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ---- All filter state lives in the URL so results are shareable/bookmarkable ----
+  const search = searchParams.get('q') || '';
+  const page = parseInt(searchParams.get('page') || '1', 10) || 1;
+  const selectedLanguages = parseList(searchParams.get('lang'));
+  const selectedTypes = parseList(searchParams.get('type'));
+  const selectedCountries = parseList(searchParams.get('country'));
+  const selectedCategoryId = searchParams.get('category') ? parseInt(searchParams.get('category') as string, 10) : null;
+  const maxPrice = searchParams.get('maxPrice') || '';
+  const minMoq = searchParams.get('minMoq') || '';
+  const sortBy = searchParams.get('sort') || 'newest';
+
+  const [searchInput, setSearchInput] = useState(search);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  const updateParams = (patch: Record<string, string | null | undefined>, resetPage = true) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch).forEach(([k, v]) => { if (v === null || v === undefined || v === '') next.delete(k); else next.set(k, v); });
+    if (resetPage) next.delete('page');
+    setSearchParams(next, { replace: false });
+  };
+  const toggleInList = (key: string, current: string[], value: string) => {
+    const next = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+    updateParams({ [key]: next.join(',') });
+  };
+  const clearAll = () => setSearchParams(new URLSearchParams(), { replace: false });
 
   const { data: categoriesData = [] } = useQuery({
     queryKey: ['categories'],
@@ -77,23 +137,22 @@ export function Marketplace() {
     }
   });
 
-  const { data: locationsData = { countries: [], regions: [] } } = useQuery({
-    queryKey: ['countries'],
+  const { data: facets = { languages: [], sealedTypes: [], countries: [] } } = useQuery({
+    queryKey: ['marketplace-facets'],
     queryFn: async () => {
-      const res = await fetch('/api-v2/countries');
-      if (!res.ok) return { countries: [], regions: [] };
+      const res = await fetch('/api-v2/marketplace/facets');
+      if (!res.ok) return { languages: [], sealedTypes: [], countries: [] };
       return res.json();
-    }
+    },
+    staleTime: 60_000
   });
 
-
-  
   const categoryTree = React.useMemo(() => {
     if (!Array.isArray(categoriesData)) return [];
     const map = new Map();
-    const roots = [];
-    categoriesData.forEach(c => map.set(c.id, { ...c, children: [] }));
-    categoriesData.forEach(c => {
+    const roots: any[] = [];
+    categoriesData.forEach((c: any) => map.set(c.id, { ...c, children: [] }));
+    categoriesData.forEach((c: any) => {
         if (c.parentId) {
             const parent = map.get(c.parentId);
             if (parent) parent.children.push(map.get(c.id));
@@ -104,43 +163,38 @@ export function Marketplace() {
     return roots;
   }, [categoriesData]);
 
+  const { data = {}, isLoading, error } = useQuery({
+    queryKey: ['products', search, page, selectedLanguages, selectedTypes, selectedCountries, selectedCategoryId, maxPrice, minMoq, sortBy],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: page.toString(), sortBy });
+      if (search) params.set('q', search);
+      if (selectedLanguages.length) params.set('languages', selectedLanguages.join(','));
+      if (selectedTypes.length) params.set('sealedTypes', selectedTypes.join(','));
+      if (selectedCountries.length) params.set('countries', selectedCountries.join(','));
+      if (selectedCategoryId) params.set('category', String(selectedCategoryId));
+      if (maxPrice) params.set('maxPrice', maxPrice);
+      if (minMoq) params.set('minMoq', minMoq);
+      const res = await fetch(`/api-v2/products?${params.toString()}`);
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 150)}`);
+      }
+    },
+    placeholderData: (prev) => prev
+  });
 
-const { data = {}, isLoading, error } = useQuery({
-  queryKey: ['products', search, page, filters, selectedCategoryId],
-  queryFn: async () => {
-    const params = new URLSearchParams({
-      q: search,
-      page: page.toString(),
-      ...(filters.includeCountries.length ? { includeCountries: filters.includeCountries.join(',') } : {}),
-      ...(filters.excludeCountries.length ? { excludeCountries: filters.excludeCountries.join(',') } : {}),
-      ...(filters.includeRegions.length ? { includeRegions: filters.includeRegions.join(',') } : {}),
-      ...(filters.excludeRegions.length ? { excludeRegions: filters.excludeRegions.join(',') } : {}),
-      minMoq: filters.minMoq,
-      maxPrice: filters.maxPrice,
-      category: selectedCategoryId ? selectedCategoryId.toString() : filters.category,
-      sortBy: filters.sortBy
-    });
-    const res = await fetch(`/api-v2/products?${params.toString()}`);
-    const text = await res.text();
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 150)}`);
-    }
-  }
-});
-
-  const safeCategories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.categories || []);
   const products = Array.isArray(data) ? data : (data?.products || []);
   const totalPages = data?.totalPages || 1;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearch(searchInput);
+    updateParams({ q: searchInput });
   };
 
-
-  const isFiltering = Boolean(search || selectedCategoryId || filters.includeCountries.length || filters.excludeCountries.length || filters.includeRegions.length || filters.excludeRegions.length || filters.minMoq || filters.maxPrice || filters.sortBy !== 'newest' );
+  const activeFilterCount = selectedLanguages.length + selectedTypes.length + selectedCountries.length + (selectedCategoryId ? 1 : 0) + (maxPrice ? 1 : 0) + (minMoq ? 1 : 0);
+  const isFiltering = Boolean(search || activeFilterCount > 0 || sortBy !== 'newest');
 
   const groupedProducts = React.useMemo(() => {
     const groups: { [key: string]: { companyName: string, sellerId: number, products: any[] } } = {};
@@ -182,11 +236,114 @@ const { data = {}, isLoading, error } = useQuery({
     };
   }, [products, isFiltering]);
 
+  // Group sealed types by their group label (Boxes / Packs / Decks / ...)
+  const typeGroups = React.useMemo(() => {
+    const out: Record<string, any[]> = {};
+    (facets.sealedTypes || []).forEach((s: any) => { (out[s.group] ||= []).push(s); });
+    return out;
+  }, [facets.sealedTypes]);
+
+  const categoryName = (id: number | null) => (Array.isArray(categoriesData) ? categoriesData : []).find((c: any) => c.id === id)?.name;
+
+  const sidebar = (
+    <>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2 text-white font-bold text-lg">
+          <Filter className="w-5 h-5 text-[#ffcc00]" />
+          <h2>{t('Filters')}</h2>
+        </div>
+        {activeFilterCount > 0 && (
+          <button onClick={clearAll} className="text-xs text-slate-400 hover:text-[#ffcc00] font-semibold transition-colors">{t('Clear all')}</button>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {/* Language — the primary way buyers shop sealed product */}
+        <FilterSection title={t('Language / Edition')} count={selectedLanguages.length}>
+          {(facets.languages || []).length === 0 && <p className="text-xs text-slate-500 px-2">{t('No language data yet')}</p>}
+          {(facets.languages || []).map((l: any) => (
+            <FacetCheckbox key={l.value} prefix={l.flag} label={t(l.label)} count={l.count} checked={selectedLanguages.includes(l.value)} onChange={() => toggleInList('lang', selectedLanguages, l.value)} />
+          ))}
+        </FilterSection>
+
+        {/* Product type */}
+        <FilterSection title={t('Product Type')} count={selectedTypes.length}>
+          {Object.keys(typeGroups).length === 0 && <p className="text-xs text-slate-500 px-2">{t('No product type data yet')}</p>}
+          {Object.entries(typeGroups).map(([group, items]) => (
+            <div key={group} className="mb-2 last:mb-0">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 pt-1 pb-0.5">{t(group)}</div>
+              {items.map((s: any) => (
+                <FacetCheckbox key={s.value} label={t(s.label)} count={s.count} checked={selectedTypes.includes(s.value)} onChange={() => toggleInList('type', selectedTypes, s.value)} />
+              ))}
+            </div>
+          ))}
+        </FilterSection>
+
+        {/* Category tree */}
+        <FilterSection title={t('Category')} count={selectedCategoryId ? 1 : 0} defaultOpen={false}>
+          <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+            <button 
+              onClick={() => updateParams({ category: null })} 
+              className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === null ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+            >
+              {t('All Categories')}
+            </button>
+            {categoryTree.map((parent: any) => (
+              <div key={parent.id}>
+                <button 
+                  onClick={() => updateParams({ category: String(parent.id) })}
+                  className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === parent.id ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                >
+                  {parent.name}
+                </button>
+                {parent.children.length > 0 && (
+                  <div className="pl-3 ml-2 border-l border-slate-800 space-y-0.5">
+                    {parent.children.map((child: any) => (
+                      <button 
+                        key={child.id}
+                        onClick={() => updateParams({ category: String(child.id) })}
+                        className={`w-full text-left px-2 py-1 rounded-lg text-sm transition-all ${selectedCategoryId === child.id ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+                      >
+                        {child.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </FilterSection>
+
+        {/* Ships from — replaces the old include/exclude country + region multi-selects */}
+        <FilterSection title={t('Ships From')} count={selectedCountries.length} defaultOpen={false}>
+          {(facets.countries || []).length === 0 && <p className="text-xs text-slate-500 px-2">{t('No seller locations yet')}</p>}
+          {(facets.countries || []).map((c: any) => (
+            <FacetCheckbox key={c.value} prefix={<MapPin className="w-3 h-3 text-slate-500" /> as any} label={c.value} count={c.count} checked={selectedCountries.includes(c.value)} onChange={() => toggleInList('country', selectedCountries, c.value)} />
+          ))}
+        </FilterSection>
+
+        {/* Price & MOQ */}
+        <FilterSection title={t('Price & Quantity')} count={(maxPrice ? 1 : 0) + (minMoq ? 1 : 0)} defaultOpen={false}>
+          <div className="grid grid-cols-2 gap-2 px-1">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">{t('Max Price')}</label>
+              <input type="number" min="0" value={maxPrice} onChange={e => updateParams({ maxPrice: e.target.value })} placeholder="∞" className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-slate-200 focus:border-[#ffcc00] outline-none" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">{t('Max MOQ')}</label>
+              <input type="number" min="1" value={minMoq} onChange={e => updateParams({ minMoq: e.target.value })} placeholder="Any" className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-slate-200 focus:border-[#ffcc00] outline-none" />
+            </div>
+          </div>
+        </FilterSection>
+      </div>
+    </>
+  );
+
   return (
     <div className="bg-slate-950 min-h-screen text-slate-100 flex flex-col">
       <Helmet>
         <title>Marketplace | Hatake</title>
-        <meta name="description" content="Discover wholesale products on Hatake Marketplace." />
+        <meta name="description" content="Discover wholesale sealed TCG products on Hatake Marketplace." />
       </Helmet>
       <div className="bg-slate-900 border-b border-slate-800 p-6">
         <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row gap-4 justify-between items-center">
@@ -207,91 +364,41 @@ const { data = {}, isLoading, error } = useQuery({
       </div>
       
       <div className="max-w-[1920px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
-        <aside className="w-full md:w-64 shrink-0 space-y-6 bg-slate-900 border border-slate-800 p-6 rounded-2xl h-fit">
-          <div className="flex items-center space-x-2 text-white font-bold text-lg mb-2">
-            <Filter className="w-5 h-5 text-[#ffcc00]" />
-            <h2>{t('Filters')}</h2>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Category')}</label>
-           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                <button 
-                  onClick={() => setSelectedCategoryId(null)} 
-                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-all ${selectedCategoryId === null ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent font-medium'}`}
-                >
-                  {t('All Categories')}
-                </button>
-                
-                {Array.isArray(categoryTree) && categoryTree.map((parent: any) => (
-                  <div key={parent.id} className="space-y-1">
-                    <button 
-                      onClick={() => setSelectedCategoryId(parent.id)}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-all ${selectedCategoryId === parent.id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent font-medium'}`}
-                    >
-                      {parent.name}
-                    </button>
-                    {parent.children.length > 0 && (
-                      <div className="pl-4 space-y-1 border-l-2 border-slate-700/50 ml-3 mt-1">
-                        {Array.isArray(parent.children) && parent.children.map((child: any) => (
-                          <button 
-                            key={child.id}
-                            onClick={() => setSelectedCategoryId(child.id)}
-                            className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === child.id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'}`}
-                          >
-                            {child.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Include Countries')}</label>
-              <select multiple value={filters.includeCountries} onChange={e => setFilters({...filters, includeCountries: Array.from(e.target.selectedOptions, option => option.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4 h-24 custom-scrollbar">
-                {Array.isArray(locationsData?.countries) && locationsData.countries.map((country: string) => (
-                  <option key={country} value={country}>{country}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Exclude Countries')}</label>
-              <select multiple value={filters.excludeCountries} onChange={e => setFilters({...filters, excludeCountries: Array.from(e.target.selectedOptions, option => option.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4 h-24 custom-scrollbar">
-                {Array.isArray(locationsData?.countries) && locationsData.countries.map((country: string) => (
-                  <option key={country} value={country}>{country}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Include Regions')}</label>
-              <select multiple value={filters.includeRegions} onChange={e => setFilters({...filters, includeRegions: Array.from(e.target.selectedOptions, option => option.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4 h-24 custom-scrollbar">
-                {Array.isArray(locationsData?.regions) && locationsData.regions.map((region: string) => (
-                  <option key={region} value={region}>{region}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Exclude Regions')}</label>
-              <select multiple value={filters.excludeRegions} onChange={e => setFilters({...filters, excludeRegions: Array.from(e.target.selectedOptions, option => option.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] focus:ring-1 focus:ring-[#ffcc00] outline-none text-slate-200 mb-4 h-24 custom-scrollbar">
-                {Array.isArray(locationsData?.regions) && locationsData.regions.map((region: string) => (
-                  <option key={region} value={region}>{region}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t('Sort By')}</label>
-              <select value={filters.sortBy} onChange={e => setFilters({...filters, sortBy: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-slate-200">
-                <option value="newest">{t('Newest Arrivals')}</option>
-                <option value="price_asc">{t('Price: Low to High')}</option>
-                <option value="price_desc">{t('Price: High to Low')}</option>
-              </select>
-            </div>
-          </div>
+        {/* Mobile filter toggle */}
+        <button onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)} className="md:hidden flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm font-semibold text-white">
+          <span className="flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-[#ffcc00]" /> {t('Filters')} {activeFilterCount > 0 && <span className="bg-[#ffcc00] text-black text-[10px] px-1.5 py-0.5 rounded-full font-black">{activeFilterCount}</span>}</span>
+          <ChevronDown className={`w-4 h-4 transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        <aside className={`${mobileFiltersOpen ? 'block' : 'hidden'} md:block w-full md:w-72 shrink-0 bg-slate-900 border border-slate-800 p-5 rounded-2xl h-fit md:sticky md:top-6`}>
+          {sidebar}
         </aside>
 
       <main className="flex-1 min-w-0">
+          {/* Toolbar: active filters + sort */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
+            <div className="flex flex-wrap items-center gap-2 min-h-[28px]">
+              {search && <Chip label={`"${search}"`} onRemove={() => { setSearchInput(''); updateParams({ q: null }); }} />}
+              {selectedLanguages.map(v => { const l = (facets.languages || []).find((x: any) => x.value === v); return <Chip key={v} label={`${l?.flag || ''} ${t(l?.label || v)}`} onRemove={() => toggleInList('lang', selectedLanguages, v)} />; })}
+              {selectedTypes.map(v => { const s = (facets.sealedTypes || []).find((x: any) => x.value === v); return <Chip key={v} label={t(s?.label || v)} onRemove={() => toggleInList('type', selectedTypes, v)} />; })}
+              {selectedCountries.map(v => <Chip key={v} label={v} onRemove={() => toggleInList('country', selectedCountries, v)} />)}
+              {selectedCategoryId && <Chip label={categoryName(selectedCategoryId) || t('Category')} onRemove={() => updateParams({ category: null })} />}
+              {maxPrice && <Chip label={`≤ ${formatPrice(Number(maxPrice))}`} onRemove={() => updateParams({ maxPrice: null })} />}
+              {minMoq && <Chip label={`MOQ ≤ ${minMoq}`} onRemove={() => updateParams({ minMoq: null })} />}
+              {(activeFilterCount > 0 || search) && <button onClick={() => { setSearchInput(''); clearAll(); }} className="text-xs text-slate-400 hover:text-white underline underline-offset-2 ml-1">{t('Clear all')}</button>}
+              {!activeFilterCount && !search && <span className="text-sm text-slate-500">{t('Showing all sealed products')}</span>}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('Sort By')}</label>
+              <select value={sortBy} onChange={e => updateParams({ sort: e.target.value })} className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] outline-none text-slate-200">
+                <option value="newest">{t('Newest Arrivals')}</option>
+                <option value="price_asc">{t('Price: Low to High')}</option>
+                <option value="price_desc">{t('Price: High to Low')}</option>
+                <option value="lowest_moq">{t('Lowest MOQ')}</option>
+              </select>
+            </div>
+          </div>
+
           {error ? (
             <div className="p-6 bg-red-950/50 border border-red-500 rounded-2xl text-red-200 my-8">
               <h3 className="font-bold text-lg mb-2">API Connection Failed</h3>
@@ -365,6 +472,14 @@ const { data = {}, isLoading, error } = useQuery({
                   ));
                 })()
               )}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-10">
+              <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) }, false)} className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 disabled:opacity-40 hover:border-slate-600 transition-colors">{t('Previous')}</button>
+              <span className="text-sm text-slate-400 px-3 tabular-nums">{page} / {totalPages}</span>
+              <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) }, false)} className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 disabled:opacity-40 hover:border-slate-600 transition-colors">{t('Next')}</button>
             </div>
           )}
         </main>

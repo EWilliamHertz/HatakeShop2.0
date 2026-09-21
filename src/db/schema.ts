@@ -87,6 +87,13 @@ export const products = pgTable('products', {
   shippingOptions: jsonb('shipping_options').default(sql`'[]'::jsonb`),
   images: jsonb('images').default(sql`'[]'::jsonb`),
   
+  // Sealed-product classification
+  // language: 'en' | 'ja' | 'zh-Hant' (Traditional Chinese / Cantonese) | 'zh-Hans' (Simplified Chinese / Mandarin) | 'ko' | 'other'
+  language: text('language'),
+  // sealedType: 'booster_box' | 'etb' | 'booster_bundle' | 'booster_pack' | 'collection_box' | 'premium_collection'
+  //             | 'tin' | 'blister' | 'deck' | 'case' | 'accessory' | 'other'
+  sealedType: text('sealed_type'),
+
   // Graded Card Fields
   productType: text('product_type').default('sealed'), // 'sealed' | 'graded'
   gradingCompany: text('grading_company'),

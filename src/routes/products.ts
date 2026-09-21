@@ -11,6 +11,7 @@ import crypto from "crypto";
 import { generateB2BEmailHtml } from "../lib/emailTemplate.js";
 import { getUserProfile } from "../db/users.js";
 import { getTranslatedProduct } from "../lib/translate.js";
+import { PRODUCT_LANGUAGES, SEALED_TYPES } from "../lib/productTaxonomy.js";
 
 const router = Router();
 
@@ -22,15 +23,51 @@ router.get("/api-v2/countries", async (req, res) => {
     })
     .from(products)
     .innerJoin(users, eq(products.sellerId, users.id))
-    .where(isNotNull(users.country));
-    
-    // Create an object grouping countries by region, or simply return countries and regions.
-    // The user wants a dropdown with regions and countries.
-    // Let's just return unique countries for now, and handle regions if needed.
-    const countries = Array.from(new Set(sellersWithProducts.map(s => s.country).filter(Boolean)));
-    const regions = Array.from(new Set(sellersWithProducts.map(s => s.region).filter(Boolean)));
-    
+    .where(and(isNotNull(users.country), eq(products.approvalStatus, 'approved')));
+    const countries = Array.from(new Set(sellersWithProducts.map(s => s.country).filter(Boolean))).sort();
+    const regions = Array.from(new Set(sellersWithProducts.map(s => s.region).filter(Boolean))).sort();
     res.json({ countries, regions });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Facets for the marketplace sidebar: languages, sealed product types and
+ * seller countries, each with the number of approved sealed listings.
+ * Only facets that actually have products are returned, so the sidebar never
+ * shows empty options.
+ */
+router.get("/api-v2/marketplace/facets", async (req, res) => {
+  try {
+    const base = and(eq(products.approvalStatus, 'approved'), sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`);
+
+    const [langRows, typeRows, countryRows] = await Promise.all([
+      db.select({ key: products.language, count: sql<number>`count(*)::int` }).from(products).where(base).groupBy(products.language),
+      db.select({ key: products.sealedType, count: sql<number>`count(*)::int` }).from(products).where(base).groupBy(products.sealedType),
+      db.select({ key: users.country, count: sql<number>`count(*)::int` }).from(products).innerJoin(users, eq(products.sellerId, users.id)).where(and(base, isNotNull(users.country))).groupBy(users.country),
+    ]);
+
+    const langMap = new Map(langRows.map(r => [r.key || 'unset', Number(r.count)]));
+    const typeMap = new Map(typeRows.map(r => [r.key || 'unset', Number(r.count)]));
+
+    const languages = PRODUCT_LANGUAGES
+      .map(l => ({ ...l, count: langMap.get(l.value) || 0 }))
+      .filter(l => l.count > 0);
+    const sealedTypes = SEALED_TYPES
+      .map(s => ({ ...s, count: typeMap.get(s.value) || 0 }))
+      .filter(s => s.count > 0);
+    const countries = countryRows
+      .filter(r => r.key)
+      .map(r => ({ value: r.key as string, count: Number(r.count) }))
+      .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+
+    res.json({
+      languages,
+      sealedTypes,
+      countries,
+      unclassified: { language: langMap.get('unset') || 0, sealedType: typeMap.get('unset') || 0 }
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -62,6 +99,9 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
       const categoryId = req.query.category as string;
       const productType = req.query.productType as string;
       const sortBy = req.query.sortBy as string || 'newest';
+      const languagesParam = (req.query.languages as string) || (req.query.language as string) || '';
+      const sealedTypesParam = (req.query.sealedTypes as string) || (req.query.sealedType as string) || '';
+      const countriesParam = (req.query.countries as string) || (req.query.includeCountries as string) || '';
       
       const page = parseInt(req.query.page as string) || 1;
       const limit = 12;
@@ -88,6 +128,8 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
           shippingOptions: products.shippingOptions,
           images: products.images,
           productType: products.productType,
+          language: products.language,
+          sealedType: products.sealedType,
           gradingCompany: products.gradingCompany,
           grade: products.grade,
           certNumber: products.certNumber,
@@ -107,13 +149,20 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
 
       const conditions = [eq(products.approvalStatus, 'approved'), (productType === 'graded' ? eq(products.productType, 'graded') : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`)];
       
-      const includeCountries = req.query.includeCountries as string;
       const excludeCountries = req.query.excludeCountries as string;
       const includeRegions = req.query.includeRegions as string;
       const excludeRegions = req.query.excludeRegions as string;
 
-      if (includeCountries) {
-         const arr = includeCountries.split(',').filter(Boolean);
+      if (languagesParam) {
+         const arr = languagesParam.split(',').filter(Boolean);
+         if (arr.length > 0) conditions.push(inArray(products.language, arr));
+      }
+      if (sealedTypesParam) {
+         const arr = sealedTypesParam.split(',').filter(Boolean);
+         if (arr.length > 0) conditions.push(inArray(products.sealedType, arr));
+      }
+      if (countriesParam) {
+         const arr = countriesParam.split(',').filter(Boolean);
          if (arr.length > 0) conditions.push(inArray(users.country, arr));
       }
       if (excludeCountries) {
@@ -173,11 +222,11 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
       if (!q || textSearchFailed) {
          if (sortBy === 'randomized') {
            query = query.orderBy(sql`RANDOM()`) as any;
-         } else if (sortBy === 'lowest_moq') {
+         } else if (sortBy === 'lowest_moq' || sortBy === 'moq_asc') {
            query = query.orderBy(products.moq) as any;
-         } else if (sortBy === 'lowest_price') {
+         } else if (sortBy === 'lowest_price' || sortBy === 'price_asc') {
            query = query.orderBy(sql`CAST(${products.unitCost} AS numeric) ASC`) as any;
-         } else if (sortBy === 'highest_price') {
+         } else if (sortBy === 'highest_price' || sortBy === 'price_desc') {
            query = query.orderBy(sql`CAST(${products.unitCost} AS numeric) DESC`) as any;
          } else {
            query = query.orderBy(desc(products.createdAt)) as any;
