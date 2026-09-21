@@ -629,6 +629,195 @@ app.get(["/marketplace/sneak-peek", "/api/marketplace/sneak-peek", "/api-v2/mark
   }
 });
 
+// Browse overview for the "All Categories" view: a few products per category (mixed
+// suppliers) + every company A-Z with a small product preview. Powers the marketplace
+// browse sections and the home "Featured Categories" sections.
+app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/browse"], async (req, res) => {
+  try {
+    await ensureSealedTaxonomySchema();
+    const productType = (req.query.productType as string) || 'sealed';
+    const sortBy = (req.query.sortBy as string) || 'company_az';
+    const PREVIEW_COUNT = 4;
+    const typeCondition = productType === 'graded'
+      ? eq(products.productType, 'graded')
+      : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
+
+    const [allRows, topCategories, allCats] = await Promise.all([
+      db.select({
+        product: {
+          id: products.id,
+          sellerId: products.sellerId,
+          categoryId: products.categoryId,
+          categoryIds: products.categoryIds,
+          isSponsored: products.isSponsored,
+          title: products.title,
+          brand: products.brand,
+          description: products.description,
+          specifications: products.specifications,
+          moq: products.moq,
+          oemMoq: products.oemMoq,
+          offersOem: products.offersOem,
+          stockQuantity: products.stockQuantity,
+          unitCost: products.unitCost,
+          tieredPricing: products.tieredPricing,
+          originType: products.originType,
+          leadTimeDays: products.leadTimeDays,
+          shippingOptions: products.shippingOptions,
+          images: products.images,
+          productType: products.productType,
+          language: products.language,
+          sealedType: products.sealedType,
+          gradingCompany: products.gradingCompany,
+          grade: products.grade,
+          certNumber: products.certNumber,
+          cardYear: products.cardYear,
+          cardSet: products.cardSet,
+          cardNumber: products.cardNumber,
+          cardVariant: products.cardVariant,
+          createdAt: products.createdAt
+        },
+        seller: { id: users.id, companyName: users.companyName, country: users.country, verificationStatus: users.verificationStatus }
+      })
+        .from(products)
+        .leftJoin(users, eq(products.sellerId, users.id))
+        .where(and(eq(products.approvalStatus, 'approved'), typeCondition))
+        .orderBy(desc(products.createdAt)),
+      db.select().from(categories).where(sql`parent_id IS NULL`).orderBy(categories.sortOrder),
+      db.select().from(categories)
+    ]);
+
+    const flat: any[] = allRows.map((r: any) => ({ ...r.product, seller: r.seller }));
+    const catalog = flat.filter((p: any) => !(p.isSponsored || p.is_sponsored || p.sponsored || p.featured));
+    const sponsored = flat.filter((p: any) => p.isSponsored || p.is_sponsored || p.sponsored || p.featured).slice(0, 6);
+
+    // --- helpers for ordering previews ---
+    const priceOf = (p: any): number | null => {
+      let tiers: any = p.tieredPricing;
+      if (typeof tiers === 'string') { try { tiers = JSON.parse(tiers); } catch { tiers = []; } }
+      if (Array.isArray(tiers) && tiers.length > 0) {
+        const prices = tiers.map((t: any) => Number(t.price ?? t.unitPrice)).filter((n: number) => Number.isFinite(n) && n > 0);
+        if (prices.length > 0) return Math.min(...prices);
+      }
+      const base = Number(p.unitCost ?? p.unitPrice);
+      return Number.isFinite(base) && base > 0 ? base : null;
+    };
+    const companyKey = (p: any) => String(p.seller?.companyName || '\uffff');
+    const timeOf = (p: any) => new Date(p.createdAt ?? 0).getTime();
+    const sortProducts = (list: any[]) => {
+      const arr = [...list];
+      if (sortBy === 'company_az') {
+        arr.sort((a, b) => companyKey(a).localeCompare(companyKey(b)) || timeOf(b) - timeOf(a));
+      } else if (sortBy === 'company_za') {
+        arr.sort((a, b) => companyKey(b).localeCompare(companyKey(a)) || timeOf(b) - timeOf(a));
+      } else if (sortBy === 'lowest_price' || sortBy === 'price_asc') {
+        arr.sort((a, b) => (priceOf(a) ?? Infinity) - (priceOf(b) ?? Infinity));
+      } else if (sortBy === 'highest_price' || sortBy === 'price_desc') {
+        arr.sort((a, b) => (priceOf(b) ?? -Infinity) - (priceOf(a) ?? -Infinity));
+      } else if (sortBy === 'lowest_moq' || sortBy === 'moq_asc') {
+        arr.sort((a, b) => (a.moq ?? 0) - (b.moq ?? 0));
+      } else {
+        arr.sort((a, b) => timeOf(b) - timeOf(a));
+      }
+      return arr;
+    };
+
+    // --- map every category to its top-level ancestor + descendant sets ---
+    const byId = new Map<number, any>();
+    for (const c of allCats) byId.set((c as any).id, c);
+    const topAncestor = (id: number | null | undefined): number | null => {
+      let cur = id ?? null;
+      const seen = new Set<number>();
+      while (cur != null && byId.has(cur) && !seen.has(cur)) {
+        seen.add(cur);
+        const c: any = byId.get(cur);
+        if (c.parentId == null) return c.id;
+        cur = c.parentId;
+      }
+      return cur;
+    };
+    const childrenOf = new Map<number | null, any[]>();
+    for (const c of allCats) {
+      const key = ((c as any).parentId ?? null) as number | null;
+      if (!childrenOf.has(key)) childrenOf.set(key, []);
+      childrenOf.get(key)!.push(c);
+    }
+    const descendants = (id: number): Set<number> => {
+      const out = new Set<number>([id]);
+      const stack = [id];
+      while (stack.length > 0) {
+        const cur = stack.pop()!;
+        for (const child of (childrenOf.get(cur) || [])) {
+          const cid = (child as any).id;
+          if (!out.has(cid)) { out.add(cid); stack.push(cid); }
+        }
+      }
+      return out;
+    };
+
+    // --- category previews (mixed suppliers) ---
+    const catBuckets = new Map<number, any[]>();
+    for (const p of catalog) {
+      let top = topAncestor(p.categoryId);
+      if (top == null && Array.isArray(p.categoryIds) && p.categoryIds.length > 0) {
+        for (const cid of p.categoryIds) {
+          const t = topAncestor(cid);
+          if (t != null) { top = t; break; }
+        }
+      }
+      if (top == null) continue;
+      if (!catBuckets.has(top)) catBuckets.set(top, []);
+      catBuckets.get(top)!.push(p);
+    }
+
+    const categoriesOut: any[] = [];
+    for (const cat of topCategories as any[]) {
+      const bucket = catBuckets.get(cat.id) || [];
+      if (bucket.length === 0) continue;
+      const subOut: any[] = [];
+      for (const sub of (childrenOf.get(cat.id) || []) as any[]) {
+        const desc = descendants(sub.id);
+        const count = catalog.filter((p: any) =>
+          (p.categoryId != null && desc.has(p.categoryId)) ||
+          (Array.isArray(p.categoryIds) && p.categoryIds.some((cid: number) => desc.has(cid)))
+        ).length;
+        if (count > 0 || sub.isVisibleIfEmpty) subOut.push({ id: sub.id, name: sub.name, productCount: count });
+      }
+      categoriesOut.push({
+        id: cat.id,
+        name: cat.name,
+        productCount: bucket.length,
+        subcategories: subOut,
+        products: sortProducts(bucket).slice(0, PREVIEW_COUNT)
+      });
+    }
+
+    // --- company previews, all companies A-Z ---
+    const compBuckets = new Map<number, any[]>();
+    for (const p of catalog) {
+      const sid = p.seller?.id ?? p.sellerId;
+      if (sid == null) continue;
+      if (!compBuckets.has(sid)) compBuckets.set(sid, []);
+      compBuckets.get(sid)!.push(p);
+    }
+    const companiesOut = Array.from(compBuckets.entries()).map(([sid, list]) => {
+      const s: any = list[0].seller || {};
+      return {
+        sellerId: sid,
+        companyName: s.companyName || 'Independent Sellers',
+        country: s.country ?? null,
+        verificationStatus: s.verificationStatus ?? null,
+        productCount: list.length,
+        products: [...list].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, PREVIEW_COUNT)
+      };
+    }).sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || '')));
+
+    res.json({ categories: categoriesOut, companies: companiesOut, sponsored });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get(["/insights", "/api/insights", "/api-v2/insights"], async (req, res) => {
   try {
     const { timeRange = '30d', category = 'all' } = req.query;
