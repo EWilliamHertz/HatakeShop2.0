@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../db/index.js";
+import { db, ensureSealedTaxonomySchema } from "../db/index.js";
 import { users, products, inquiries, orders, categories } from "../db/schema.js";
 import { eq, or, and, desc, sql, inArray, ilike } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
@@ -114,6 +114,7 @@ router.get(["/seller/analytics", "/api/seller/analytics", "/api-v2/seller/analyt
 
 router.get(["/seller/products", "/api/seller/products", "/api-v2/seller/products"], requireAuth, requireSeller, async (req: AuthRequest, res) => {
   try {
+    await ensureSealedTaxonomySchema();
     const userProfile = await getUserProfile(req.user!.uid);
     const teamOwnerId = userProfile.teamOwnerId || userProfile.id;
     const myProducts = await db.select({
@@ -146,6 +147,7 @@ router.get(["/seller/products", "/api/seller/products", "/api-v2/seller/products
 
 router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/products"], requireAuth, requireSeller, async (req: AuthRequest, res) => {
   try {
+    await ensureSealedTaxonomySchema();
     const userProfile = await getUserProfile(req.user!.uid);
     const teamOwnerId = userProfile.teamOwnerId || userProfile.id;
     
@@ -250,6 +252,7 @@ router.post(["/seller/products/bulk", "/api/seller/products/bulk", "/api-v2/sell
 
 router.patch(["/seller/products/:id", "/api/seller/products/:id", "/api-v2/seller/products/:id"], requireAuth, requireSeller, async (req: AuthRequest, res) => {
   try {
+    await ensureSealedTaxonomySchema();
     const userProfile = await getUserProfile(req.user!.uid);
     const productId = parseInt(req.params.id, 10);
     

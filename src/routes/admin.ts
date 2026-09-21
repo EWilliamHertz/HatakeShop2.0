@@ -3,7 +3,7 @@ import express from "express";
 import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/services.js";
 
 import { Router } from "express";
-import { db } from "../db/index.js";
+import { db, ensureSealedTaxonomySchema } from "../db/index.js";
 import { adminAuth } from "../lib/firebase-admin.js";
 import { users, products, feedback, leads, affiliates, marketing_logs, categories, inquiries, inquiryMessages, reviews } from "../db/schema.js";
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
@@ -419,6 +419,7 @@ router.get("/api-v2/admin/test-email", requireAuth, requireAdmin, async (req, re
 
 router.get("/api-v2/admin/stats", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
+      await ensureSealedTaxonomySchema();
       const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
       const allProducts = await db.select({
           id: products.id,
@@ -593,6 +594,7 @@ router.delete("/api-v2/admin/users/:id", requireAuth, requireAdmin, async (req: 
 
 router.patch("/api-v2/admin/products/:id", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
+      await ensureSealedTaxonomySchema();
       const productId = parseInt(req.params.id, 10);
       const { title, description, moq, oemMoq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, certifications, isSponsored, language, sealedType } = req.body;
       const updateData: any = {}; if(title) updateData.title = title; if(description) updateData.description = description; if(moq) updateData.moq = moq; if(oemMoq !== undefined) updateData.oemMoq = oemMoq; if(originType) updateData.originType = originType; if(sellerId) updateData.sellerId = sellerId; if(shippingOptions) updateData.shippingOptions = shippingOptions; if(images) updateData.images = images; if(certifications) updateData.certifications = certifications; if(approvalStatus) updateData.approvalStatus = approvalStatus; if(categoryId !== undefined) updateData.categoryId = categoryId; if(isSponsored !== undefined) updateData.isSponsored = isSponsored; if(language !== undefined) updateData.language = language || null; if(sealedType !== undefined) updateData.sealedType = sealedType || null; await db.update(products).set(updateData).where(eq(products.id, productId));
@@ -643,6 +645,7 @@ router.get("/api-v2/admin/products", requireAuth, requireAdmin, async (req: Auth
 
 router.patch("/api-v2/admin/products/bulk", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
+    await ensureSealedTaxonomySchema();
     const { productIds, updates } = req.body;
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
       return res.status(400).json({ error: "No productIds provided" });

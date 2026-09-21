@@ -12,6 +12,7 @@ import { generateB2BEmailHtml } from "../lib/emailTemplate.js";
 import { getUserProfile } from "../db/users.js";
 import { getTranslatedProduct } from "../lib/translate.js";
 import { PRODUCT_LANGUAGES, SEALED_TYPES } from "../lib/productTaxonomy.js";
+import { ensureSealedTaxonomySchema } from "../db/index.js";
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.get("/api-v2/countries", async (req, res) => {
  */
 router.get("/api-v2/marketplace/facets", async (req, res) => {
   try {
+    await ensureSealedTaxonomySchema();
     const base = and(eq(products.approvalStatus, 'approved'), sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`);
 
     const [langRows, typeRows, countryRows] = await Promise.all([
@@ -92,6 +94,7 @@ async function getDescendantCategoryIds(db: any, parentId: number): Promise<numb
 
 router.get("/api-v2/products", async (req: AuthRequest, res) => {
     try {
+      await ensureSealedTaxonomySchema();
       const q = req.query.q as string;
       const origin = req.query.origin as string;
       const minMoq = req.query.minMoq as string;
