@@ -5,9 +5,11 @@ import { Helmet } from 'react-helmet-async';
 import { Package, BadgeCheck, Search, ArrowLeft, Tag, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ProductModal } from '../components/ProductModal.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 
 export function CompanyListings() {
   const { t } = useTranslation();
+  const { formatPrice } = useCurrency();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -127,7 +129,9 @@ export function CompanyListings() {
               try { images = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch {}
               let tiers: any[] = [];
               try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch {}
-              const lowestPrice = tiers.length > 0 ? Math.min(...tiers.map((t: any) => Number(t.unitPrice))) : null;
+              const tierPrices = (Array.isArray(tiers) ? tiers : []).map((t: any) => Number(t.price ?? t.unitPrice)).filter((n: number) => Number.isFinite(n) && n > 0);
+              const basePrice = Number(p.unitCost ?? p.unitPrice);
+              const lowestPrice = tierPrices.length > 0 ? Math.min(...tierPrices) : (Number.isFinite(basePrice) && basePrice > 0 ? basePrice : null);
 
               return (
                 <div
@@ -160,7 +164,7 @@ export function CompanyListings() {
                     )}
                     <div className="mt-auto pt-2 border-t border-slate-800/50">
                       {lowestPrice
-                        ? <div><div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">From</div><div className="text-base font-bold text-white">${lowestPrice.toFixed(2)}<span className="text-slate-500 text-xs font-normal">/unit</span></div></div>
+                        ? <div><div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">From</div><div className="text-base font-bold text-white">{formatPrice(lowestPrice)}<span className="text-slate-500 text-xs font-normal">/unit</span></div></div>
                         : <div className="text-sm font-medium text-slate-400">Price on request</div>}
                     </div>
                   </div>

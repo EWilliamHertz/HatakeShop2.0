@@ -194,7 +194,7 @@ export function Marketplace() {
   };
 
   const activeFilterCount = selectedLanguages.length + selectedTypes.length + selectedCountries.length + (selectedCategoryId ? 1 : 0) + (maxPrice ? 1 : 0) + (minMoq ? 1 : 0);
-  const isFiltering = Boolean(search || activeFilterCount > 0 || sortBy !== 'newest');
+  const isFiltering = Boolean(search || activeFilterCount > 0 || (sortBy !== 'newest' && sortBy !== 'company_az'));
 
   const groupedProducts = React.useMemo(() => {
     const groups: { [key: string]: { companyName: string, sellerId: number, products: any[] } } = {};
@@ -222,7 +222,9 @@ export function Marketplace() {
     });
     
     let companiesArr = Object.values(groups);
-    if (!isFiltering) {
+    if (sortBy === 'company_az') {
+      companiesArr.sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || '')));
+    } else if (!isFiltering) {
       for (let i = companiesArr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [companiesArr[i], companiesArr[j]] = [companiesArr[j], companiesArr[i]];
@@ -234,7 +236,7 @@ export function Marketplace() {
       companies: companiesArr,
       flatProducts: flatList
     };
-  }, [products, isFiltering]);
+  }, [products, isFiltering, sortBy]);
 
   // Group sealed types by their group label (Boxes / Packs / Decks / ...)
   const typeGroups = React.useMemo(() => {
@@ -395,6 +397,7 @@ export function Marketplace() {
                 <option value="price_asc">{t('Price: Low to High')}</option>
                 <option value="price_desc">{t('Price: High to Low')}</option>
                 <option value="lowest_moq">{t('Lowest MOQ')}</option>
+                <option value="company_az">{t('By Company (A-Z)')}</option>
               </select>
             </div>
           </div>

@@ -10,9 +10,11 @@ import { Maximize2 } from 'lucide-react';
 import { VendorReviews } from '../components/VendorReviews.tsx';
 import { toast } from 'sonner';
 import { ProductModal } from '../components/ProductModal.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 
 export function CompanyProfile() {
   const { t } = useTranslation();
+  const { formatPrice } = useCurrency();
   const { id } = useParams<{ id: string }>();
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -210,7 +212,9 @@ export function CompanyProfile() {
                       try { images = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch {}
                       let tiers: any[] = [];
                       try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch {}
-                      const lowestPrice = tiers.length > 0 ? Math.min(...tiers.map((t: any) => Number(t.unitPrice))) : null;
+                      const tierPrices = (Array.isArray(tiers) ? tiers : []).map((t: any) => Number(t.price ?? t.unitPrice)).filter((n: number) => Number.isFinite(n) && n > 0);
+                      const basePrice = Number(p.unitCost ?? p.unitPrice);
+                      const lowestPrice = tierPrices.length > 0 ? Math.min(...tierPrices) : (Number.isFinite(basePrice) && basePrice > 0 ? basePrice : null);
                       return (
                         <div key={p.id} onClick={() => setSelectedProduct(p)} className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer flex flex-col">
                           <div className="aspect-[4/3] bg-slate-800 overflow-hidden relative">
@@ -226,7 +230,7 @@ export function CompanyProfile() {
                             {p.description && <p className="text-xs text-slate-500 line-clamp-2 mb-3">{p.description}</p>}
                             <div className="mt-auto">
                               {lowestPrice
-                                ? <div><div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">From</div><div className="text-base font-bold text-white">${lowestPrice.toFixed(2)}<span className="text-slate-500 text-xs font-normal">/unit</span></div></div>
+                                ? <div><div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">From</div><div className="text-base font-bold text-white">{formatPrice(lowestPrice)}<span className="text-slate-500 text-xs font-normal">/unit</span></div></div>
                                 : <div className="text-sm font-medium text-slate-400">Price on request</div>}
                             </div>
                           </div>
