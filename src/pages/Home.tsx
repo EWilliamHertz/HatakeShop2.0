@@ -10,6 +10,7 @@ import { useCart } from '../components/SampleCart.tsx';
 import { cn } from '../components/Layout.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { LandedCostEstimator } from '../components/LandedCostEstimator.tsx';
+import { BrowseSections } from '../components/BrowseSections.tsx';
 import { ResponsiveContainer, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 const generatePriceTrend = (basePrice: number) => {
@@ -97,19 +98,18 @@ export function Home() {
   const [searchInput, setSearchInput] = useState("");
   
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", productType: "sealed", sortBy: "newest" });
+  const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", productType: "sealed", sortBy: "company_az" });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: sneakPeekData = [] } = useQuery({
-    queryKey: ['sneakPeek', filters.productType],
+  const { data: browseData = { categories: [], companies: [] } } = useQuery({
+    queryKey: ['browse', filters.productType],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api-v2/marketplace/sneak-peek?productType=${filters.productType}`);
-        const json = await res.json();
-        return Array.isArray(json) ? json : [];
-      } catch { return []; }
+        const res = await fetch(`/api-v2/marketplace/browse?productType=${encodeURIComponent(filters.productType)}`);
+        return res.ok ? await res.json() : { categories: [], companies: [] };
+      } catch { return { categories: [], companies: [] }; }
     }
   });
 
@@ -223,6 +223,75 @@ export function Home() {
     }
     const base = Number(product?.unitCost ?? product?.unitPrice);
     return Number.isFinite(base) && base > 0 ? base : null;
+  };
+
+  // Product card used by the "All Categories" browse sections (mixed suppliers)
+  const renderBrowseCard = (item: any, pIdx: number) => {
+    const product = item.product || item;
+    const seller = item.seller || product.seller || {};
+    let images: any[] = [];
+    try { images = Array.isArray(product.images) ? product.images : JSON.parse(product.images || '[]'); } catch(e) {}
+    return (
+      <div key={product.id || pIdx} onClick={() => {
+          setSelectedProduct({ product, seller });
+          setActiveImageIndex(0);
+      }} className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full">
+        <div className="relative aspect-[4/3] bg-slate-800 overflow-hidden">
+          {product.productType === 'graded' ? (
+            <div className="w-full h-full p-2 bg-slate-800">
+              <DigitalSlab 
+                company={product.gradingCompany}
+                grade={product.grade}
+                certNumber={product.certNumber}
+                cardName={product.title}
+                cardSet={product.cardSet}
+                cardNumber={product.cardNumber}
+                year={product.cardYear}
+                variant={product.cardVariant}
+                image={images.length > 0 ? images[0] : undefined}
+              />
+            </div>
+          ) : (
+            <CardImageCarousel images={images} title={product.title} />
+          )}
+
+          <div className="absolute top-3 left-3 flex flex-col gap-2">
+            <span className="px-2.5 py-1 bg-slate-900/95 backdrop-blur-sm text-slate-200 text-[10px] uppercase font-semibold tracking-tight rounded-full shadow-sm border border-slate-700">
+              {t('MOQ')}: {product.moq}{product.offersOem ? ` Gen / ${product.oemMoq || product.moq} OEM` : ''}
+            </span>
+          </div>
+        </div>
+        <div className="p-5 flex-1 flex flex-col">
+          <h3 className="font-semibold tracking-tight text-slate-200 line-clamp-1 mb-1 group-hover:text-cyan-400 transition-colors flex items-center gap-2">
+            <span className="line-clamp-1">{product.title}</span>
+            {product.productType === 'graded' && <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold tracking-tight uppercase rounded-full shrink-0">{t('Graded')}</span>}
+          </h3>
+          {product.productType === 'graded' && <div className="text-[10px] font-semibold tracking-tight text-slate-400 mb-1">{product.gradingCompany} {product.grade} • Cert: {product.certNumber || 'N/A'}</div>}
+
+          <div className="flex items-center text-xs font-medium text-slate-400 mb-4">
+            <Building2 className="w-3.5 h-3.5 mr-1 text-slate-400" />
+            <Link to={`/company/${seller?.id || ""}`} onClick={(e) => e.stopPropagation()} className="truncate hover:text-cyan-400 transition-colors">{seller?.companyName || "Supplier"}</Link>
+            {seller?.verificationStatus === 'verified' && <BadgeCheck className="w-3.5 h-3.5 ml-1 text-cyan-500" />}
+          </div>
+          <div className="mt-auto flex items-end justify-between">
+            <div>
+              <div className="text-[10px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest mb-0.5">{t('Wholesale')}</div>
+              {formatTiers(product.tieredPricing) ? (
+                <div className="flex flex-col gap-0.5">
+                  {formatTiers(product.tieredPricing).map((t: string, i: number) => (
+                    <div key={i} className="text-[13px] font-semibold tracking-tight text-slate-200">{t}</div>
+                  ))}
+                </div>
+              ) : lowestUnitPrice(product) ? (
+                <div className="text-lg font-semibold tracking-tight font-display text-slate-200">{formatPrice(Number(lowestUnitPrice(product)))}<span className="text-[11px] text-slate-400 font-normal ml-1">PPU</span></div>
+              ) : (
+                <div className="text-lg font-semibold tracking-tight font-display text-slate-200">{t('Negotiable')}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const calculatePrice = () => {
@@ -415,135 +484,12 @@ export function Home() {
             <div className="flex flex-col items-center justify-center gap-4 text-center">
               <h2 className="heading-xl">{t('Featured Categories')}</h2>
             </div>
-          {sneakPeekData.map((dataItem: any, idx: number) => (
-            <div key={idx} className="space-y-6">
-              <div className="flex justify-between items-end border-b border-slate-800 pb-2">
-                <div>
-                  <h3 className="text-2xl font-bold tracking-tight text-slate-200">{dataItem.category.name}</h3>
-                  <div className="flex flex-wrap gap-2.5 mt-3">
-                    {(dataItem.subcategories || []).map((sub: any) => (
-                      <button 
-                        key={sub.id} 
-                        onClick={() => { setSelectedCategoryId(sub.id); setSearch(""); setPage(1); }} 
-                        className="group flex items-center text-[13px] bg-slate-900 border border-slate-800 text-slate-400 px-3.5 py-1.5 rounded-full font-medium transition-all duration-200 hover:bg-slate-800 hover:border-slate-700 hover:text-white active:scale-95"
-                      >
-                        <span className="text-cyan-500/70 group-hover:text-cyan-400 mr-1.5 font-semibold tracking-tight">#</span>
-                        {sub.name}
-                        <span className="ml-2 text-[11px] font-semibold tracking-tight bg-slate-800 text-slate-400 group-hover:text-cyan-400 group-hover:bg-slate-700 px-1.5 py-0.5 rounded-lg transition-colors">{sub.productCount || 0}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              {(() => {
-                const filteredGroups = (dataItem.groups || []).map((group: any) => ({
-                  ...group,
-                  products: (group.products || []).filter((item: any) => {
-                    const p = item.product || item;
-                    return !(p.isSponsored || p.is_sponsored || p.sponsored || p.featured);
-                  }).slice(0, 3)
-                })).filter((group: any) => group.products.length > 0);
-
-                if (filteredGroups.length === 0) {
-                  return <div className="text-slate-400 text-sm py-4">{t('No products listed in this category yet.')}</div>;
-                }
-                
-                return (
-                  <div className="space-y-8">
-                  {filteredGroups.map((group: any, gIdx: number) => (
-                    <div key={gIdx} className="mb-8 border-b border-slate-800 pb-8 last:border-0 last:mb-0 last:pb-0">
-                      {group.seller && (
-                        <h4 className="text-md font-semibold tracking-tight text-slate-400 mb-4 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                          {t('Top Listings from')} {group.seller.companyName}
-                        </h4>
-                      )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full justify-start place-items-stretch">
-                        {(group.products || []).map((item: any, pIdx: number) => {
-                          const product = item.product || item;
-                          const seller = item.seller || product.seller || group.seller || {};
-                          let images = [];
-                          try { images = Array.isArray(product.images) ? product.images : JSON.parse(product.images || '[]'); } catch(e) {}
-                          
-                          return (
-                            <div key={product.id || pIdx} onClick={() => {
-                                setSelectedProduct({ product, seller });
-                                setActiveImageIndex(0);
-                            }} className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full">
-                              <div className="relative aspect-[4/3] bg-slate-800 overflow-hidden">
-                                {product.productType === 'graded' ? (
-                                  <div className="w-full h-full p-2 bg-slate-800">
-                                    <DigitalSlab 
-                                      company={product.gradingCompany}
-                                      grade={product.grade}
-                                      certNumber={product.certNumber}
-                                      cardName={product.title}
-                                      cardSet={product.cardSet}
-                                      cardNumber={product.cardNumber}
-                                      year={product.cardYear}
-                                      variant={product.cardVariant}
-                                      image={images.length > 0 ? images[0] : undefined}
-                                    />
-                                  </div>
-                                ) : (
-                                  <CardImageCarousel images={images} title={product.title} />
-                                )}
-
-                                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                                  <span className="px-2.5 py-1 bg-slate-900/95 backdrop-blur-sm text-slate-200 text-[10px] uppercase font-semibold tracking-tight rounded-full shadow-sm border border-slate-700">
-                                    {t('MOQ')}: {product.moq}{product.offersOem ? ` Gen / ${product.oemMoq || product.moq} OEM` : ''}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="p-5 flex-1 flex flex-col">
-                                <h3 className="font-semibold tracking-tight text-slate-200 line-clamp-1 mb-1 group-hover:text-cyan-400 transition-colors flex items-center gap-2">
-                                  <span className="line-clamp-1">{product.title}</span>
-                                  {product.productType === 'graded' && <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold tracking-tight uppercase rounded-full shrink-0">{t('Graded')}</span>}
-                                </h3>
-                                {product.productType === 'graded' && <div className="text-[10px] font-semibold tracking-tight text-slate-400 mb-1">{product.gradingCompany} {product.grade} • Cert: {product.certNumber || 'N/A'}</div>}
-
-                                <div className="flex items-center text-xs font-medium text-slate-400 mb-4">
-                                  <Building2 className="w-3.5 h-3.5 mr-1 text-slate-400" />
-                                  <Link to={`/company/${seller?.id || ""}`} onClick={(e) => e.stopPropagation()} className="truncate hover:text-cyan-400 transition-colors">{seller?.companyName || "Supplier"}</Link>
-                                  {seller?.verificationStatus === 'verified' && <BadgeCheck className="w-3.5 h-3.5 ml-1 text-cyan-500" />}
-                                </div>
-                                <div className="mt-auto flex items-end justify-between">
-                                  <div>
-                                    <div className="text-[10px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest mb-0.5">{t('Wholesale')}</div>
-                                    {formatTiers(product.tieredPricing) ? (
-                                      <div className="flex flex-col gap-0.5">
-                                        {formatTiers(product.tieredPricing).map((t: string, i: number) => (
-                                          <div key={i} className="text-[13px] font-semibold tracking-tight text-slate-200">{t}</div>
-                                        ))}
-                                      </div>
-                                    ) : lowestUnitPrice(product) ? (
-                                      <div className="text-lg font-semibold tracking-tight font-display text-slate-200">{formatPrice(Number(lowestUnitPrice(product)))}<span className="text-[11px] text-slate-400 font-normal ml-1">PPU</span></div>
-                                    ) : (
-                                      <div className="text-lg font-semibold tracking-tight font-display text-slate-200">{t('Negotiable')}</div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                        
-                        <Link to={`/company/${group.seller?.id || ''}`} onClick={() => window.scrollTo(0, 0)} className="group bg-slate-900/50 rounded-2xl border border-slate-800/60 overflow-hidden hover:border-cyan-500/50 hover:bg-slate-800 hover:shadow-lg hover:shadow-cyan-900/20 transition-all duration-300 flex flex-col items-center justify-center h-full min-h-[250px] text-center p-6 cursor-pointer">
-                           <div className="w-14 h-14 rounded-full bg-slate-800 shadow-none text-cyan-400 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:bg-cyan-500 group-hover:text-slate-900 transition-all duration-300 border border-slate-700 group-hover:border-transparent">
-                             <Building2 className="w-6 h-6 mb-2" />
-                           </div>
-                           <span className="text-xs font-bold tracking-wider uppercase">{t('View All')}</span>
-                           <span className="text-[10px] text-slate-500 mt-1">{group.seller?.companyName}</span>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                );
-              })()}
-            </div>
-          ))}
+          <BrowseSections
+            categories={browseData?.categories || []}
+            companies={browseData?.companies || []}
+            renderCard={renderBrowseCard}
+            onViewCategory={(id: number) => { setSelectedCategoryId(id); setSearch(""); setPage(1); window.scrollTo(0, 0); }}
+          />
         </div>
       ) : (
 <>
@@ -614,12 +560,12 @@ export function Home() {
                      onChange={e => { setFilters(f => ({ ...f, sortBy: e.target.value })); setPage(1); }}
                      className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-4 py-2 w-full text-sm font-medium appearance-none outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all" style={{ backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")", backgroundPosition: "right 0.5rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.5em 1.5em", paddingRight: "2.5rem" }}
                    >
+                      <option value="company_az">{t('By Company (A-Z)')}</option>
                       <option value="newest">{t('Newest First')}</option>
                       <option value="randomized">{t('Randomized Sellers')}</option>
                       <option value="lowest_moq">{t('Lowest MOQ')}</option>
                       <option value="lowest_price">{t('Lowest Price')}</option>
                       <option value="highest_price">{t('Highest Price')}</option>
-                      <option value="company_az">{t('By Company (A-Z)')}</option>
                    </select>
                 </div>
                 <div>
@@ -649,7 +595,7 @@ export function Home() {
                    </select>
                 </div>
                 <button 
-                  onClick={() => { setFilters({ origin: "", category: "", minMoq: "", maxPrice: "", productType: filters.productType, sortBy: "newest" }); setPage(1); }}
+                  onClick={() => { setFilters({ origin: "", category: "", minMoq: "", maxPrice: "", productType: filters.productType, sortBy: "company_az" }); setPage(1); }}
                   className="w-full py-2 text-sm font-medium rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white transition-colors mt-2"
                 >
                   Clear Filters
