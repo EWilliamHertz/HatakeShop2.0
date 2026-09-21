@@ -129,6 +129,8 @@ app.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/prod
     if (req.body.originType !== undefined) updates.originType = req.body.originType;
     if (req.body.shippingOptions !== undefined) updates.shippingOptions = req.body.shippingOptions;
     if (req.body.images !== undefined) updates.images = req.body.images;
+    if (req.body.language !== undefined) updates.language = req.body.language || null;
+    if (req.body.sealedType !== undefined) updates.sealedType = req.body.sealedType || null;
     
     if (req.body.sellerId !== undefined) {
         const sId = parseInt(req.body.sellerId, 10);
@@ -146,135 +148,11 @@ app.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/prod
   }
 });
 
-app.get(["/products", "/api/products", "/api-v2/products"], async (req, res) => {
-  try {
-    const { q, category, minMoq, maxPrice, origin, sortBy } = req.query;
-    let conditions = [eq(products.approvalStatus, 'approved')];
-
-    // Apply General Filters
-    if (q && typeof q === 'string') conditions.push(ilike(products.title, `%${q}%`));
-    if (minMoq) conditions.push(gte(products.moq, parseInt(minMoq as string, 10)));
-    if (maxPrice) conditions.push(sql`CAST(${products.unitCost} AS numeric) <= ${parseFloat(maxPrice as string)}`);
-    if (origin && typeof origin === 'string') conditions.push(eq(products.originType, origin));
-
-    // Handle Smart Category Matching (Translate Strings to IDs)
-    if (category && category !== 'null' && category !== 'undefined' && category !== '') {
-      let catId = parseInt(category as string, 10);
-
-      // If the frontend passed a string name instead of an ID, look it up in the database!
-      if (isNaN(catId)) {
-         const catRecord = await db.query.categories.findFirst({
-             where: or(eq(categories.name, category as string), eq(categories.slug, category as string))
-         });
-         if (catRecord) catId = catRecord.id;
-      }
-
-      // If we successfully found a category ID, fetch it and all its children
-      if (!isNaN(catId)) {
-        const descIds = await getDescendantCategoryIds(db, catId);
-        if (descIds.length > 0) {
-           conditions.push(inArray(products.categoryId, descIds));
-        } else {
-           conditions.push(eq(products.categoryId, catId));
-        }
-      }
-    }
-
-    // Apply Sorting Options
-    let orderByClause = desc(products.createdAt);
-    if (sortBy === 'price_asc') orderByClause = asc(products.unitCost);
-    if (sortBy === 'price_desc') orderByClause = desc(products.unitCost);
-    if (sortBy === 'moq_asc') orderByClause = asc(products.moq);
-
-    const filteredProducts = await db.select({
-       product: products,
-       seller: { id: users.id, companyName: users.companyName, verificationStatus: users.verificationStatus }
-    })
-    .from(products)
-    .leftJoin(users, eq(products.sellerId, users.id))
-    .where(and(...conditions))
-    .orderBy(orderByClause);
-
-    res.json({ products: filteredProducts, totalPages: 1 });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 // -------------------------------------------------------------------------
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// --- OVERRIDE ROUTES FOR ADMIN CATEGORY ASSIGNMENT & MARKETPLACE FILTERS ---
-app.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/products/:id"], requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const userProfile = await getUserProfile(req.user!.uid);
-    if (userProfile?.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
-
-    const productId = parseInt(req.params.id, 10);
-    const { categoryId, isSponsored, approvalStatus, title, description, moq, originType, sellerId, shippingOptions, images } = req.body;
-
-    await db.update(products).set({
-      categoryId: categoryId ? parseInt(categoryId, 10) : null,
-      isSponsored: isSponsored || false,
-      approvalStatus: approvalStatus || 'pending',
-      title,
-      description,
-      moq: parseInt(moq, 10) || 1,
-      originType,
-      sellerId: parseInt(sellerId, 10),
-      shippingOptions: shippingOptions || [],
-      images: images || []
-    }).where(eq(products.id, productId));
-
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get(["/products", "/api/products", "/api-v2/products"], async (req, res) => {
-  try {
-    const { q, category, minMoq, maxPrice, origin, sortBy } = req.query;
-    let conditions = [eq(products.approvalStatus, 'approved')];
-
-    // Apply Filters
-    if (q && typeof q === 'string') conditions.push(ilike(products.title, `%${q}%`));
-    if (minMoq) conditions.push(gte(products.moq, parseInt(minMoq as string, 10)));
-    if (maxPrice) conditions.push(sql`CAST(${products.unitCost} AS numeric) <= ${parseFloat(maxPrice as string)}`);
-    if (origin && typeof origin === 'string') conditions.push(eq(products.originType, origin));
-
-    // Deep-Tree Category Matching (e.g., clicking "TCG" gets Pokemon, Magic, AND Binders)
-    if (category) {
-      const catId = parseInt(category as string, 10);
-      if (!isNaN(catId)) {
-        const descIds = await getDescendantCategoryIds(db, catId);
-        if (descIds.length > 0) {
-           conditions.push(inArray(products.categoryId, descIds));
-        } else {
-           conditions.push(eq(products.categoryId, catId));
-        }
-      }
-    }
-
-    // Apply Sorting Options
-    let orderByClause = desc(products.createdAt);
-    if (sortBy === 'price_asc') orderByClause = asc(products.unitCost);
-    if (sortBy === 'price_desc') orderByClause = desc(products.unitCost);
-    if (sortBy === 'moq_asc') orderByClause = asc(products.moq);
-
-    const filteredProducts = await db.select({
-       product: products,
-       seller: { id: users.id, companyName: users.companyName, verificationStatus: users.verificationStatus }
-    })
-    .from(products)
-    .leftJoin(users, eq(products.sellerId, users.id))
-    .where(and(...conditions))
-    .orderBy(orderByClause);
-
-    res.json({ products: filteredProducts, totalPages: 1 });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// NOTE: GET /api-v2/products is served by src/routes/products.ts (supports pagination,
+// language / sealed-type / country facets and sorting). Do not re-add a handler here.
 
 // --- ROUTE MOUNTING (Supporting both /api/ and /api-v2/ prefixes to prevent 404s) ---
 import feedRouter from "./src/routes/feed.js";

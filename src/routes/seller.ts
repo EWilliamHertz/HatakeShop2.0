@@ -133,6 +133,8 @@ router.get(["/seller/products", "/api/seller/products", "/api-v2/seller/products
         shippingOptions: products.shippingOptions,
         approvalStatus: products.approvalStatus,
         images: products.images,
+        language: products.language,
+        sealedType: products.sealedType,
         createdAt: products.createdAt
     }).from(products).where(eq(products.sellerId, teamOwnerId)).orderBy(desc(products.createdAt));
     res.json(myProducts);
@@ -147,7 +149,7 @@ router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/product
     const userProfile = await getUserProfile(req.user!.uid);
     const teamOwnerId = userProfile.teamOwnerId || userProfile.id;
     
-    const { title, description, originType, moq, offersOem, oemMoq, tieredPricing, leadTimeDays, shippingOptions, certifications, images, stockQuantity, unitCost, categoryId, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant } = req.body;
+    const { title, description, originType, moq, offersOem, oemMoq, tieredPricing, leadTimeDays, shippingOptions, certifications, images, stockQuantity, unitCost, categoryId, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant, language, sealedType } = req.body;
     const embedding = await generateEmbedding(`${title} ${description} ${originType || 'Direct Factory'}`);
     
     const parsedMoq = parseInt(moq, 10);
@@ -174,6 +176,8 @@ router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/product
       categoryId: categoryId || null,
       approvalStatus: (userProfile.role === "admin" ? "approved" : "pending") as "approved" | "pending",
       productType: productType || 'sealed',
+      language: language || null,
+      sealedType: sealedType || null,
       gradingCompany: gradingCompany || null,
       grade: grade || null,
       certNumber: certNumber || null,
@@ -199,7 +203,7 @@ router.post(["/seller/products/bulk", "/api/seller/products/bulk", "/api-v2/sell
     if (!Array.isArray(newProducts)) return res.status(400).json({ error: "Expected an array of products" });
 
     const insertData = await Promise.all(newProducts.map(async (p: any) => {
-      const { title, description, originType, moq, tieredPricing, leadTimeDays, shippingOptions, certifications, images, stockQuantity, unitCost, categoryId, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant } = p;
+      const { title, description, originType, moq, tieredPricing, leadTimeDays, shippingOptions, certifications, images, stockQuantity, unitCost, categoryId, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant, language, sealedType } = p;
       const embedding = await generateEmbedding(`${title} ${description} ${originType || 'Direct Factory'}`);
       
       const parsedMoq = parseInt(moq, 10);
@@ -224,6 +228,8 @@ router.post(["/seller/products/bulk", "/api/seller/products/bulk", "/api-v2/sell
         categoryId: categoryId || null,
       approvalStatus: (userProfile.role === "admin" ? "approved" : "pending") as "approved" | "pending",
         productType: productType || 'sealed',
+        language: language || null,
+        sealedType: sealedType || null,
         gradingCompany: gradingCompany || null,
         grade: grade || null,
         certNumber: certNumber || null,
@@ -250,10 +256,11 @@ router.patch(["/seller/products/:id", "/api/seller/products/:id", "/api-v2/selle
     const existing = await db.select().from(products).where(and(eq(products.id, productId), eq(products.sellerId, userProfile.teamOwnerId || userProfile.id)));
     if (!existing.length) return res.status(403).json({ error: "Not authorized" });
 
-    const { title, description, moq, offersOem, oemMoq, originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant } = req.body;
+    const { title, description, moq, offersOem, oemMoq, originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant, language, sealedType } = req.body;
     const embedding = await generateEmbedding(`${title} ${description} ${originType}`);
     await db.update(products).set({
       title, description, moq, offersOem: !!offersOem, oemMoq: parseInt(oemMoq) || null, originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant,
+      language: language || null, sealedType: sealedType || null,
     }).where(eq(products.id, productId));
     
     res.json({ success: true });

@@ -10,10 +10,14 @@ declare global {
 
 export const createPool = () => {
   if (!global._postgresPool) {
+    // SSL is required for hosted DBs (Neon, Cloud SQL). Allow opting out for
+    // local development databases via `?sslmode=disable` or PGSSL=disable.
+    const url = process.env.DATABASE_URL || '';
+    const sslDisabled = /sslmode=disable/.test(url) || process.env.PGSSL === 'disable';
     const config: pg.PoolConfig = {
       max: 10,
       connectionTimeoutMillis: 30000,
-      ssl: true,
+      ssl: sslDisabled ? false : true,
     };
     
     if (process.env.DATABASE_URL) {
