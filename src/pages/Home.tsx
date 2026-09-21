@@ -203,29 +203,47 @@ export function Home() {
       try { parsedTiers = JSON.parse(tiers); } catch (e) { parsedTiers = []; }
     }
     if (!Array.isArray(parsedTiers) || parsedTiers.length === 0) return null;
-    const sorted = [...parsedTiers].sort((a, b) => a.quantity - b.quantity);
+    const sorted = [...parsedTiers].sort((a, b) => (a.quantity ?? a.minQty ?? 0) - (b.quantity ?? b.minQty ?? 0));
     return sorted.map((tier, idx) => {
       const nextTier = sorted[idx + 1];
-      const range = nextTier ? `${tier.quantity}-${nextTier.quantity - 1}` : `${tier.quantity}+`;
-      return `${formatPrice(tier.unitPrice)} PPU ${range} units`;
+      const qty = tier.quantity ?? tier.minQty ?? 0;
+      const range = nextTier ? `${qty}-${(nextTier.quantity ?? nextTier.minQty ?? 0) - 1}` : `${qty}+`;
+      const tierPrice = Number(tier.price ?? tier.unitPrice ?? 0);
+      return `${formatPrice(tierPrice)} PPU ${range} units`;
     });
   };
 
+  // Lowest effective unit price: cheapest tier, or the base unit cost when there are no tiers
+  const lowestUnitPrice = (product: any): number | null => {
+    let tiers: any = product?.tieredPricing;
+    if (typeof tiers === 'string') { try { tiers = JSON.parse(tiers); } catch (e) { tiers = []; } }
+    if (Array.isArray(tiers) && tiers.length > 0) {
+      const prices = tiers.map((tier: any) => Number(tier.price ?? tier.unitPrice)).filter((n: number) => Number.isFinite(n) && n > 0);
+      if (prices.length > 0) return Math.min(...prices);
+    }
+    const base = Number(product?.unitCost ?? product?.unitPrice);
+    return Number.isFinite(base) && base > 0 ? base : null;
+  };
+
   const calculatePrice = () => {
-     if (!selectedProduct?.product?.tieredPricing) return null;
-     const tiers = selectedProduct.product.tieredPricing as { quantity: number, unitPrice: number }[];
-     if (!tiers || tiers.length === 0) return null;
+     if (!selectedProduct?.product) return null;
+     const product = selectedProduct.product;
+     const tiers = product.tieredPricing as { quantity: number, unitPrice: number, price?: number }[];
+     if (Array.isArray(tiers) && tiers.length > 0) {
      
      // Sort descending to find highest tier met
-     const sorted = [...tiers].sort((a, b) => b.quantity - a.quantity);
+     const sorted = [...tiers].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
      for (const tier of sorted) {
-        if (selectedQuantity >= tier.quantity) {
-           return tier.unitPrice;
+        if (selectedQuantity >= (tier.quantity ?? 0)) {
+           return Number(tier.price ?? tier.unitPrice);
         }
      }
      
      // If below lowest tier but above moq, maybe return the lowest tier price or null
-     return sorted[sorted.length - 1].unitPrice;
+     return Number(sorted[sorted.length - 1].price ?? sorted[sorted.length - 1].unitPrice);
+     }
+     // No tiers — fall back to the base unit cost so a price still shows
+     return lowestUnitPrice(product);
   };
   
   const currentPrice = calculatePrice();
@@ -346,7 +364,8 @@ export function Home() {
                                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,0.8)]"></span>
                                 {sp.seller?.companyName || sp.companyName || sp.brand || 'Verified Seller'}
                               </p>
-                              <div className="mt-auto pt-2 flex flex-wrap gap-1.5">
+                              <div className="mt-auto pt-2 flex flex-wrap items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-white">{lowestUnitPrice(sp) ? formatPrice(Number(lowestUnitPrice(sp))) : t('Negotiate')}</span>
                                 <span className="bg-indigo-500/20 text-indigo-300 rounded text-[9px] py-0.5 px-1.5 font-semibold tracking-wider uppercase border border-indigo-500/30">{sp.originType || 'Factory'}</span>
                               </div>
                             </div>
@@ -498,6 +517,8 @@ export function Home() {
                                           <div key={i} className="text-[13px] font-semibold tracking-tight text-slate-200">{t}</div>
                                         ))}
                                       </div>
+                                    ) : lowestUnitPrice(product) ? (
+                                      <div className="text-lg font-semibold tracking-tight font-display text-slate-200">{formatPrice(Number(lowestUnitPrice(product)))}<span className="text-[11px] text-slate-400 font-normal ml-1">PPU</span></div>
                                     ) : (
                                       <div className="text-lg font-semibold tracking-tight font-display text-slate-200">{t('Negotiable')}</div>
                                     )}
@@ -598,6 +619,7 @@ export function Home() {
                       <option value="lowest_moq">{t('Lowest MOQ')}</option>
                       <option value="lowest_price">{t('Lowest Price')}</option>
                       <option value="highest_price">{t('Highest Price')}</option>
+                      <option value="company_az">{t('By Company (A-Z)')}</option>
                    </select>
                 </div>
                 <div>
@@ -709,6 +731,8 @@ export function Home() {
                               <div key={i} className="text-[12px] leading-tight font-semibold tracking-tight text-slate-200">{t}</div>
                             ))}
                           </div>
+                        ) : lowestUnitPrice(p.product) ? (
+                          <div className="text-[13px] leading-tight font-semibold tracking-tight text-slate-200">{formatPrice(Number(lowestUnitPrice(p.product)))}<span className="text-[10px] text-slate-500 font-normal ml-1">PPU</span></div>
                         ) : 'Negotiable'}
                       </span>
                     </div>
@@ -975,6 +999,8 @@ export function Home() {
                               <div key={i} className="text-lg font-semibold tracking-tight font-display text-slate-200">{t}</div>
                             ))}
                           </div>
+                        ) : lowestUnitPrice(selectedProduct.product) ? (
+                          <span className="text-xl font-semibold tracking-tight font-display text-slate-200">{formatPrice(Number(lowestUnitPrice(selectedProduct.product)))}<span className="text-xs text-slate-400 font-normal ml-1">PPU</span></span>
                         ) : (
                           <span className="text-xl font-semibold tracking-tight font-display text-slate-200">{t('Negotiable')}</span>
                         )}

@@ -227,6 +227,10 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
            query = query.orderBy(sql`RANDOM()`) as any;
          } else if (sortBy === 'lowest_moq' || sortBy === 'moq_asc') {
            query = query.orderBy(products.moq) as any;
+         } else if (sortBy === 'company_az') {
+           query = query.orderBy(sql`LOWER(COALESCE(${users.companyName}, '')) ASC`, asc(products.title)) as any;
+         } else if (sortBy === 'company_za') {
+           query = query.orderBy(sql`LOWER(COALESCE(${users.companyName}, '')) DESC`, asc(products.title)) as any;
          } else if (sortBy === 'lowest_price' || sortBy === 'price_asc') {
            query = query.orderBy(sql`CAST(${products.unitCost} AS numeric) ASC`) as any;
          } else if (sortBy === 'highest_price' || sortBy === 'price_desc') {
