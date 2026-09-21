@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, PackageSearch, Building2, MapPin, ChevronDown, X, SlidersHorizontal } from 'lucide-react';
+import { Filter, PackageSearch, Building2, MapPin, ChevronDown, X, SlidersHorizontal, BadgeCheck } from 'lucide-react';
 import { languageLabel, sealedTypeLabel, PRODUCT_LANGUAGES } from '../lib/productTaxonomy.ts';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { WishlistButton } from '../components/WishlistButton.tsx';
+import { BrowseSections } from '../components/BrowseSections.tsx';
 const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) => {
   if (!p) return null;
   // Safely parse JSON strings sent by the database driver
@@ -36,8 +37,14 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
       </div>
       <div className="p-5 flex flex-col flex-1">
         <h3 className="text-lg font-bold text-white line-clamp-1 mb-1">{p.title}</h3>
-        <p className="text-xs text-slate-400 line-clamp-2 mb-3 h-8">{p.description}</p>
-        
+        <p className="text-xs text-slate-400 line-clamp-2 mb-2 h-8">{p.description}</p>
+
+        <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-3 min-w-0">
+          <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+          <Link to={`/company/${p.seller?.id || p.sellerId || ''}`} onClick={(e) => e.stopPropagation()} className="truncate hover:text-cyan-400 transition-colors">{p.seller?.companyName || 'Supplier'}</Link>
+          {p.seller?.verificationStatus === 'verified' && <BadgeCheck className="w-3.5 h-3.5 text-cyan-500 shrink-0" />}
+        </div>
+
         <div className="flex flex-wrap gap-1.5 mb-4">
            {p.language && (() => { const l = PRODUCT_LANGUAGES.find(x => x.value === p.language); return <span title={languageLabel(p.language)} className="bg-[#ffcc00]/10 text-[#ffcc00] border border-[#ffcc00]/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1">{l?.flag} {l?.short || p.language}</span>; })()}
            {p.sealedType && <span className="bg-slate-800 text-slate-200 text-[10px] px-2 py-1 rounded border border-slate-700 font-semibold">{sealedTypeLabel(p.sealedType)}</span>}
@@ -110,7 +117,7 @@ export function Marketplace() {
   const selectedCategoryId = searchParams.get('category') ? parseInt(searchParams.get('category') as string, 10) : null;
   const maxPrice = searchParams.get('maxPrice') || '';
   const minMoq = searchParams.get('minMoq') || '';
-  const sortBy = searchParams.get('sort') || 'newest';
+  const sortBy = searchParams.get('sort') || 'company_az';
 
   const [searchInput, setSearchInput] = useState(search);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -163,6 +170,12 @@ export function Marketplace() {
     return roots;
   }, [categoriesData]);
 
+  const activeFilterCount = selectedLanguages.length + selectedTypes.length + selectedCountries.length + (selectedCategoryId ? 1 : 0) + (maxPrice ? 1 : 0) + (minMoq ? 1 : 0);
+  // "All Categories" browse: no search / facets / category chosen
+  const isCategoryBrowse = !search && activeFilterCount === 0 && !selectedCategoryId;
+  // "All Companies A-Z" rows — tied to the default "By Company (A-Z)" sort
+  const isCompanyBrowse = isCategoryBrowse && sortBy === 'company_az';
+
   const { data = {}, isLoading, error } = useQuery({
     queryKey: ['products', search, page, selectedLanguages, selectedTypes, selectedCountries, selectedCategoryId, maxPrice, minMoq, sortBy],
     queryFn: async () => {
@@ -182,7 +195,19 @@ export function Marketplace() {
         throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 150)}`);
       }
     },
-    placeholderData: (prev) => prev
+    placeholderData: (prev) => prev,
+    enabled: !isCompanyBrowse
+  });
+
+  const { data: browseData = { categories: [], companies: [], sponsored: [] }, isLoading: browseLoading } = useQuery({
+    queryKey: ['browse', sortBy],
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api-v2/marketplace/browse?sortBy=${encodeURIComponent(sortBy)}`);
+        return res.ok ? await res.json() : { categories: [], companies: [], sponsored: [] };
+      } catch { return { categories: [], companies: [], sponsored: [] }; }
+    },
+    enabled: isCategoryBrowse
   });
 
   const products = Array.isArray(data) ? data : (data?.products || []);
@@ -193,7 +218,6 @@ export function Marketplace() {
     updateParams({ q: searchInput });
   };
 
-  const activeFilterCount = selectedLanguages.length + selectedTypes.length + selectedCountries.length + (selectedCategoryId ? 1 : 0) + (maxPrice ? 1 : 0) + (minMoq ? 1 : 0);
   const isFiltering = Boolean(search || activeFilterCount > 0 || (sortBy !== 'newest' && sortBy !== 'company_az'));
 
   const groupedProducts = React.useMemo(() => {
@@ -246,6 +270,24 @@ export function Marketplace() {
   }, [facets.sealedTypes]);
 
   const categoryName = (id: number | null) => (Array.isArray(categoriesData) ? categoriesData : []).find((c: any) => c.id === id)?.name;
+
+  const sponsoredStrip = (items: any[]) => (items || []).length > 0 ? (
+    <div className="space-y-4">
+      <h2 className="text-xl font-black text-[#ffcc00] flex items-center gap-2 uppercase tracking-wider">
+        <span className="w-2 h-6 bg-[#ffcc00] rounded-sm"></span>
+        Sponsored & Featured
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
+        {(items || []).map((p: any) => (
+          <ProductCard key={`sponsored-${p?.id || Math.random()}`} p={p} formatPrice={formatPrice} t={t} isSponsored={true} onSelect={setSelectedProduct} />
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  const renderBrowseCard = (p: any, i: number) => (
+    <ProductCard key={p?.id ?? i} p={p} formatPrice={formatPrice} t={t} isSponsored={!!p.isSponsored} onSelect={setSelectedProduct} />
+  );
 
   const sidebar = (
     <>
@@ -393,11 +435,11 @@ export function Marketplace() {
             <div className="flex items-center gap-2 shrink-0">
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('Sort By')}</label>
               <select value={sortBy} onChange={e => updateParams({ sort: e.target.value })} className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] outline-none text-slate-200">
+                <option value="company_az">{t('By Company (A-Z)')}</option>
                 <option value="newest">{t('Newest Arrivals')}</option>
                 <option value="price_asc">{t('Price: Low to High')}</option>
                 <option value="price_desc">{t('Price: High to Low')}</option>
                 <option value="lowest_moq">{t('Lowest MOQ')}</option>
-                <option value="company_az">{t('By Company (A-Z)')}</option>
               </select>
             </div>
           </div>
@@ -407,8 +449,26 @@ export function Marketplace() {
               <h3 className="font-bold text-lg mb-2">API Connection Failed</h3>
               <p className="font-mono text-xs whitespace-pre-wrap">{error.message}</p>
             </div>
-          ) : isLoading ? (
+          ) : (isCompanyBrowse ? browseLoading : isLoading) ? (
             <div className="flex justify-center py-20 text-slate-400 animate-pulse">{t('Loading products...')}</div>
+          ) : isCompanyBrowse ? (
+            (browseData.categories || []).length === 0 && (browseData.companies || []).length === 0 ? (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col items-center justify-center py-32">
+                <PackageSearch className="w-16 h-16 text-slate-600 mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">{t('No products found')}</h3>
+                <p className="text-slate-400 max-w-md text-center">{t('Try adjusting your filters or search query.')}</p>
+              </div>
+            ) : (
+              <div className="space-y-12">
+                {sponsoredStrip(browseData.sponsored || [])}
+                <BrowseSections
+                  categories={browseData.categories || []}
+                  companies={browseData.companies || []}
+                  renderCard={renderBrowseCard}
+                  onViewCategory={(id: number) => updateParams({ category: String(id) })}
+                />
+              </div>
+            )
           ) : products.length === 0 ? (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl flex flex-col items-center justify-center py-32">
               <PackageSearch className="w-16 h-16 text-slate-600 mb-4" />
@@ -417,23 +477,20 @@ export function Marketplace() {
             </div>
           ) : (
             <div className="space-y-12">
-              {groupedProducts.sponsored.length > 0 && (
-                <div className="space-y-4">
-                  <h2 className="text-xl font-black text-[#ffcc00] flex items-center gap-2 uppercase tracking-wider">
-                    <span className="w-2 h-6 bg-[#ffcc00] rounded-sm"></span>
-                    Sponsored & Featured
-                  </h2>
-               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
-                    {groupedProducts.sponsored.map((p: any) => (
-                       <ProductCard key={`sponsored-${p?.id || Math.random()}`} p={p} formatPrice={formatPrice} t={t} isSponsored={true} onSelect={setSelectedProduct} />
-                    ))}
-                  </div>
-                </div>
+              {sponsoredStrip(groupedProducts.sponsored)}
+
+              {isCategoryBrowse && (
+                <BrowseSections
+                  categories={browseData.categories || []}
+                  companies={[]}
+                  renderCard={renderBrowseCard}
+                  onViewCategory={(id: number) => updateParams({ category: String(id) })}
+                />
               )}
 
-              {isFiltering ? (
+              {isFiltering || isCategoryBrowse ? (
                 <div className="space-y-4">
-                  <h2 className="text-xl font-bold text-white mb-6">Search Results</h2>
+                  <h2 className="text-xl font-bold text-white mb-6">{isCategoryBrowse ? 'All Products' : 'Search Results'}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
                     {groupedProducts.flatProducts.filter(p => !p.isSponsored).map((p: any) => (
                        <ProductCard key={p?.id || Math.random()} p={p} formatPrice={formatPrice} t={t} onSelect={setSelectedProduct} />
