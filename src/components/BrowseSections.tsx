@@ -9,7 +9,7 @@ import { Building2, ChevronRight, ArrowRight, BadgeCheck } from 'lucide-react';
  * - one row per company (A-Z): a few products + an arrow to view more of their products
  */
 
-export const BROWSE_PREVIEW_COUNT = 4;
+export const BROWSE_PREVIEW_COUNT = 3;
 
 const previewGrid = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full';
 

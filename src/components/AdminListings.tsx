@@ -15,6 +15,7 @@ export function AdminListings() {
   const [bulkSponsored, setBulkSponsored] = useState<string>('');
   const [bulkLanguage, setBulkLanguage] = useState<string>('');
   const [bulkSealedType, setBulkSealedType] = useState<string>('');
+  const [bulkProductType, setBulkProductType] = useState<string>('');
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterLanguage, setFilterLanguage] = useState<string>('');
@@ -105,9 +106,10 @@ export function AdminListings() {
     if (bulkSponsored !== '') updates.isSponsored = bulkSponsored === 'true';
     if (bulkLanguage !== '') updates.language = bulkLanguage === '__clear' ? null : bulkLanguage;
     if (bulkSealedType !== '') updates.sealedType = bulkSealedType === '__clear' ? null : bulkSealedType;
+    if (bulkProductType !== '') updates.productType = bulkProductType === '__clear' ? null : bulkProductType;
     
     if (Object.keys(updates).length > 0) {
-      bulkUpdateMutation.mutate(updates);
+      bulkUpdateMutation.mutate({ productIds: selectedIds, updates });
     }
   };
 
@@ -134,6 +136,17 @@ export function AdminListings() {
           </div>
           
           <select 
+              value={bulkProductType} 
+              onChange={e => setBulkProductType(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">-- Set Main Type --</option>
+              <option value="sealed">Sealed</option>
+              <option value="graded">Graded</option>
+              <option value="accessories">Accessories</option>
+              <option value="__clear">Clear type</option>
+            </select>
+            <select 
             value={filterCategory} 
             onChange={e => setFilterCategory(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
@@ -256,7 +269,7 @@ export function AdminListings() {
             </select>
             <button 
               onClick={handleBulkUpdate}
-              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkLanguage === '' && bulkSealedType === '') || bulkUpdateMutation.isPending}
+              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkLanguage === '' && bulkSealedType === '' && bulkProductType === '') || bulkUpdateMutation.isPending}
               className="btn-primary"
             >
               {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}

@@ -837,7 +837,7 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
         name: cat.name,
         productCount: bucket.length,
         subcategories: subOut,
-        products: sortProducts(bucket).slice(0, PREVIEW_COUNT)
+        products: [...bucket].sort(() => Math.random() - 0.5).slice(0, PREVIEW_COUNT)
       });
     }
 
@@ -849,6 +849,17 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
       if (!compBuckets.has(sid)) compBuckets.set(sid, []);
       compBuckets.get(sid)!.push(p);
     }
+    
+    const sellerIds = Array.from(compBuckets.keys());
+    const countsRes = sellerIds.length > 0 ? await db.select({
+      sellerId: products.sellerId,
+      count: sql<number>`count(*)::int`
+    }).from(products)
+    .where(and(inArray(products.sellerId, sellerIds), eq(products.approvalStatus, 'approved')))
+    .groupBy(products.sellerId) : [];
+    
+    const countMap = new Map(countsRes.map(r => [r.sellerId, r.count]));
+
     const companiesOut = Array.from(compBuckets.entries()).map(([sid, list]) => {
       const s: any = list[0].seller || {};
       return {
@@ -856,7 +867,7 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
         companyName: s.companyName || 'Independent Sellers',
         country: s.country ?? null,
         verificationStatus: s.verificationStatus ?? null,
-        productCount: list.length,
+        productCount: countMap.get(sid) || list.length,
         products: [...list].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, PREVIEW_COUNT)
       };
     }).sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || '')));
