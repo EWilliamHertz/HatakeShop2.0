@@ -105,7 +105,7 @@ export function CompanyProfile() {
     return imgs.filter(Boolean);
   })();
 
-  const previewProducts = (products || []).slice(0, 4);
+  const previewProducts = (products || []).slice(0, 3);
 
   return (
     <div className="min-h-screen bg-slate-950 pb-24">
@@ -239,14 +239,15 @@ export function CompanyProfile() {
                     })}
                   </div>
 
-                  {products && products?.length > 4 && (
-                    <div className="mt-6 flex justify-center">
-                      <Link to={`/company/${id}/listings`} onClick={() => window.scrollTo(0, 0)} className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-800/80 transition-all duration-300 text-slate-300 hover:text-white font-semibold">
-                        <span>View all {products?.length} products from {company.companyName}</span>
-                        <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {products && products?.length > 3 && (
+                      <Link to={`/company/${id}/listings`} onClick={() => window.scrollTo(0, 0)} className="group bg-slate-900/50 rounded-2xl border border-slate-800/60 overflow-hidden hover:border-cyan-500/50 hover:bg-slate-800 hover:shadow-lg hover:shadow-cyan-900/20 transition-all duration-300 flex flex-col items-center justify-center h-full min-h-[250px] text-center p-6 cursor-pointer">
+                         <div className="w-14 h-14 rounded-full bg-slate-800 shadow-none text-cyan-400 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:bg-cyan-500 group-hover:text-slate-900 transition-all duration-300 border border-slate-700 group-hover:border-transparent">
+                           <ArrowRight className="w-6 h-6 mb-1" />
+                         </div>
+                         <span className="text-xs font-bold tracking-wider uppercase">View All</span>
+                         <span className="text-[10px] text-slate-500 mt-1">{products?.length} Products</span>
                       </Link>
-                    </div>
-                  )}
+                    )}
                 </>
               ) : (
                 <div className="text-center py-16 bg-slate-900/50 border border-slate-800 rounded-2xl text-slate-500">
