@@ -42,12 +42,57 @@ router.get("/api-v2/countries", async (req, res) => {
 router.get("/api-v2/marketplace/facets", async (req, res) => {
   try {
     await ensureSealedTaxonomySchema();
-    const base = and(eq(products.approvalStatus, 'approved'), sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`);
+    
+    // Build dynamic conditions based on query params
+    const conditions = [eq(products.approvalStatus, 'approved'), sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`];
+    
+    const categoryId = req.query.category;
+    if (categoryId) {
+       const parsedId = parseInt(categoryId, 10);
+       const catIds = await getDescendantCategoryIds(db, parsedId);
+       conditions.push(or(inArray(products.categoryId, catIds), sql`${products.categoryIds} && ARRAY[${sql.join(catIds.map(id => sql`${id}`), sql`, `)}]::int[]`));
+    }
+
+    const minMoq = req.query.minMoq;
+    const maxPrice = req.query.maxPrice;
+    if (maxPrice) conditions.push(sql`CAST(${products.unitCost} AS numeric) <= ${parseFloat(maxPrice)}`);
+    if (minMoq) conditions.push(sql`${products.moq} <= ${parseInt(minMoq)}`);
+
+    const q = req.query.q;
+    if (q) {
+      conditions.push(or(ilike(products.title, `%${q}%`), ilike(products.description, `%${q}%`)));
+    }
+
+    // When calculating facets, we usually want to know how many WOULD match if we selected it.
+    // We'll apply cross-filtering: filter languages by everything EXCEPT language, etc.
+    const languagesParam = (req.query.languages) || (req.query.language) || '';
+    const sealedTypesParam = (req.query.sealedTypes) || (req.query.sealedType) || '';
+    const countriesParam = (req.query.countries) || (req.query.includeCountries) || '';
+    
+    const langConds = [...conditions];
+    const typeConds = [...conditions];
+    const countryConds = [...conditions];
+    
+    if (sealedTypesParam) {
+       const arr = String(sealedTypesParam).split(',').filter(Boolean);
+       if (arr.length > 0) { langConds.push(inArray(products.sealedType, arr)); countryConds.push(inArray(products.sealedType, arr)); }
+    }
+    if (languagesParam) {
+       const arr = String(languagesParam).split(',').filter(Boolean);
+       if (arr.length > 0) { typeConds.push(inArray(products.language, arr)); countryConds.push(inArray(products.language, arr)); }
+    }
+    if (countriesParam) {
+       const arr = String(countriesParam).split(',').filter(Boolean);
+       if (arr.length > 0) { langConds.push(inArray(users.country, arr)); typeConds.push(inArray(users.country, arr)); }
+    }
 
     const [langRows, typeRows, countryRows] = await Promise.all([
-      db.select({ key: products.language, count: sql<number>`count(*)::int` }).from(products).where(base).groupBy(products.language),
-      db.select({ key: products.sealedType, count: sql<number>`count(*)::int` }).from(products).where(base).groupBy(products.sealedType),
-      db.select({ key: users.country, count: sql<number>`count(*)::int` }).from(products).innerJoin(users, eq(products.sellerId, users.id)).where(and(base, isNotNull(users.country))).groupBy(users.country),
+      db.select({ key: products.language, count: sql<number>`count(*)::int` })
+        .from(products).leftJoin(users, eq(products.sellerId, users.id)).where(and(...langConds)).groupBy(products.language),
+      db.select({ key: products.sealedType, count: sql<number>`count(*)::int` })
+        .from(products).leftJoin(users, eq(products.sellerId, users.id)).where(and(...typeConds)).groupBy(products.sealedType),
+      db.select({ key: users.country, count: sql<number>`count(*)::int` })
+        .from(products).innerJoin(users, eq(products.sellerId, users.id)).where(and(...countryConds, isNotNull(users.country))).groupBy(users.country),
     ]);
 
     const langMap = new Map(langRows.map(r => [r.key || 'unset', Number(r.count)]));

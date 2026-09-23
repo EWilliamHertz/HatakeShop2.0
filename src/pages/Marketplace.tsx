@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, PackageSearch, Building2, MapPin, ChevronDown, X, SlidersHorizontal, BadgeCheck } from 'lucide-react';
+import { Filter, PackageSearch, Building2, MapPin, ChevronDown, ChevronRight, X, SlidersHorizontal, BadgeCheck } from 'lucide-react';
 import { languageLabel, sealedTypeLabel, PRODUCT_LANGUAGES } from '../lib/productTaxonomy.ts';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -46,6 +46,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
         </div>
 
         <div className="flex flex-wrap gap-1.5 mb-4">
+           {p.category && <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1">{p.category}</span>}
            {p.language && (() => { const l = PRODUCT_LANGUAGES.find(x => x.value === p.language); return <span title={languageLabel(p.language)} className="bg-[#ffcc00]/10 text-[#ffcc00] border border-[#ffcc00]/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1">{l?.flag} {l?.short || p.language}</span>; })()}
            {p.sealedType && <span className="bg-slate-800 text-slate-200 text-[10px] px-2 py-1 rounded border border-slate-700 font-semibold">{sealedTypeLabel(p.sealedType)}</span>}
            {p?.seller?.country && <span className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded border border-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {p.seller.country}</span>}
@@ -122,6 +123,12 @@ export function Marketplace() {
   const [searchInput, setSearchInput] = useState(search);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({ 3: true }); // TCG expanded by default
+
+  const toggleCategory = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedCategories(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const updateParams = (patch: Record<string, string | null | undefined>, resetPage = true) => {
     const next = new URLSearchParams(searchParams);
@@ -145,9 +152,17 @@ export function Marketplace() {
   });
 
   const { data: facets = { languages: [], sealedTypes: [], countries: [] } } = useQuery({
-    queryKey: ['marketplace-facets'],
+    queryKey: ['marketplace-facets', search, selectedLanguages, selectedTypes, selectedCountries, selectedCategoryId, maxPrice, minMoq],
     queryFn: async () => {
-      const res = await fetch('/api-v2/marketplace/facets');
+      const params = new URLSearchParams();
+      if (search) params.set('q', search);
+      if (selectedLanguages.length) params.set('languages', selectedLanguages.join(','));
+      if (selectedTypes.length) params.set('sealedTypes', selectedTypes.join(','));
+      if (selectedCountries.length) params.set('countries', selectedCountries.join(','));
+      if (selectedCategoryId) params.set('category', String(selectedCategoryId));
+      if (maxPrice) params.set('maxPrice', maxPrice);
+      if (minMoq) params.set('minMoq', minMoq);
+      const res = await fetch(`/api-v2/marketplace/facets?${params.toString()}`);
       if (!res.ok) return { languages: [], sealedTypes: [], countries: [] };
       return res.json();
     },
@@ -302,6 +317,64 @@ export function Marketplace() {
       </div>
 
       <div className="space-y-4">
+        {/* Category tree */}
+        <FilterSection title={t('Category')} count={selectedCategoryId ? 1 : 0} defaultOpen={true}>
+          <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+            <button 
+              onClick={() => updateParams({ category: null })} 
+              className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === null ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+            >
+              {t('All Categories')}
+            </button>
+            {categoryTree.map((parent: any) => {
+              const isExpanded = !!expandedCategories[parent.id];
+              return (
+              <div key={parent.id}>
+                <div className="flex items-center w-full">
+                  <button 
+                    onClick={() => updateParams({ category: String(parent.id) })}
+                    className={`flex-1 text-left px-2 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === parent.id ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                  >
+                    {parent.name}
+                  </button>
+                  {parent.children.length > 0 && (
+                    <button 
+                      onClick={(e) => toggleCategory(parent.id, e)}
+                      className="p-1.5 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                    </button>
+                  )}
+                </div>
+                {parent.children.length > 0 && isExpanded && (
+                  <div className="pl-3 ml-2 border-l border-slate-800 space-y-0.5 mt-1">
+                    {parent.children.map((child: any) => (
+                      <button 
+                        key={child.id}
+                        onClick={() => updateParams({ category: String(child.id) })}
+                        className={`w-full text-left px-2 py-1 rounded-lg text-sm transition-all ${selectedCategoryId === child.id ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+                      >
+                        {child.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )})}
+          </div>
+        </FilterSection>
+
+        {/* Sort By */}
+        <FilterSection title={t('Sort By')} defaultOpen={true} count={sortBy !== 'company_az' ? 1 : 0}>
+          <select value={sortBy} onChange={e => updateParams({ sort: e.target.value })} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] outline-none text-slate-200">
+            <option value="company_az">{t('By Company (A-Z)')}</option>
+            <option value="newest">{t('Newest Arrivals')}</option>
+            <option value="price_asc">{t('Price: Low to High')}</option>
+            <option value="price_desc">{t('Price: High to Low')}</option>
+            <option value="lowest_moq">{t('Lowest MOQ')}</option>
+          </select>
+        </FilterSection>
+
         {/* Language — the primary way buyers shop sealed product */}
         <FilterSection title={t('Language / Edition')} count={selectedLanguages.length}>
           {(facets.languages || []).length === 0 && <p className="text-xs text-slate-500 px-2">{t('No language data yet')}</p>}
@@ -321,41 +394,6 @@ export function Marketplace() {
               ))}
             </div>
           ))}
-        </FilterSection>
-
-        {/* Category tree */}
-        <FilterSection title={t('Category')} count={selectedCategoryId ? 1 : 0} defaultOpen={false}>
-          <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
-            <button 
-              onClick={() => updateParams({ category: null })} 
-              className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === null ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-            >
-              {t('All Categories')}
-            </button>
-            {categoryTree.map((parent: any) => (
-              <div key={parent.id}>
-                <button 
-                  onClick={() => updateParams({ category: String(parent.id) })}
-                  className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-all ${selectedCategoryId === parent.id ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-                >
-                  {parent.name}
-                </button>
-                {parent.children.length > 0 && (
-                  <div className="pl-3 ml-2 border-l border-slate-800 space-y-0.5">
-                    {parent.children.map((child: any) => (
-                      <button 
-                        key={child.id}
-                        onClick={() => updateParams({ category: String(child.id) })}
-                        className={`w-full text-left px-2 py-1 rounded-lg text-sm transition-all ${selectedCategoryId === child.id ? 'bg-[#ffcc00]/10 text-white font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
-                      >
-                        {child.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
         </FilterSection>
 
         {/* Ships from — replaces the old include/exclude country + region multi-selects */}
@@ -432,16 +470,7 @@ export function Marketplace() {
               {(activeFilterCount > 0 || search) && <button onClick={() => { setSearchInput(''); clearAll(); }} className="text-xs text-slate-400 hover:text-white underline underline-offset-2 ml-1">{t('Clear all')}</button>}
               {!activeFilterCount && !search && <span className="text-sm text-slate-500">{t('Showing all sealed products')}</span>}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('Sort By')}</label>
-              <select value={sortBy} onChange={e => updateParams({ sort: e.target.value })} className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] outline-none text-slate-200">
-                <option value="company_az">{t('By Company (A-Z)')}</option>
-                <option value="newest">{t('Newest Arrivals')}</option>
-                <option value="price_asc">{t('Price: Low to High')}</option>
-                <option value="price_desc">{t('Price: High to Low')}</option>
-                <option value="lowest_moq">{t('Lowest MOQ')}</option>
-              </select>
-            </div>
+
           </div>
 
           {error ? (
