@@ -364,16 +364,6 @@ export function Marketplace() {
           </div>
         </FilterSection>
 
-        {/* Sort By */}
-        <FilterSection title={t('Sort By')} defaultOpen={true} count={sortBy !== 'company_az' ? 1 : 0}>
-          <select value={sortBy} onChange={e => updateParams({ sort: e.target.value })} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] outline-none text-slate-200">
-            <option value="company_az">{t('By Company (A-Z)')}</option>
-            <option value="newest">{t('Newest Arrivals')}</option>
-            <option value="price_asc">{t('Price: Low to High')}</option>
-            <option value="price_desc">{t('Price: High to Low')}</option>
-            <option value="lowest_moq">{t('Lowest MOQ')}</option>
-          </select>
-        </FilterSection>
 
         {/* Language — the primary way buyers shop sealed product */}
         <FilterSection title={t('Language / Edition')} count={selectedLanguages.length}>
@@ -470,7 +460,16 @@ export function Marketplace() {
               {(activeFilterCount > 0 || search) && <button onClick={() => { setSearchInput(''); clearAll(); }} className="text-xs text-slate-400 hover:text-white underline underline-offset-2 ml-1">{t('Clear all')}</button>}
               {!activeFilterCount && !search && <span className="text-sm text-slate-500">{t('Showing all sealed products')}</span>}
             </div>
-
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('Sort By')}</label>
+              <select value={sortBy} onChange={e => updateParams({ sort: e.target.value })} className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:border-[#ffcc00] outline-none text-slate-200">
+                <option value="company_az">{t('By Company (A-Z)')}</option>
+                <option value="newest">{t('Newest Arrivals')}</option>
+                <option value="price_asc">{t('Price: Low to High')}</option>
+                <option value="price_desc">{t('Price: High to Low')}</option>
+                <option value="lowest_moq">{t('Lowest MOQ')}</option>
+              </select>
+            </div>
           </div>
 
           {error ? (
