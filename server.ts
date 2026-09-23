@@ -108,6 +108,51 @@ function __dummy_getEasyPost() {
 
 app.use(express.json({ limit: '50mb' }));
 // --- FORCE OVERRIDES FOR ADMIN CATEGORY ASSIGNMENT & MARKETPLACE FILTERS ---
+app.patch(["/admin/products/bulk", "/api/admin/products/bulk", "/api-v2/admin/products/bulk"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    await ensureSealedTaxonomySchema();
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (userProfile?.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
+
+    const { productIds, updates } = req.body;
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ error: "No product IDs provided" });
+    }
+
+    const dbUpdates: any = {};
+    if (updates.categoryIds !== undefined && Array.isArray(updates.categoryIds)) {
+      if (updates.categoryIds.length > 0) {
+        dbUpdates.categoryId = updates.categoryIds[0];
+        dbUpdates.categoryIds = updates.categoryIds;
+      }
+    }
+    if (updates.isSponsored !== undefined) {
+      dbUpdates.isSponsored = updates.isSponsored;
+    }
+    if (updates.language !== undefined) {
+      dbUpdates.language = updates.language;
+    }
+    if (updates.sealedType !== undefined) {
+      dbUpdates.sealedType = updates.sealedType;
+    }
+    if (updates.productType !== undefined) {
+      dbUpdates.productType = updates.productType;
+    }
+
+    if (Object.keys(dbUpdates).length > 0) {
+      await db.update(products)
+        .set({ ...dbUpdates, updatedAt: new Date() })
+        .where(inArray(products.id, productIds));
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Bulk update error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/products/:id"], requireAuth, async (req: AuthRequest, res) => {
   try {
     await ensureSealedTaxonomySchema();
@@ -606,6 +651,11 @@ app.get(["/marketplace/sneak-peek", "/api/marketplace/sneak-peek", "/api-v2/mark
          }
       }
       const groups = Array.from(sellerMap.values());
+
+      for (const group of groups) {
+        group.products.sort(() => Math.random() - 0.5);
+      }
+      groups.sort(() => Math.random() - 0.5);
 
       const subcatsWithCounts = await Promise.all(subcats.map(async (sub) => {
          const descIds = await getDescendantCategoryIds(db, sub.id);

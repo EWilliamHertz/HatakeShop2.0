@@ -72,7 +72,7 @@ export function CompanyListings() {
           </Link>
           <span className="text-slate-700">|</span>
           <div className="flex items-center gap-2">
-            {company?.profilePictureUrl && <img src={company.profilePictureUrl} alt="" className="w-6 h-6 rounded-full object-cover" />}
+            {company?.profilePictureUrl && <img src={company?.profilePictureUrl} alt="" className="w-6 h-6 rounded-full object-cover" />}
             <span className="text-white font-semibold text-sm">{company?.companyName}</span>
             {company?.verificationStatus === 'verified' && <BadgeCheck className="w-4 h-4 text-cyan-400" />}
           </div>

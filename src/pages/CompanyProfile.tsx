@@ -97,11 +97,11 @@ export function CompanyProfile() {
 
   const allImages = (() => {
     if (!products) return [];
-    const imgs: string[] = products.flatMap((p: any) => {
+    const imgs: string[] = products?.flatMap((p: any) => {
       try { return Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch { return []; }
     });
-    if (company.profilePictureUrl) imgs.push(company.profilePictureUrl);
-    if (company.bannerUrl) imgs.push(company.bannerUrl);
+    if (company?.profilePictureUrl) imgs.push(company?.profilePictureUrl);
+    if (company?.bannerUrl) imgs.push(company?.bannerUrl);
     return imgs.filter(Boolean);
   })();
 
@@ -116,7 +116,7 @@ export function CompanyProfile() {
 
       {/* Hero Banner */}
       <div className="relative h-52 md:h-64 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 overflow-hidden">
-        {company.bannerUrl && <img src={company.bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+        {company?.bannerUrl && <img src={company?.bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover opacity-40" />}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
       </div>
 
@@ -125,8 +125,8 @@ export function CompanyProfile() {
         {/* Profile Header */}
         <div className="flex flex-col md:flex-row md:items-end gap-6 mb-10">
           <div className="w-28 h-28 rounded-3xl overflow-hidden bg-slate-800 border-4 border-slate-950 shadow-2xl shrink-0 flex items-center justify-center">
-            {company.profilePictureUrl
-              ? <img src={company.profilePictureUrl} alt={company.companyName} className="w-full h-full object-cover" />
+            {company?.profilePictureUrl
+              ? <img src={company?.profilePictureUrl} alt={company.companyName} className="w-full h-full object-cover" />
               : <span className="text-4xl font-black text-white">{company.companyName?.charAt(0) || '?'}</span>}
           </div>
           <div className="flex-1 min-w-0">
@@ -144,7 +144,7 @@ export function CompanyProfile() {
               {company.country && <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{company.country}</span>}
               {company.website && <a href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors"><Globe2 className="w-4 h-4" />{company.website}</a>}
               <span>Member since {new Date(company.createdAt).getFullYear()}</span>
-              {products && <span className="flex items-center gap-1.5"><Package className="w-4 h-4" />{products.length} Listings</span>}
+              {products && <span className="flex items-center gap-1.5"><Package className="w-4 h-4" />{products?.length} Listings</span>}
             </div>
           </div>
           <div className="flex flex-wrap gap-3 shrink-0">
@@ -197,7 +197,7 @@ export function CompanyProfile() {
                   <h2 className="text-2xl font-bold text-white">Featured Listings</h2>
                   <span className="text-sm text-slate-500">({products?.length || 0} total)</span>
                 </div>
-                {products && products.length > 4 && (
+                {products && products?.length > 4 && (
                   <Link to={`/company/${id}/listings`} onClick={() => window.scrollTo(0, 0)} className="flex items-center gap-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 px-4 py-2 rounded-xl hover:bg-cyan-500/10 transition-all">
                     View All <ArrowRight className="w-4 h-4" />
                   </Link>
@@ -239,10 +239,10 @@ export function CompanyProfile() {
                     })}
                   </div>
 
-                  {products && products.length > 4 && (
+                  {products && products?.length > 4 && (
                     <div className="mt-6 flex justify-center">
                       <Link to={`/company/${id}/listings`} onClick={() => window.scrollTo(0, 0)} className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-800/80 transition-all duration-300 text-slate-300 hover:text-white font-semibold">
-                        <span>View all {products.length} products from {company.companyName}</span>
+                        <span>View all {products?.length} products from {company.companyName}</span>
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </Link>
                     </div>
