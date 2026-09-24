@@ -21,7 +21,7 @@ export function Wishlist() {
     }
     const fetchWishlist = async () => {
       try {
-        let token = await user.getIdToken();
+        let token = await user.getIdToken(true);
         const res = await fetch('/api-v2/wishlists', {
           headers: { 'Authorization': `Bearer ${token}` }
         });

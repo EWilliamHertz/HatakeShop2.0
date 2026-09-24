@@ -129,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let profileData = null;
         let token = '';
         try {
-          token = await currentUser.getIdToken();
+          token = await currentUser.getIdToken(true);
           
           try {
             // 1. Get profile FIRST so UI unblocks instantly

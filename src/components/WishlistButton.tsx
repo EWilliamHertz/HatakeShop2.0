@@ -15,7 +15,7 @@ export function WishlistButton({ productId }: { productId: number }) {
     }
     const checkWishlist = async () => {
       try {
-        let token = await user.getIdToken();
+        let token = await user.getIdToken(true);
         const res = await fetch('/api-v2/wishlists', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -39,7 +39,7 @@ export function WishlistButton({ productId }: { productId: number }) {
       return;
     }
     try {
-      let token = await user.getIdToken();
+      let token = await user.getIdToken(true);
       const res = await fetch('/api-v2/wishlists/toggle', {
         method: 'POST',
         headers: {

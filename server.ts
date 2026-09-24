@@ -203,7 +203,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // --- ROUTE MOUNTING (Supporting both /api/ and /api-v2/ prefixes to prevent 404s) ---
 import feedRouter from "./src/routes/feed.js";
 import notificationsRouter from "./src/routes/notifications.js";
-const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter];
+const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter, notificationsRouter];
 
 for (const router of routers) {
   app.use("/", router);
