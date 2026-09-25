@@ -415,11 +415,7 @@ export function Home() {
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 h-full">
-                    {[...homeProducts].sort((a: any, b: any) => {
-                        const aSponsored = a.isSponsored || a.is_sponsored || a.sponsored || a.featured ? 1 : 0;
-                        const bSponsored = b.isSponsored || b.is_sponsored || b.sponsored || b.featured ? 1 : 0;
-                        return bSponsored - aSponsored;
-                    }).slice(0, 3).map((sp: any, idx: number) => {
+                    {[...homeProducts].filter((a: any) => a.isSponsored || a.is_sponsored || a.sponsored || a.featured).slice(0, 3).map((sp: any, idx: number) => {
                         let images = [];
                         try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
                         return (

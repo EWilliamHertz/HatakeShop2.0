@@ -20,6 +20,8 @@ export function AdminListings() {
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterLanguage, setFilterLanguage] = useState<string>('');
   const [filterSealedType, setFilterSealedType] = useState<string>('');
+  const [filterProductType, setFilterProductType] = useState<string>('');
+  const [filterSponsored, setFilterSponsored] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('newest');
   
@@ -45,7 +47,7 @@ export function AdminListings() {
   });
 
   const bulkUpdateMutation = useMutation({
-    mutationFn: async (updates: any) => {
+    mutationFn: async (payload: { productIds: string[], updates: any }) => {
       let token; try { token = await user?.getIdToken(); } catch(e) {}
       const res = await fetch('/api-v2/admin/products/bulk', {
         method: 'PATCH',
@@ -53,7 +55,7 @@ export function AdminListings() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ productIds: selectedIds, updates })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('Failed to update products');
       return res.json();
@@ -74,7 +76,9 @@ export function AdminListings() {
     const matchesStatus = filterStatus === '' || p.approvalStatus === filterStatus;
     const matchesLanguage = filterLanguage === '' || (filterLanguage === '__unset' ? !p.language : p.language === filterLanguage);
     const matchesSealedType = filterSealedType === '' || (filterSealedType === '__unset' ? !p.sealedType : p.sealedType === filterSealedType);
-    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType;
+    const matchesProductType = filterProductType === '' || p.productType === filterProductType;
+    const matchesSponsored = filterSponsored === '' || (filterSponsored === 'true' ? p.isSponsored : !p.isSponsored);
+    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType && matchesProductType && matchesSponsored;
   }).sort((a: any, b: any) => {
     if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -116,8 +120,9 @@ export function AdminListings() {
   if (isLoading) return <div className="p-8 text-center text-slate-400">Loading listings...</div>;
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-      <div className="bg-slate-900 p-5 border-b border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="bg-slate-800 border border-slate-700 rounded-2xl">
+      <div className="sticky top-[64px] sm:top-[80px] z-20 flex flex-col shadow-xl">
+        <div className="bg-slate-900 p-5 border-b border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 rounded-t-2xl">
         <div>
           <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">All Listings ({products.length})</h2>
           <p className="text-sm text-slate-400 mt-1">Manage and bulk edit products from all sellers.</p>
@@ -136,15 +141,23 @@ export function AdminListings() {
           </div>
           
           <select 
-              value={bulkProductType} 
-              onChange={e => setBulkProductType(e.target.value)}
+              value={filterProductType} 
+              onChange={e => setFilterProductType(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">-- Set Main Type --</option>
+              <option value="">All Main Types</option>
               <option value="sealed">Sealed</option>
               <option value="graded">Graded</option>
               <option value="accessories">Accessories</option>
-              <option value="__clear">Clear type</option>
+            </select>
+          <select 
+              value={filterSponsored} 
+              onChange={e => setFilterSponsored(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">All Placements</option>
+              <option value="true">Sponsored Only</option>
+              <option value="false">Regular Only</option>
             </select>
             <select 
             value={filterCategory} 
@@ -267,16 +280,28 @@ export function AdminListings() {
               {SEALED_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               <option value="__clear">Clear type</option>
             </select>
+            <select 
+              value={bulkProductType} 
+              onChange={e => setBulkProductType(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">-- Set Main Type --</option>
+              <option value="sealed">Sealed</option>
+              <option value="graded">Graded</option>
+              <option value="accessories">Accessories</option>
+              <option value="__clear">Clear type</option>
+            </select>
             <button 
               onClick={handleBulkUpdate}
               disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkLanguage === '' && bulkSealedType === '' && bulkProductType === '') || bulkUpdateMutation.isPending}
               className="btn-primary"
             >
               {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}
-            </button>
+                        </button>
           </div>
         </div>
       )}
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
