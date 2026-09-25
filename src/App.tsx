@@ -148,6 +148,7 @@ export default function App() {
       <BrowserRouter>
       <CurrencyProvider>
       <CartProvider>
+        <CookieConsent />
         <SplashModal />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
