@@ -26,5 +26,6 @@ if (getApps().length === 0) {
   }
 }
 
-export const adminDb = getFirestore();
-export const adminAuth = getAuth();
+// Export Firebase services, but don't crash the entire Node process if initialization failed
+export const adminDb = getApps().length > 0 ? getFirestore() : ({} as any);
+export const adminAuth = getApps().length > 0 ? getAuth() : ({} as any);
