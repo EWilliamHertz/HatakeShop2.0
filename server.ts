@@ -940,7 +940,7 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
         country: s.country ?? null,
         verificationStatus: s.verificationStatus ?? null,
         productCount: countMap.get(sid) || list.length,
-        products: [...list].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, PREVIEW_COUNT)
+        products: [...list].sort(() => Math.random() - 0.5).slice(0, PREVIEW_COUNT)
       };
     }).sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || '')));
 
