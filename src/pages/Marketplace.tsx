@@ -442,7 +442,7 @@ export function Marketplace() {
           <ChevronDown className={`w-4 h-4 transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
         </button>
 
-        <aside className={`${mobileFiltersOpen ? 'block' : 'hidden'} md:block w-full md:w-72 shrink-0 bg-slate-900 border border-slate-800 p-5 rounded-2xl h-fit md:sticky md:top-6`}>
+        <aside className={`${mobileFiltersOpen ? 'block' : 'hidden'} md:block w-full md:w-72 shrink-0 bg-slate-900 border border-slate-800 p-5 rounded-2xl h-fit max-h-[calc(100vh-48px)] overflow-y-auto custom-scrollbar md:sticky md:top-6`}>
           {sidebar}
         </aside>
 
@@ -471,6 +471,14 @@ export function Marketplace() {
               </select>
             </div>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) }, false)} className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 disabled:opacity-40 hover:border-slate-600 transition-colors">{t('Previous')}</button>
+              <span className="text-sm text-slate-400 px-3 tabular-nums">{page} / {totalPages}</span>
+              <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) }, false)} className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 disabled:opacity-40 hover:border-slate-600 transition-colors">{t('Next')}</button>
+            </div>
+          )}
 
           {error ? (
             <div className="p-6 bg-red-950/50 border border-red-500 rounded-2xl text-red-200 my-8">
@@ -507,59 +515,17 @@ export function Marketplace() {
             <div className="space-y-12">
               {sponsoredStrip(groupedProducts.sponsored)}
 
-              {isCategoryBrowse && (
-                <BrowseSections
-                  categories={browseData.categories || []}
-                  companies={[]}
-                  renderCard={renderBrowseCard}
-                  onViewCategory={(id: number) => updateParams({ category: String(id) })}
-                />
-              )}
-
-              {isFiltering || isCategoryBrowse ? (
-                <div className="space-y-4">
-                  <h2 className="text-xl font-bold text-white mb-6">{isCategoryBrowse ? 'All Products' : 'Search Results'}</h2>
+              <div className="space-y-4">
+                  <h2 className="text-xl font-bold text-white mb-6">
+                    {search ? 'Search Results' : 'All Products'}
+                  </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
                     {groupedProducts.flatProducts.filter(p => !p.isSponsored).map((p: any) => (
                        <ProductCard key={p?.id || Math.random()} p={p} formatPrice={formatPrice} t={t} onSelect={setSelectedProduct} />
                     ))}
                   </div>
-                </div>
-              ) : (
-                (() => {
-                  const filteredCompanies = groupedProducts.companies.map(group => ({
-                    ...group,
-                    products: group.products.filter((p: any) => !p.isSponsored && !p.is_sponsored && !p.sponsored && !p.featured)
-                  })).filter(group => group.products.length > 0);
+              </div>
 
-                  return filteredCompanies.map((group, idx) => (
-                  <div key={idx} className="space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800/80 w-full">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-4">
-                       <div className="flex items-center gap-4">
-                         <Link to={`/company/${group.sellerId}`} className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shrink-0 hover:border-cyan-500/50 transition-colors">
-                           <Building2 className="w-6 h-6 text-slate-400" />
-                         </Link>
-                         <div>
-                           <Link to={`/company/${group.sellerId}`} className="text-xl font-bold text-white hover:text-cyan-400 transition-colors">{group.companyName}</Link>
-                           <p className="text-sm text-slate-500">{group.products.length} product{group.products.length !== 1 ? 's' : ''} in this category</p>
-                         </div>
-                       </div>
-                       <Link
-                         to={`/company/${group.sellerId}/listings`}
-                         className="flex items-center gap-2 text-sm font-semibold text-cyan-400 border border-cyan-500/30 px-4 py-2 rounded-xl hover:bg-cyan-500/10 hover:border-cyan-400 transition-all shrink-0"
-                       >
-                         View All Listings →
-                       </Link>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full">
-                      {group.products.map((p: any) => (
-                         <ProductCard key={p?.id || Math.random()} p={p} formatPrice={formatPrice} t={t} onSelect={setSelectedProduct} />
-                      ))}
-                    </div>
-                  </div>
-                  ));
-                })()
-              )}
             </div>
           )}
 
