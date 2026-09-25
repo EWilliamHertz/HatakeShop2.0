@@ -90,7 +90,7 @@ export function Home() {
  const { data: homeProductsData } = useQuery({ 
     queryKey: ["homeProducts"], 
     queryFn: async () => {
-      try { const res = await fetch("/api-v2/products"); return res.ok ? await res.json() : { products: [] }; } 
+      try { const res = await fetch("/api-v2/products?sortBy=recommended"); return res.ok ? await res.json() : { products: [] }; } 
       catch { return { products: [] }; }
     } 
   });
