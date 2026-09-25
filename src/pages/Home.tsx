@@ -98,7 +98,7 @@ export function Home() {
   const [searchInput, setSearchInput] = useState("");
   
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", productType: "sealed", sortBy: "company_az" });
+  const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", productType: "sealed", sortBy: "recommended" });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   const [showFilters, setShowFilters] = useState(false);
@@ -556,6 +556,7 @@ export function Home() {
                      onChange={e => { setFilters(f => ({ ...f, sortBy: e.target.value })); setPage(1); }}
                      className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-4 py-2 w-full text-sm font-medium appearance-none outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all" style={{ backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")", backgroundPosition: "right 0.5rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.5em 1.5em", paddingRight: "2.5rem" }}
                    >
+                      <option value="recommended">{t('Recommended (Sponsored First)')}</option>
                       <option value="company_az">{t('By Company (A-Z)')}</option>
                       <option value="newest">{t('Newest First')}</option>
                       <option value="randomized">{t('Randomized Sellers')}</option>
@@ -591,7 +592,7 @@ export function Home() {
                    </select>
                 </div>
                 <button 
-                  onClick={() => { setFilters({ origin: "", category: "", minMoq: "", maxPrice: "", productType: filters.productType, sortBy: "company_az" }); setPage(1); }}
+                  onClick={() => { setFilters({ origin: "", category: "", minMoq: "", maxPrice: "", productType: filters.productType, sortBy: "recommended" }); setPage(1); }}
                   className="w-full py-2 text-sm font-medium rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white transition-colors mt-2"
                 >
                   Clear Filters

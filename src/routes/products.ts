@@ -269,7 +269,9 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
       countQuery = countQuery.where(and(...conditions)) as any;
       
       if (!q || textSearchFailed) {
-         if (sortBy === 'randomized') {
+         if (sortBy === 'recommended') {
+           query = query.orderBy(desc(products.isSponsored), sql`RANDOM()`) as any;
+         } else if (sortBy === 'randomized') {
            query = query.orderBy(sql`RANDOM()`) as any;
          } else if (sortBy === 'lowest_moq' || sortBy === 'moq_asc') {
            query = query.orderBy(products.moq) as any;
