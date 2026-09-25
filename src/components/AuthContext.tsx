@@ -26,6 +26,11 @@ const AuthContext = createContext<AuthContextType>({
   updateDbUser: () => {}
 });
 
+// Mirrors server: mock token flows only exist in dev (ALLOW_TEST_TOKENS=1).
+// In production builds these code paths are compiled out entirely.
+const DEV_MOCK_AUTH = import.meta.env.DEV === true;
+const isMockToken = (t: string) => DEV_MOCK_AUTH && (t === 'mock-admin-token' || t.startsWith('custom-token-'));
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [dbUser, setDbUser] = useState<any | null>(null);
@@ -51,14 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
          if (cachedDbUser) {
            setDbUser(JSON.parse(cachedDbUser));
          } else {
-           const isPhoebe = parsed.email?.toLowerCase() === 'phoebe@topbestpkg.com';
-           const isErnst = parsed.email?.toLowerCase() === 'ernst@hatake.eu';
-           const isAdminFallback = isPhoebe || isErnst;
            setDbUser({ 
              id: parsed.uid, 
              email: parsed.email, 
-             role: isAdminFallback ? 'admin' : 'buyer', 
-             verificationStatus: isAdminFallback ? 'verified' : 'pending',
+             role: 'buyer', 
+             verificationStatus: 'pending',
              displayName: parsed.displayName || 'User'
            });
          }
@@ -74,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const mockToken = localStorage.getItem('mock_token');
-    if (mockToken) {
+    if (mockToken && isMockToken(mockToken)) {
       const uid = mockToken === 'mock-admin-token' ? 'mock-admin-uid' : mockToken.split('custom-token-')[1];
       const customMockUser = { uid, email: '', name: 'Custom User', getIdToken: async () => mockToken };
       setUser(customMockUser as any);
@@ -113,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       const mockToken = localStorage.getItem('mock_token');
-      if (mockToken) {
+      if (mockToken && isMockToken(mockToken)) {
          const uid = mockToken === 'mock-admin-token' ? 'mock-admin-uid' : mockToken.split('custom-token-')[1];
          const customMockUser = { uid, email: '', name: 'Custom User', getIdToken: async () => mockToken };
          setUser(customMockUser as any);
@@ -165,14 +167,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // 3. Fallback check: Guarantee dbUser is set even if token fetch or profile fetch crashed
         if (!profileData) {
-          const isPhoebe = currentUser.email?.toLowerCase() === 'phoebe@topbestpkg.com';
-          const isErnst = currentUser.email?.toLowerCase() === 'ernst@hatake.eu';
-          const isAdminFallback = isPhoebe || isErnst;
           const fallbackUser = { 
             id: currentUser.uid, 
             email: currentUser.email, 
-            role: isAdminFallback ? 'admin' : 'buyer', 
-            verificationStatus: isAdminFallback ? 'verified' : 'pending',
+            role: 'buyer', 
+            verificationStatus: 'pending',
             displayName: currentUser.displayName || 'User'
           };
           setDbUser(fallbackUser);
@@ -239,7 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithCustom = async (token: string) => {
-    if (token === 'mock-admin-token' || token.startsWith('custom-token-')) {
+    if (isMockToken(token)) {
       localStorage.setItem('mock_token', token);
       const uid = token === 'mock-admin-token' ? 'mock-admin-uid' : token.split('custom-token-')[1];
       const customMockUser = { uid, email: '', name: 'Custom User', getIdToken: async () => token };
@@ -251,6 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     try {
+      // Production flow: the server mints a real Firebase custom token.
       await signInWithCustomToken(auth, token);
     } catch (error) {
       console.error('Error signing in with Custom Token', error);

@@ -218,6 +218,19 @@ export const inquiryMessagesRelations = relations(inquiryMessages, ({ one }) => 
   }),
 }));
 
+/** Append-only trail of every admin API access (see middleware/roles.ts). */
+export const adminAuditLog = pgTable('admin_audit_log', {
+  id: serial('id').primaryKey(),
+  uid: text('uid').notNull(),
+  email: text('email').default(''),
+  method: text('method').notNull(),
+  route: text('route').notNull(),
+  statusCode: integer('status_code'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  createdAtIdx: index('admin_audit_log_created_at_idx').on(t.createdAt),
+}));
+
 export const leads = pgTable('leads', {
   id: serial('id').primaryKey(),
   email: text('email').notNull().unique(),

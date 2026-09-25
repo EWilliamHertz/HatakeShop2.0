@@ -1,11 +1,10 @@
-import { SellerOnboarding } from './pages/SellerOnboarding.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthContext.tsx';
@@ -25,19 +24,26 @@ import { UserProfile } from './pages/UserProfile.tsx';
 import { Settings } from './pages/Settings.tsx';
 import { CompanySettings } from './pages/CompanySettings.tsx';
 import { Login } from './pages/Login.tsx';
-import { AdminDashboard } from './pages/AdminDashboard.tsx';
-import { DatabaseViewer } from './pages/DatabaseViewer.tsx';
-import { AffiliateDashboard } from './pages/AffiliateDashboard.tsx';
-import { Feed } from './pages/Feed.tsx';
-import { Storefront } from './pages/Storefront.tsx';
-import { SellerDashboard } from './pages/SellerDashboard.tsx';
-import { Leads } from './pages/Leads.tsx';
-import { MarketInsights } from './pages/MarketInsights.tsx';
 import { JoinCompany } from "./pages/JoinCompany.tsx";
-import { Orders } from './pages/Orders.tsx';
-import { CookieBanner } from './components/CookieBanner.tsx';
-import { Wishlist } from './pages/Wishlist.tsx';
 import { Suppliers } from './pages/Suppliers.tsx';
+
+// --- Code-split heavy / rarely-visited pages (keeps the public bundle small) ---
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard.tsx').then(m => ({ default: m.AdminDashboard })));
+const DatabaseViewer = lazy(() => import('./pages/DatabaseViewer.tsx').then(m => ({ default: m.DatabaseViewer })));
+const SellerDashboard = lazy(() => import('./pages/SellerDashboard.tsx').then(m => ({ default: m.SellerDashboard })));
+const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard.tsx').then(m => ({ default: m.AffiliateDashboard })));
+const Feed = lazy(() => import('./pages/Feed.tsx').then(m => ({ default: m.Feed })));
+const Storefront = lazy(() => import('./pages/Storefront.tsx').then(m => ({ default: m.Storefront })));
+const Leads = lazy(() => import('./pages/Leads.tsx').then(m => ({ default: m.Leads })));
+const MarketInsights = lazy(() => import('./pages/MarketInsights.tsx').then(m => ({ default: m.MarketInsights })));
+const Orders = lazy(() => import('./pages/Orders.tsx').then(m => ({ default: m.Orders })));
+const RFQDetailsLazy = RFQDetails;
+const Wishlist = lazy(() => import('./pages/Wishlist.tsx').then(m => ({ default: m.Wishlist })));
+const SellerOnboarding = lazy(() => import('./pages/SellerOnboarding.tsx').then(m => ({ default: m.SellerOnboarding })));
+
+function RouteFallback() {
+  return <div className="p-8 text-center text-slate-400">Loading…</div>;
+}
 
 
 function VerificationOverlay({ user }: { user: any }) {
@@ -115,9 +121,9 @@ function ProtectedRoute({ children, requireAdmin, requireSeller }: { children: R
   }
 
  if (requireAdmin) {
-    const isHardcodedAdmin = user.email === 'ernst@hatake.eu';
+    // DB role is the single source of truth for admin access
     const isDbAdmin = dbUser?.role?.toLowerCase() === 'admin';
-    if (!isHardcodedAdmin && !isDbAdmin) {
+    if (!isDbAdmin) {
       return <Navigate to="/" />;
     }
   }
@@ -143,6 +149,7 @@ export default function App() {
       <CurrencyProvider>
       <CartProvider>
         <SplashModal />
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
@@ -190,6 +197,7 @@ export default function App() {
             <Route path="/insights" element={<MarketInsights />} />
           </Route>
         </Routes>
+        </Suspense>
       </CartProvider>
       </CurrencyProvider>
       </BrowserRouter>

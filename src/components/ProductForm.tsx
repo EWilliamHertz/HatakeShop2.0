@@ -4,7 +4,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ImageUploader } from './ImageUploader.tsx';
-import { PRODUCT_LANGUAGES, SEALED_TYPES, classifyProduct } from '../lib/productTaxonomy.ts';
+import { PRODUCT_LANGUAGES, SEALED_TYPES, ORIGIN_TYPES, classifyProduct } from '../lib/productTaxonomy.ts';
 
 export const productSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -136,9 +136,7 @@ export function ProductForm({ initialValues, onSubmit, onCancel, submitLabel = "
             <div>
               <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Origin Facility Type</label>
               <select {...register("originType")} className="w-full bg-slate-900 text-slate-100 px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
-                <option value="Direct Factory">Direct Factory</option>
-                <option value="Verified EU Carrier/Warehouse">Verified EU Carrier/Warehouse</option>
-                <option value="Global Distributor">Global Distributor</option>
+                {ORIGIN_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               {errors.originType && <p className="text-red-500 text-xs mt-1">{errors.originType.message as string}</p>}
             </div>

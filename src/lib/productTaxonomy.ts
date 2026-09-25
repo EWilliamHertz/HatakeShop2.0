@@ -32,6 +32,37 @@ export const SEALED_TYPES = [
 
 export type SealedType = typeof SEALED_TYPES[number]['value'];
 
+export const ORIGIN_TYPES = [
+  { value: 'Direct Factory',                label: 'Direct Factory',                short: 'Factory' },
+  { value: 'EU Warehouse',                  label: 'EU Warehouse',                  short: 'EU WH' },
+  { value: 'Verified EU Carrier/Warehouse', label: 'Verified EU Carrier/Warehouse', short: 'EU Carrier' },
+  { value: 'Global Distributor',            label: 'Global Distributor',            short: 'Distributor' },
+] as const;
+
+export type OriginType = typeof ORIGIN_TYPES[number]['value'];
+
+export const originTypeLabel = (v?: string | null) =>
+  ORIGIN_TYPES.find(o => o.value === v)?.label || v || '';
+
+export const originTypeShort = (v?: string | null) =>
+  ORIGIN_TYPES.find(o => o.value === v)?.short || v || '';
+
+/**
+ * Map legacy / free-text origin values to the canonical taxonomy.
+ * e.g. 'warehouse' (legacy bulk import) -> 'EU Warehouse'.
+ * Unknown values are returned unchanged so nothing is silently lost.
+ */
+export function normalizeOriginType(v?: string | null): string | null {
+  if (!v) return null;
+  const t = v.trim();
+  const lower = t.toLowerCase();
+  if (lower === 'warehouse' || lower === 'eu warehouse') return 'EU Warehouse';
+  if (lower === 'factory') return 'Direct Factory';
+  if (lower === 'distributor') return 'Global Distributor';
+  const match = ORIGIN_TYPES.find(o => o.value.toLowerCase() === lower);
+  return match ? match.value : t;
+}
+
 export const languageLabel = (v?: string | null) =>
   PRODUCT_LANGUAGES.find(l => l.value === v)?.label || v || '';
 export const sealedTypeLabel = (v?: string | null) =>

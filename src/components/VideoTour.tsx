@@ -39,7 +39,7 @@ export function VideoTour({ inquiryId, onClose, isInitiator, recipientName, isAu
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
-    socketRef.current = io();
+    socketRef.current = io({ auth: (cb) => { user?.getIdToken().then(t => cb({ token: t })).catch(() => cb({})); } });
     socketRef.current.emit("join_inquiry", inquiryId);
     
     // Live Captions via Socket

@@ -2,6 +2,9 @@ import 'dotenv/config';
 import EasyPostClient from '@easypost/api';
 import { FieldValue } from "firebase-admin/firestore";
 import express from "express";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import compression from "compression";
 import { validateEnv } from "./src/envValidator.js";
 import bcrypt from "bcryptjs";
 try {
@@ -71,6 +74,26 @@ if (!process.env.VERCEL) {
 }
 
 const app = express();
+const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+
+// ---------------------------------------------------------------------------
+// SECURITY & PERFORMANCE MIDDLEWARE
+// ---------------------------------------------------------------------------
+app.set('trust proxy', 1); // Vercel sits behind a proxy; needed for correct rate-limit IPs
+app.use(helmet({
+  contentSecurityPolicy: false, // SPA loads scripts/styles from self + inline; CSP tuned later
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // product images are hot-linked by the SPA
+}));
+app.use(compression());
+
+// General API rate limit + stricter auth brute-force guard
+const apiLimiter = rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60_000, max: 20, standardHeaders: true, legacyHeaders: false });
+const aiLimiter = rateLimit({ windowMs: 60_000, max: 30, standardHeaders: true, legacyHeaders: false });
+app.use(["/api", "/api-v2"], apiLimiter);
+app.use(["/api/auth", "/api-v2/auth"], authLimiter);
+app.use(["/translate", "/api/translate", "/api-v2/translate",
+         "/sourcing/ai-match", "/api/sourcing/ai-match", "/api-v2/sourcing/ai-match"], aiLimiter);
 
 async function getDescendantCategoryIds(dbInstance: any, categoryId: number): Promise<number[]> {
   const allCats = await dbInstance.select({ id: categories.id, parentId: categories.parentId }).from(categories);
@@ -106,96 +129,81 @@ function __dummy_getEasyPost() {
   return easypostClient;
 }
 
-app.use(express.json({ limit: '50mb' }));
-// --- FORCE OVERRIDES FOR ADMIN CATEGORY ASSIGNMENT & MARKETPLACE FILTERS ---
-app.patch(["/admin/products/bulk", "/api/admin/products/bulk", "/api-v2/admin/products/bulk"], requireAuth, async (req: AuthRequest, res) => {
-  try {
-    await ensureSealedTaxonomySchema();
-    const userProfile = await getUserProfile(req.user!.uid);
-    if (userProfile?.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
+app.use(express.json({ limit: '1mb' }));
 
-    const { productIds, updates } = req.body;
-    if (!Array.isArray(productIds) || productIds.length === 0) {
-      return res.status(400).json({ error: "No product IDs provided" });
-    }
-
-    const dbUpdates: any = {};
-    if (updates.categoryIds !== undefined && Array.isArray(updates.categoryIds)) {
-      if (updates.categoryIds.length > 0) {
-        dbUpdates.categoryId = updates.categoryIds[0];
-        dbUpdates.categoryIds = updates.categoryIds;
-      }
-    }
-    if (updates.isSponsored !== undefined) {
-      dbUpdates.isSponsored = updates.isSponsored;
-    }
-    if (updates.language !== undefined) {
-      dbUpdates.language = updates.language;
-    }
-    if (updates.sealedType !== undefined) {
-      dbUpdates.sealedType = updates.sealedType;
-    }
-    if (updates.productType !== undefined) {
-      dbUpdates.productType = updates.productType;
-    }
-
-    if (Object.keys(dbUpdates).length > 0) {
-      await db.update(products)
-        .set({ ...dbUpdates, updatedAt: new Date() })
-        .where(inArray(products.id, productIds));
-    }
-
-    res.json({ success: true });
-  } catch (err: any) {
-    console.error('Bulk update error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-app.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/products/:id"], requireAuth, async (req: AuthRequest, res) => {
-  try {
-    await ensureSealedTaxonomySchema();
-    const userProfile = await getUserProfile(req.user!.uid);
-    if (userProfile?.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
-
-    const productId = parseInt(req.params.id, 10);
-    const updates: any = {};
-
-    // SMART PARTIAL UPDATES: Only update the exact fields sent by the frontend
-    if (req.body.categoryId !== undefined) {
-       const parsedCatId = parseInt(req.body.categoryId, 10);
-       updates.categoryId = isNaN(parsedCatId) ? null : parsedCatId;
-    }
-    if (req.body.isSponsored !== undefined) updates.isSponsored = req.body.isSponsored;
-    if (req.body.approvalStatus !== undefined) updates.approvalStatus = req.body.approvalStatus;
-    if (req.body.title !== undefined) updates.title = req.body.title;
-    if (req.body.description !== undefined) updates.description = req.body.description;
-    if (req.body.moq !== undefined) updates.moq = parseInt(req.body.moq, 10);
-    if (req.body.originType !== undefined) updates.originType = req.body.originType;
-    if (req.body.shippingOptions !== undefined) updates.shippingOptions = req.body.shippingOptions;
-    if (req.body.images !== undefined) updates.images = req.body.images;
-    if (req.body.language !== undefined) updates.language = req.body.language || null;
-    if (req.body.sealedType !== undefined) updates.sealedType = req.body.sealedType || null;
-    
-    if (req.body.sellerId !== undefined) {
-        const sId = parseInt(req.body.sellerId, 10);
-        if (!isNaN(sId)) updates.sellerId = sId;
-    }
-
-    if (Object.keys(updates).length > 0) {
-      await db.update(products).set(updates).where(eq(products.id, productId));
-    }
-
-    res.json({ success: true, updates });
-  } catch (err: any) {
-    console.error("Admin Product Patch Error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
+// NOTE: Admin product update routes live in src/routes/admin.ts
+// (PATCH /admin/products/bulk and /admin/products/:id). Do not re-register
+// them here — a handler registered before the routers would shadow the
+// canonical ones and silently drift out of sync.
 
 // -------------------------------------------------------------------------
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
+
+// --- Static build output (serves assets, robots.txt, sitemap.xml, etc.) ---
+// On Vercel, static files are served by the CDN before functions run; this
+// matters for local dev and non-Vercel deployments.
+const distDir = path.join(process.cwd(), 'dist');
+app.use(express.static(distDir, { index: false, maxAge: '1h' }));
+
+// --- SEO: robots.txt & sitemap.xml (real files for crawlers) ---
+const SITE_URL = (process.env.APP_URL || 'https://www.hatake.shop').replace(/\/$/, '');
+
+app.get(["/robots.txt", "/api/robots.txt", "/api-v2/robots.txt"], (req, res) => {
+  res.type('text/plain');
+  res.send(`User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/db
+Disallow: /api/
+Disallow: /api-v2/
+
+Sitemap: ${SITE_URL}/sitemap.xml
+`);
+});
+
+app.get(["/sitemap.xml", "/api/sitemap.xml", "/api-v2/sitemap.xml"], async (req, res) => {
+  try {
+    const staticPaths = ['', '/marketplace', '/suppliers', '/insights', '/feed', '/login', '/apply-seller'];
+    const urls: string[] = staticPaths.map(p => SITE_URL + p);
+
+    const [productRows, sellerRows, catRows] = await Promise.all([
+      db.select({ id: products.id, createdAt: products.createdAt })
+        .from(products).where(eq(products.approvalStatus, 'approved')).limit(5000),
+      db.select({ slug: users.storeSlug }).from(users).where(isNotNull(users.storeSlug)).limit(2000),
+      db.select({ id: categories.id }).from(categories).limit(1000),
+    ]);
+
+    for (const p of productRows) urls.push(`${SITE_URL}/marketplace?product=${p.id}`);
+    for (const s of sellerRows) if (s.slug) urls.push(`${SITE_URL}/v/${s.slug}`);
+    for (const c of catRows) urls.push(`${SITE_URL}/marketplace?category=${c.id}`);
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url><loc>${u}</loc></url>`).join('\n')}
+</urlset>`;
+    res.type('application/xml');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(xml);
+  } catch (e: any) {
+    // Never fail crawlers: emit at least the static pages
+    res.type('application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${SITE_URL}/</loc></url>
+  <url><loc>${SITE_URL}/marketplace</loc></url>
+</urlset>`);
+  }
+});
+
+// --- Health check (uptime monitors, Neon keep-alive) ---
+app.get(["/health", "/api/health", "/api-v2/health"], async (req, res) => {
+  try {
+    await db.execute(sql`SELECT 1`);
+    res.json({ ok: true, db: 'up', ts: new Date().toISOString() });
+  } catch (e: any) {
+    res.status(503).json({ ok: false, db: 'down', error: e.message });
+  }
+});
 
 // NOTE: GET /api-v2/products is served by src/routes/products.ts (supports pagination,
 // language / sealed-type / country facets and sorting). Do not re-add a handler here.
@@ -204,6 +212,14 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 import feedRouter from "./src/routes/feed.js";
 import notificationsRouter from "./src/routes/notifications.js";
 const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter, notificationsRouter];
+
+// Attach the Socket.IO instance to every request BEFORE the routers mount, so
+// route handlers can emit real-time events via `(req as any).io?.emit(...)`.
+// (Registered after the routers it was always undefined for router handlers.)
+app.use((req, res, next) => {
+  (req as any).io = io;
+  next();
+});
 
 for (const router of routers) {
   app.use("/", router);
@@ -230,19 +246,73 @@ app.use("/api-v2/bot", botRouter);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: "*" }
+  cors: {
+    origin: [process.env.APP_URL || 'https://www.hatake.shop', 'http://localhost:5173', 'http://localhost:3000'],
+    credentials: true,
+  },
 });
 
+// --- Socket.IO authentication: resolve the user BEFORE accepting events ---
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token as string | undefined;
+    if (!token) return next(new Error('Unauthorized: missing token'));
+    const decoded = await adminAuth.verifyIdToken(token);
+    (socket.data as any).uid = decoded.uid;
+    (socket.data as any).email = decoded.email || '';
+    next();
+  } catch (e) {
+    next(new Error('Unauthorized: invalid token'));
+  }
+});
+
+// Helper: resolve the DB user id + verify inquiry participation for sockets
+async function socketIdentity(socket: any): Promise<{ userId: number } | null> {
+  try {
+    const profile = await getUserProfile(socket.data.uid);
+    if (!profile) return null;
+    return { userId: profile.id };
+  } catch {
+    return null;
+  }
+}
+
+async function isParticipant(inquiryId: number, userId: number): Promise<boolean> {
+  try {
+    const rows = await db.select({ buyerId: inquiries.buyerId, sellerId: inquiries.targetSellerId, productId: inquiries.targetProductId })
+      .from(inquiries).where(eq(inquiries.id, inquiryId)).limit(1);
+    if (rows.length === 0) return false;
+    const row = rows[0];
+    if (row.buyerId === userId || row.sellerId === userId) return true;
+    if (row.productId) {
+      const prod = await db.select({ sellerId: products.sellerId }).from(products).where(eq(products.id, row.productId)).limit(1);
+      if (prod.length > 0 && prod[0].sellerId === userId) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 io.on("connection", (socket) => {
-  socket.on("join_inquiry", (inquiryId) => {
+  socket.on("join_inquiry", async (inquiryId) => {
+    const identity = await socketIdentity(socket);
+    if (!identity) return;
+    if (!(await isParticipant(Number(inquiryId), identity.userId))) return;
     socket.join(`inquiry_${inquiryId}`);
   });
-  
+
   socket.on("send_message", async (data) => {
     try {
+      const identity = await socketIdentity(socket);
+      if (!identity) return; // never trust a client-supplied senderId
+      const inquiryIdNum = Number(data.inquiryId);
+      if (!Number.isFinite(inquiryIdNum)) return;
+      if (!(await isParticipant(inquiryIdNum, identity.userId))) return;
+
        const [newMsg] = await db.insert(inquiryMessages).values({
-          inquiryId: data.inquiryId,
-          senderId: data.senderId,
+          inquiryId: inquiryIdNum,
+          senderId: identity.userId,
           messageContent: data.messageContent || '',
           attachmentUrl: data.attachmentUrl || null,
           isOfficialQuote: data.isOfficialQuote || false,
@@ -270,116 +340,103 @@ io.on("connection", (socket) => {
 
   socket.on("mark_read", async (data) => {
     try {
+       const identity = await socketIdentity(socket);
+       if (!identity) return;
        await db.update(inquiryMessages)
           .set({ readReceipt: true })
           .where(and(
              eq(inquiryMessages.inquiryId, data.inquiryId),
-             ne(inquiryMessages.senderId, data.userId),
+             ne(inquiryMessages.senderId, identity.userId),
              eq(inquiryMessages.readReceipt, false)
           ));
-       io.to(`inquiry_${data.inquiryId}`).emit("messages_read", { inquiryId: data.inquiryId, byUserId: data.userId });
+       io.to(`inquiry_${data.inquiryId}`).emit("messages_read", { inquiryId: data.inquiryId, byUserId: identity.userId });
     } catch(e) {
        console.error(e);
     }
   });
 
   socket.on("join_user", (uid) => {
-    socket.join(`user_${uid}`);
-  });
-  
-  socket.on("receiver_ready", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("receiver_ready", data);
-  });
-  socket.on("webrtc_offer", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("webrtc_offer", data);
-  });
-  socket.on("webrtc_answer", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("webrtc_answer", data);
-  });
-  socket.on("webrtc_ice_candidate", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("webrtc_ice_candidate", data);
+    // Only allow joining your own notification channel
+    if (uid === socket.data.uid) {
+      socket.join(`user_${uid}`);
+    }
   });
 
-  socket.on("whiteboard_draw", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("whiteboard_draw", data);
-  });
-  socket.on("whiteboard_clear", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("whiteboard_clear", data);
-  });
-  socket.on("whiteboard_image", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("whiteboard_image", data);
-  });
-  socket.on("start_video_call", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("video_call_incoming", data);
-  });
-  socket.on("accept_video_call", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("video_call_accepted", data);
-  });
-  socket.on("end_video_call", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("video_call_ended", data);
-  });
-  socket.on("live_caption", (data) => {
-    socket.to(`inquiry_${data.inquiryId}`).emit("live_caption", data);
-  });
+  // Relay events are only forwarded to sockets that actually joined the
+  // inquiry room (join_inquiry verifies participation server-side).
+  const relayIfMember = (event: string, serverEvent: string) => (data: any) => {
+    const room = `inquiry_${data?.inquiryId}`;
+    if (!data?.inquiryId || !socket.rooms.has(room)) return;
+    socket.to(room).emit(serverEvent, data);
+  };
+
+  socket.on("receiver_ready", relayIfMember("receiver_ready", "receiver_ready"));
+  socket.on("webrtc_offer", relayIfMember("webrtc_offer", "webrtc_offer"));
+  socket.on("webrtc_answer", relayIfMember("webrtc_answer", "webrtc_answer"));
+  socket.on("webrtc_ice_candidate", relayIfMember("webrtc_ice_candidate", "webrtc_ice_candidate"));
+
+  socket.on("whiteboard_draw", relayIfMember("whiteboard_draw", "whiteboard_draw"));
+  socket.on("whiteboard_clear", relayIfMember("whiteboard_clear", "whiteboard_clear"));
+  socket.on("whiteboard_image", relayIfMember("whiteboard_image", "whiteboard_image"));
+  socket.on("start_video_call", relayIfMember("start_video_call", "video_call_incoming"));
+  socket.on("accept_video_call", relayIfMember("accept_video_call", "video_call_accepted"));
+  socket.on("end_video_call", relayIfMember("end_video_call", "video_call_ended"));
+  socket.on("live_caption", relayIfMember("live_caption", "live_caption"));
 });
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-app.use((req, res, next) => {
-  (req as any).io = io;
-  next();
-});
-
 // Bootstrap Admin User & Products
+// NOTE: team members are matched by EMAIL (not uid) so we never create
+// duplicate rows for users who already signed up with Firebase.
+async function upsertTeamMember(opts: {
+  email: string; uid: string; displayName: string; role: 'seller' | 'admin';
+  teamRole: 'owner' | 'sales_rep' | 'catalog_manager'; companyName: string; teamOwnerId?: number;
+}): Promise<number> {
+  const existing = await db.select().from(users).where(eq(users.email, opts.email)).limit(1);
+  if (existing.length > 0) {
+    await db.update(users).set({
+      displayName: opts.displayName,
+      role: opts.role,
+      teamRole: opts.teamRole,
+      companyName: opts.companyName,
+      ...(opts.teamOwnerId ? { teamOwnerId: opts.teamOwnerId } : {}),
+    }).where(eq(users.id, existing[0].id));
+    return existing[0].id;
+  }
+  const inserted = await db.insert(users).values({
+    uid: opts.uid,
+    email: opts.email,
+    displayName: opts.displayName,
+    role: opts.role,
+    teamRole: opts.teamRole,
+    companyName: opts.companyName,
+    teamOwnerId: opts.teamOwnerId,
+    country: 'EU',
+    verificationStatus: 'verified',
+  }).returning();
+  return inserted[0].id;
+}
+
 async function bootstrapDB() {
   try {
     const hatakeCompany = 'Hatake KB';
-    
-    const stefanResult = await db.insert(users).values({
-      uid: 'stefan-uid',
-      email: 'stefan@hatake.eu',
-      displayName: 'Stefan',
-      role: 'seller',
-      teamRole: 'owner',
-      companyName: hatakeCompany,
-      country: 'EU',
-      verificationStatus: 'verified',
-    }).onConflictDoUpdate({
-      target: users.uid,
-      set: { displayName: 'Stefan', companyName: hatakeCompany, teamRole: 'owner' }
-    }).returning();
 
-    const teamOwnerId = stefanResult[0].id;
-
-    await db.insert(users).values([
-      {
-        uid: 'ernst-uid',
-        email: 'ernst@hatake.eu',
-        displayName: 'Ernst',
-        role: 'admin',
-        teamRole: 'catalog_manager',
-        companyName: hatakeCompany,
-        teamOwnerId: teamOwnerId,
-        country: 'EU',
-        verificationStatus: 'verified'
-      },
-      {
-        uid: 'zudran-uid',
-        email: 'zudran@hatake.eu',
-        displayName: 'Zudran',
-        role: 'seller',
-        teamRole: 'sales_rep',
-        companyName: hatakeCompany,
-        teamOwnerId: teamOwnerId,
-        country: 'EU',
-        verificationStatus: 'verified'
-      }
-    ]).onConflictDoUpdate({
-      target: users.uid,
-      set: { companyName: hatakeCompany, teamOwnerId: teamOwnerId }
+    const teamOwnerId = await upsertTeamMember({
+      email: 'stefan@hatake.eu', uid: 'stefan-uid', displayName: 'Stefan',
+      role: 'seller', teamRole: 'owner', companyName: hatakeCompany,
     });
-    
-    const adminResult = stefanResult;
+
+    await upsertTeamMember({
+      email: 'ernst@hatake.eu', uid: 'ernst-uid', displayName: 'Ernst',
+      role: 'admin', teamRole: 'catalog_manager', companyName: hatakeCompany, teamOwnerId,
+    });
+    await upsertTeamMember({
+      email: 'zudran@hatake.eu', uid: 'zudran-uid', displayName: 'Zudran',
+      role: 'seller', teamRole: 'sales_rep', companyName: hatakeCompany, teamOwnerId,
+    });
+
+    const adminResult = await db.select().from(users).where(eq(users.email, 'stefan@hatake.eu')).limit(1);
     console.log("Hatake team synced to DB");
 
     const existingProducts = await db.select({ count: sql<number>`count(*)` }).from(products);
@@ -493,11 +550,26 @@ app.post(["/upload", "/api/upload", "/api-v2/upload"], requireAuth, async (req: 
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
     const { imageBase64, filename } = req.body;
-    
+
     if (!imageBase64) return res.status(400).send("No image provided");
+
+    // Firestore documents are capped at ~1 MiB: anything larger silently fails
+    // to store, so reject early with a clear message instead.
+    const MAX_BASE64_CHARS = 750_000; // ~560 KB binary
+    if (typeof imageBase64 !== 'string' || imageBase64.length > MAX_BASE64_CHARS) {
+      return res.status(413).json({ error: "Image too large. Please compress to under 500 KB before uploading." });
+    }
+
+    // Only accept real image data URLs (prevents HTML/SVG/script payloads)
+    const dataUrlMatch = imageBase64.match(/^data:(image\/(png|jpe?g|webp|gif|avif));base64,([A-Za-z0-9+/=\s]+)$/i);
+    if (!dataUrlMatch) {
+      return res.status(400).json({ error: "Invalid image format. Allowed: png, jpg, webp, gif, avif." });
+    }
+    const mimeType = dataUrlMatch[1].toLowerCase();
 
     const docRef = await adminDb.collection("uploaded_images").add({
       data: imageBase64,
+      mimeType,
       uploader: req.user.uid,
       createdAt: new Date()
     });
@@ -958,22 +1030,33 @@ app.get(["/insights", "/api/insights", "/api-v2/insights"], async (req, res) => 
        }
     });
 
-    const priceVolatility = Array.from({ length: numBuckets }).map((_, i) => {
-       const date = new Date();
-       date.setDate(date.getDate() - (numBuckets - 1 - i) * (days / numBuckets));
-       const nextDate = new Date(date);
-       nextDate.setDate(date.getDate() + (days / numBuckets));
+    // Price index: derived from real inquiry volume in the period.
+    // Returns an empty array when there is no data — the UI shows an
+    // "insufficient data" state instead of fabricated numbers.
+    const priceVolatility = (() => {
+      if (filteredInquiries.length < 5) return []; // not enough data to be meaningful
+      const buckets = Math.min(days, 30);
+      const values: number[] = [];
+      return Array.from({ length: buckets }).map((_, i) => {
+         const date = new Date();
+         date.setDate(date.getDate() - (buckets - 1 - i) * (days / buckets));
+         const nextDate = new Date(date);
+         nextDate.setDate(date.getDate() + (days / buckets));
 
-       const dayCount = filteredInquiries.filter(inq => {
-          const inqDate = new Date(inq.createdAt!);
-          return inqDate >= date && inqDate < nextDate;
-       }).length;
-       
-       return {
-          date: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-          index: 100 + (dayCount * 5) + Math.random() * 5
-       }
-    });
+         const dayVolume = filteredInquiries.filter(inq => {
+            const inqDate = new Date(inq.createdAt!);
+            return inqDate >= date && inqDate < nextDate;
+         }).reduce((acc, curr) => acc + (curr.quantity * (parseFloat(curr.targetBudget as string) || 0)), 0);
+
+         values.push(dayVolume);
+         // Simple moving-average index relative to the mean (100 = average period)
+         const mean = values.reduce((a, b) => a + b, 0) / values.length || 1;
+         return {
+            date: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+            index: Number(((dayVolume / mean) * 100).toFixed(1))
+         }
+      });
+    })();
 
     const trendingMap: Record<string, number> = {};
     filteredInquiries.forEach(inq => {

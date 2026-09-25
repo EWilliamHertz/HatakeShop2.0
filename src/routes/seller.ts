@@ -6,6 +6,7 @@ import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { requireSeller } from "../middleware/roles.js";
 import { getUserProfile } from "../db/users.js";
 import { generateEmbedding } from "../lib/services.js";
+import { normalizeOriginType } from "../lib/productTaxonomy.js";
 
 const router = Router();
 
@@ -168,7 +169,7 @@ router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/product
       offersOem: !!offersOem,
       oemMoq: parseInt(oemMoq) || null,
       tieredPricing: tieredPricing || null,
-      originType: originType || 'Direct Factory',
+      originType: normalizeOriginType(originType) || 'Direct Factory',
       leadTimeDays: isNaN(parsedLeadTime) ? 7 : parsedLeadTime,
       shippingOptions: shippingOptions || [],
       certifications: certifications || [],
@@ -220,7 +221,7 @@ router.post(["/seller/products/bulk", "/api/seller/products/bulk", "/api-v2/sell
         description,
         moq: isNaN(parsedMoq) ? 1 : parsedMoq,
         tieredPricing: tieredPricing || null,
-        originType: originType || 'Direct Factory',
+        originType: normalizeOriginType(originType) || 'Direct Factory',
         leadTimeDays: isNaN(parsedLeadTime) ? 7 : parsedLeadTime,
         shippingOptions: shippingOptions || [],
         certifications: certifications || [],
@@ -262,7 +263,7 @@ router.patch(["/seller/products/:id", "/api/seller/products/:id", "/api-v2/selle
     const { title, description, moq, offersOem, oemMoq, originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant, language, sealedType } = req.body;
     const embedding = await generateEmbedding(`${title} ${description} ${originType}`);
     await db.update(products).set({
-      title, description, moq, offersOem: !!offersOem, oemMoq: parseInt(oemMoq) || null, originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant,
+      title, description, moq, offersOem: !!offersOem, oemMoq: parseInt(oemMoq) || null, originType: normalizeOriginType(originType) || originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant,
       language: language || null, sealedType: sealedType || null,
     }).where(eq(products.id, productId));
     

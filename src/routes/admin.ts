@@ -11,6 +11,7 @@ import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
 import crypto from "crypto";
 import { generateB2BEmailHtml } from "../lib/emailTemplate.js";
+import { normalizeOriginType } from "../lib/productTaxonomy.js";
 import { getUserProfile } from "../db/users.js";
 
 const router = Router();
@@ -592,13 +593,57 @@ router.delete("/api-v2/admin/users/:id", requireAuth, requireAdmin, async (req: 
     
   });
 
-router.patch("/api-v2/admin/products/:id", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/products/:id"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
       await ensureSealedTaxonomySchema();
       const productId = parseInt(req.params.id, 10);
-      const { title, description, moq, oemMoq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, certifications, isSponsored, language, sealedType } = req.body;
-      const updateData: any = {}; if(title) updateData.title = title; if(description) updateData.description = description; if(moq) updateData.moq = moq; if(oemMoq !== undefined) updateData.oemMoq = oemMoq; if(originType) updateData.originType = originType; if(sellerId) updateData.sellerId = sellerId; if(shippingOptions) updateData.shippingOptions = shippingOptions; if(images) updateData.images = images; if(certifications) updateData.certifications = certifications; if(approvalStatus) updateData.approvalStatus = approvalStatus; if(categoryId !== undefined) updateData.categoryId = categoryId; if(isSponsored !== undefined) updateData.isSponsored = isSponsored; if(language !== undefined) updateData.language = language || null; if(sealedType !== undefined) updateData.sealedType = sealedType || null; await db.update(products).set(updateData).where(eq(products.id, productId));
-      return res.json({ success: true });
+      if (isNaN(productId)) return res.status(400).json({ error: "Invalid product id" });
+      const { title, description, moq, oemMoq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, categoryIds, certifications, isSponsored, language, sealedType, productType } = req.body;
+      const updateData: any = {};
+      if (title !== undefined) updateData.title = title;
+      if (description !== undefined) updateData.description = description;
+      if (moq !== undefined) {
+        const parsedMoq = parseInt(String(moq), 10);
+        if (!isNaN(parsedMoq) && parsedMoq > 0) updateData.moq = parsedMoq;
+      }
+      if (oemMoq !== undefined) {
+        const parsedOem = parseInt(String(oemMoq), 10);
+        updateData.oemMoq = isNaN(parsedOem) ? null : parsedOem;
+      }
+      if (originType !== undefined) {
+        const normalized = normalizeOriginType(originType);
+        if (!normalized) return res.status(400).json({ error: "originType cannot be empty" });
+        updateData.originType = normalized;
+      }
+      if (sellerId !== undefined) {
+        const parsedSeller = parseInt(String(sellerId), 10);
+        if (!isNaN(parsedSeller)) updateData.sellerId = parsedSeller;
+      }
+      if (shippingOptions !== undefined) updateData.shippingOptions = shippingOptions;
+      if (images !== undefined) updateData.images = images;
+      if (certifications !== undefined) updateData.certifications = certifications;
+      if (approvalStatus !== undefined) updateData.approvalStatus = approvalStatus;
+      if (categoryId !== undefined) {
+        const parsedCat = parseInt(String(categoryId), 10);
+        updateData.categoryId = isNaN(parsedCat) ? null : parsedCat;
+      }
+      if (Array.isArray(categoryIds)) {
+        updateData.categoryIds = categoryIds;
+        if (categoryIds.length > 0) {
+          const first = parseInt(String(categoryIds[0]), 10);
+          if (!isNaN(first)) updateData.categoryId = first;
+        }
+      }
+      if (isSponsored !== undefined) updateData.isSponsored = isSponsored;
+      if (language !== undefined) updateData.language = language || null;
+      if (sealedType !== undefined) updateData.sealedType = sealedType || null;
+      if (productType !== undefined) updateData.productType = productType || null;
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No valid updates provided" });
+      }
+      await db.update(products).set(updateData).where(eq(products.id, productId));
+      return res.json({ success: true, updates: updateData });
 
     } catch (err: any) {
 
@@ -643,21 +688,39 @@ router.get("/api-v2/admin/products", requireAuth, requireAdmin, async (req: Auth
   }
 });
 
-router.patch("/api-v2/admin/products/bulk", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.patch(["/admin/products/bulk", "/api/admin/products/bulk", "/api-v2/admin/products/bulk"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     await ensureSealedTaxonomySchema();
     const { productIds, updates } = req.body;
-    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+    if (!Array.isArray(productIds) || productIds.length === 0) {
       return res.status(400).json({ error: "No productIds provided" });
     }
-    
+
     const updateData: any = {};
-    if (updates.categoryId !== undefined) updateData.categoryId = updates.categoryId;
-    if (updates.categoryIds !== undefined) updateData.categoryIds = updates.categoryIds;
+    if (updates.categoryId !== undefined) {
+      const parsedCat = parseInt(String(updates.categoryId), 10);
+      updateData.categoryId = isNaN(parsedCat) ? null : parsedCat;
+    }
+    if (Array.isArray(updates.categoryIds)) {
+      updateData.categoryIds = updates.categoryIds;
+      if (updates.categoryIds.length > 0) {
+        // keep the legacy single category_id in sync with the first entry
+        const first = parseInt(String(updates.categoryIds[0]), 10);
+        if (!isNaN(first)) updateData.categoryId = first;
+      }
+    }
     if (updates.isSponsored !== undefined) updateData.isSponsored = updates.isSponsored;
     if (updates.approvalStatus !== undefined) updateData.approvalStatus = updates.approvalStatus;
     if (updates.language !== undefined) updateData.language = updates.language || null;
     if (updates.sealedType !== undefined) updateData.sealedType = updates.sealedType || null;
+    if (updates.productType !== undefined) updateData.productType = updates.productType || null;
+    if (updates.originType !== undefined) {
+      const normalized = normalizeOriginType(updates.originType);
+      if (!normalized) {
+        return res.status(400).json({ error: "originType cannot be empty" });
+      }
+      updateData.originType = normalized;
+    }
     
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: "No valid updates provided" });

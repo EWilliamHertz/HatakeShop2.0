@@ -9,6 +9,7 @@ import { ShieldAlert, Users, Package, Activity, Edit2, Trash2, X, ChevronDown } 
 import { ImageUploader } from '../components/ImageUploader.tsx';
 import Papa from 'papaparse';
 import { toast } from 'sonner';
+import { ORIGIN_TYPES } from '../lib/productTaxonomy.ts';
 
 
 function CategoryManagement() {
@@ -334,7 +335,8 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = await user?.getIdToken() || localStorage.getItem('custom_token') || 'mock-admin-token';
+      const token = await user?.getIdToken() || localStorage.getItem('custom_token');
+      if (!token) throw new Error('Not authenticated');
       await fetch('/api-v2/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -1189,15 +1191,13 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
               </div>
 
               <div>
-                <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Primary Origin Note</label>
+                <label className="block text-sm font-semibold tracking-tight text-slate-400 mb-1">Origin Facility Type</label>
                 <select 
                   value={editingProduct.originType} 
                   onChange={e => setEditingProduct({...editingProduct, originType: e.target.value})}
                   className="w-full px-4 py-2 border border-slate-700 rounded-xl focus:ring-2 focus:ring-ink outline-none"
                 >
-                  <option value="Direct Factory">Direct Factory</option>
-                  <option value="Verified EU Carrier/Warehouse">Verified EU Carrier/Warehouse</option>
-                  <option value="Global Distributor">Global Distributor</option>
+                  {ORIGIN_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div className="pt-2 flex justify-end space-x-3">

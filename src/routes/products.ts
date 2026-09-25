@@ -48,19 +48,20 @@ router.get("/api-v2/marketplace/facets", async (req, res) => {
     
     const categoryId = req.query.category;
     if (categoryId) {
-       const parsedId = parseInt(categoryId, 10);
+       const parsedId = parseInt(String(categoryId), 10);
        const catIds = await getDescendantCategoryIds(db, parsedId);
        conditions.push(or(inArray(products.categoryId, catIds), sql`${products.categoryIds} && ARRAY[${sql.join(catIds.map(id => sql`${id}`), sql`, `)}]::int[]`));
     }
 
     const minMoq = req.query.minMoq;
     const maxPrice = req.query.maxPrice;
-    if (maxPrice) conditions.push(sql`CAST(${products.unitCost} AS numeric) <= ${parseFloat(maxPrice)}`);
-    if (minMoq) conditions.push(sql`${products.moq} <= ${parseInt(minMoq)}`);
+    if (maxPrice) conditions.push(sql`CAST(${products.unitCost} AS numeric) <= ${parseFloat(String(maxPrice))}`);
+    if (minMoq) conditions.push(sql`${products.moq} <= ${parseInt(String(minMoq))}`);
 
     const q = req.query.q;
     if (q) {
-      conditions.push(or(ilike(products.title, `%${q}%`), ilike(products.description, `%${q}%`)));
+      const qStr = String(q);
+      conditions.push(or(ilike(products.title, `%${qStr}%`), ilike(products.description, `%${qStr}%`)));
     }
 
     // When calculating facets, we usually want to know how many WOULD match if we selected it.
@@ -95,15 +96,15 @@ router.get("/api-v2/marketplace/facets", async (req, res) => {
         .from(products).innerJoin(users, eq(products.sellerId, users.id)).where(and(...countryConds, isNotNull(users.country))).groupBy(users.country),
     ]);
 
-    const langMap = new Map(langRows.map(r => [r.key || 'unset', Number(r.count)]));
-    const typeMap = new Map(typeRows.map(r => [r.key || 'unset', Number(r.count)]));
+    const langMap = new Map<string, number>(langRows.map(r => [r.key || 'unset', Number(r.count)] as const));
+    const typeMap = new Map<string, number>(typeRows.map(r => [r.key || 'unset', Number(r.count)] as const));
 
     const languages = PRODUCT_LANGUAGES
       .map(l => ({ ...l, count: langMap.get(l.value) || 0 }))
-      .filter(l => l.count > 0);
+      .filter(l => (l.count ?? 0) > 0);
     const sealedTypes = SEALED_TYPES
       .map(s => ({ ...s, count: typeMap.get(s.value) || 0 }))
-      .filter(s => s.count > 0);
+      .filter(s => (s.count ?? 0) > 0);
     const countries = countryRows
       .filter(r => r.key)
       .map(r => ({ value: r.key as string, count: Number(r.count) }))
@@ -353,13 +354,13 @@ router.post('/api-v2/checkout/session', requireAuth, async (req: any, res) => {
 
     // Calculate total amount and verify products
     let totalAmount = 0;
-    const validatedItems = [];
+    const validatedItems: any[] = [];
     const productIds = items.map((i: any) => i.productId);
     
     const dbProducts = await db.select().from(products).where(inArray(products.id, productIds));
-    const productMap = new Map(dbProducts.map(p => [p.id, p]));
+    const productMap = new Map<number, (typeof dbProducts)[number]>(dbProducts.map(p => [p.id, p] as const));
 
-    let sellerId = null;
+    let sellerId: number | null = null;
 
     for (const item of items) {
       const dbProduct = productMap.get(item.productId);

@@ -81,6 +81,40 @@ export default defineConfig(() => {
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       allowedHosts: true as const,
+      // Local dev proxy: mirrors the Vercel rewrites so the SPA can call /api-v2/*
+      // and reach the Express server (npm run dev) on port 3000.
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+          ws: true,
+        },
+        '/api-v2': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+          ws: true,
+        },
+        // Socket.IO — the client uses io() with default path /socket.io
+        '/socket.io': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+          ws: true,
+        },
+        // Product/company images served from Firestore via the API
+        '/images': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+        },
+        // SEO files served by the API in production — mirror locally
+        '/robots.txt': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+        },
+        '/sitemap.xml': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+        },
+      },
     },
   };
 });

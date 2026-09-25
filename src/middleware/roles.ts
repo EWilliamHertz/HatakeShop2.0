@@ -1,8 +1,8 @@
 import { AuthRequest } from "./auth.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { users, adminAuditLog } from "../db/schema.js";
+import { eq, sql } from "drizzle-orm";
 import { getUserProfile } from "../db/users.js";
 
 export const requireAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
@@ -13,7 +13,16 @@ export const requireAdmin = async (req: AuthRequest, res: express.Response, next
       const byEmail = await db.select().from(users).where(eq(users.email, req.user.email));
       if (byEmail.length > 0) userProfile = byEmail[0];
     }
-    if (req.user.email === 'ernst@hatake.eu' || userProfile?.role === 'admin') {
+    // DB role is the single source of truth for admin access
+    if (userProfile?.role === 'admin') {
+      // Audit trail: every admin API hit is recorded (fire-and-forget).
+      db.insert(adminAuditLog).values({
+        uid: req.user.uid,
+        email: req.user.email || '',
+        method: req.method,
+        route: req.originalUrl.split('?')[0].slice(0, 200),
+        statusCode: res.statusCode,
+      }).catch(() => { /* never block the request on logging */ });
       return next();
     }
     return res.status(403).send("Forbidden: Admins only");

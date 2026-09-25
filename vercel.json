@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/health",
+      "schedule": "*/10 6-20 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -6,6 +12,18 @@
     },
     {
       "source": "/api-v2/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/health",
       "destination": "/api/index"
     },
     {

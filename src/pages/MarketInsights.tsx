@@ -146,6 +146,13 @@ export function MarketInsights() {
                 <TrendingUp className="w-5 h-5 text-slate-400" />
               </div>
               <div className="h-72">
+                {(!data.priceVolatility || data.priceVolatility.length === 0) ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center">
+                    <TrendingUp className="w-8 h-8 text-slate-600 mb-3" />
+                    <p className="text-slate-400 text-sm font-medium">Not enough transaction data yet</p>
+                    <p className="text-slate-500 text-xs mt-1">The price index is calculated from real RFQ volume. Check back once the marketplace has more activity.</p>
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.priceVolatility}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
@@ -157,6 +164,7 @@ export function MarketInsights() {
                     <Line type="monotone" dataKey="index" stroke="#22d3ee" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#4f46e5' }} />
                   </LineChart>
                 </ResponsiveContainer>
+                )}
               </div>
             </div>
 

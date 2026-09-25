@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Edit, CheckSquare, Square, Check, X, Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext.tsx';
-import { PRODUCT_LANGUAGES, SEALED_TYPES, languageLabel, sealedTypeLabel } from '../lib/productTaxonomy.ts';
+import { PRODUCT_LANGUAGES, SEALED_TYPES, ORIGIN_TYPES, languageLabel, sealedTypeLabel, originTypeShort } from '../lib/productTaxonomy.ts';
 
 export function AdminListings() {
   const { t } = useTranslation();
@@ -16,11 +16,13 @@ export function AdminListings() {
   const [bulkLanguage, setBulkLanguage] = useState<string>('');
   const [bulkSealedType, setBulkSealedType] = useState<string>('');
   const [bulkProductType, setBulkProductType] = useState<string>('');
+  const [bulkOriginType, setBulkOriginType] = useState<string>('');
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterLanguage, setFilterLanguage] = useState<string>('');
   const [filterSealedType, setFilterSealedType] = useState<string>('');
   const [filterProductType, setFilterProductType] = useState<string>('');
+  const [filterOrigin, setFilterOrigin] = useState<string>('');
   const [filterSponsored, setFilterSponsored] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('newest');
@@ -47,7 +49,7 @@ export function AdminListings() {
   });
 
   const bulkUpdateMutation = useMutation({
-    mutationFn: async (payload: { productIds: string[], updates: any }) => {
+    mutationFn: async (payload: { productIds: number[], updates: any }) => {
       let token; try { token = await user?.getIdToken(); } catch(e) {}
       const res = await fetch('/api-v2/admin/products/bulk', {
         method: 'PATCH',
@@ -77,8 +79,9 @@ export function AdminListings() {
     const matchesLanguage = filterLanguage === '' || (filterLanguage === '__unset' ? !p.language : p.language === filterLanguage);
     const matchesSealedType = filterSealedType === '' || (filterSealedType === '__unset' ? !p.sealedType : p.sealedType === filterSealedType);
     const matchesProductType = filterProductType === '' || p.productType === filterProductType;
+    const matchesOrigin = filterOrigin === '' || p.originType === filterOrigin;
     const matchesSponsored = filterSponsored === '' || (filterSponsored === 'true' ? p.isSponsored : !p.isSponsored);
-    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType && matchesProductType && matchesSponsored;
+    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType && matchesProductType && matchesOrigin && matchesSponsored;
   }).sort((a: any, b: any) => {
     if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -111,6 +114,7 @@ export function AdminListings() {
     if (bulkLanguage !== '') updates.language = bulkLanguage === '__clear' ? null : bulkLanguage;
     if (bulkSealedType !== '') updates.sealedType = bulkSealedType === '__clear' ? null : bulkSealedType;
     if (bulkProductType !== '') updates.productType = bulkProductType === '__clear' ? null : bulkProductType;
+    if (bulkOriginType !== '') updates.originType = bulkOriginType;
     
     if (Object.keys(updates).length > 0) {
       bulkUpdateMutation.mutate({ productIds: selectedIds, updates });
@@ -190,6 +194,15 @@ export function AdminListings() {
             <option value="__unset">⚠ No type set</option>
           </select>
           
+          <select 
+            value={filterOrigin} 
+            onChange={e => setFilterOrigin(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
+          >
+            <option value="">All Origins</option>
+            {ORIGIN_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+
           <select 
             value={filterStatus} 
             onChange={e => setFilterStatus(e.target.value)}
@@ -291,9 +304,17 @@ export function AdminListings() {
               <option value="accessories">Accessories</option>
               <option value="__clear">Clear type</option>
             </select>
+            <select 
+              value={bulkOriginType} 
+              onChange={e => setBulkOriginType(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">-- Set Origin --</option>
+              {ORIGIN_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
             <button 
               onClick={handleBulkUpdate}
-              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkLanguage === '' && bulkSealedType === '' && bulkProductType === '') || bulkUpdateMutation.isPending}
+              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkLanguage === '' && bulkSealedType === '' && bulkProductType === '' && bulkOriginType === '') || bulkUpdateMutation.isPending}
               className="btn-primary"
             >
               {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}
@@ -317,6 +338,7 @@ export function AdminListings() {
               <th className="p-4">Category</th>
               <th className="p-4">Language</th>
               <th className="p-4">Type</th>
+              <th className="p-4">Origin</th>
               <th className="p-4">Status</th>
             </tr>
           </thead>
@@ -364,6 +386,9 @@ export function AdminListings() {
                 </td>
                 <td className="p-4 text-sm">
                   {p.sealedType ? <span className="bg-slate-700 px-2 py-0.5 rounded text-xs">{sealedTypeLabel(p.sealedType)}</span> : <span className="text-amber-400/80 text-xs italic">Not set</span>}
+                </td>
+                <td className="p-4 text-sm">
+                  {p.originType ? <span className="bg-slate-700 px-2 py-0.5 rounded text-xs text-slate-200">{originTypeShort(p.originType)}</span> : <span className="text-slate-500 italic">—</span>}
                 </td>
 
                 <td className="p-4">

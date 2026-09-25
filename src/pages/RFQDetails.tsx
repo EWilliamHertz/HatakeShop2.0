@@ -171,8 +171,8 @@ export function RFQDetails() {
     if (!user) return;
     fetchInquiry();
     
-    // Connect to Socket.io for Real-Time Status Updates
-    if (!socketRef.current) socketRef.current = io();
+    // Connect to Socket.io for Real-Time Status Updates (auth token required by server)
+    if (!socketRef.current) socketRef.current = io({ auth: (cb) => { user.getIdToken().then(t => cb({ token: t })).catch(() => cb({})); } });
     const socket = socketRef.current;
     socket.emit("join_inquiry", id);
     
@@ -208,7 +208,7 @@ export function RFQDetails() {
   
   useEffect(() => {
     if (!id || !user) return;
-    if (!socketRef.current) socketRef.current = io();
+    if (!socketRef.current) socketRef.current = io({ auth: (cb) => { user.getIdToken().then(t => cb({ token: t })).catch(() => cb({})); } });
     const socket = socketRef.current;
     const fetchMessages = async () => {
       try {

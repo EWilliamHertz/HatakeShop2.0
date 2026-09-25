@@ -144,7 +144,7 @@ export function RFQHub() {
     if (!user) return;
     fetchInquiries();
     
-    if (!socketRef.current) socketRef.current = io();
+    if (!socketRef.current) socketRef.current = io({ auth: (cb) => { user.getIdToken().then(t => cb({ token: t })).catch(() => cb({})); } });
     const socket = socketRef.current;
     socket.emit("join_user", user.uid);
     
