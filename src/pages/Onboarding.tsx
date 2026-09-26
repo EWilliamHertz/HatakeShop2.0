@@ -22,9 +22,9 @@ export function Onboarding() {
   }, []);
 
   const { data: homeProductsData } = useQuery({ 
-    queryKey: ['homeProducts'], 
+    queryKey: ['onboardingProducts'], 
     queryFn: async () => {
-      const res = await fetch('/api-v2/home-products');
+      const res = await fetch('/api-v2/products?sortBy=recommended');
       if (!res.ok) throw new Error('Failed');
       return res.json();
     }
@@ -32,14 +32,21 @@ export function Onboarding() {
 
   const backgroundImages = useMemo(() => {
     const imgs = new Set<string>();
-    const source = homeProductsData?.featured || [];
+    const source = homeProductsData?.products || [];
     for (const p of source) {
       if (!p) continue;
       let parsed: string[] = [];
       try { parsed = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch {}
       if (parsed[0]) imgs.add(parsed[0]);
     }
-    return Array.from(imgs).sort(() => Math.random() - 0.5);
+    let uniqueImgs = Array.from(imgs).sort(() => Math.random() - 0.5);
+    // Pad the array to ensure the rainbow circle is fully populated (e.g., at least 40 items)
+    if (uniqueImgs.length > 0) {
+      while (uniqueImgs.length < 40) {
+        uniqueImgs = [...uniqueImgs, ...Array.from(imgs).sort(() => Math.random() - 0.5)];
+      }
+    }
+    return uniqueImgs;
   }, [homeProductsData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,46 +90,34 @@ export function Onboarding() {
 
   return (
     <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center overflow-hidden z-[100]">
-      {/* Casino Slot Machine Background */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none overflow-hidden flex gap-4 rotate-[-12deg] scale-125 translate-y-[-10%]">
-        {[...Array(5)].map((_, colIdx) => {
-          let colItems = [...MOCK_PRODUCTS];
-          if (backgroundImages.length > 0) {
-             let pool = [...backgroundImages];
-             while (pool.length < 25) {
-                pool = [...pool, ...[...backgroundImages].sort(() => Math.random() - 0.5)];
-             }
-             const colSize = Math.max(5, Math.ceil(pool.length / 5));
-             const start = colIdx * colSize;
-             colItems = pool.slice(start, start + colSize);
-          }
-          const displayItems = [...colItems, ...colItems, ...colItems];
-          
-          return (
-          <motion.div
-            key={colIdx}
-            className="flex flex-col gap-4 min-w-[200px]"
-            animate={{ y: [0, -1500] }}
-            transition={{ repeat: Infinity, duration: 30 + (colIdx % 3) * 10, ease: "linear", repeatType: "loop" }}
-          >
-            {displayItems.map((item, i) => (
-              <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-xl">
-                <div className="aspect-[3/4] rounded-xl overflow-hidden mb-2 bg-slate-800 relative">
-                  {typeof item === 'string' ? (
-                    <img src={item} alt="" className="w-full h-full object-cover opacity-90 drop-shadow-lg saturate-[1.2] hover:scale-105 transition-transform" />
-                  ) : (
-                    <div className={`w-full h-full ${item.bg} flex items-center justify-center opacity-90 saturate-[1.2]`}>
-                      <span className="text-white font-black text-2xl rotate-[-45deg] whitespace-nowrap tracking-wider drop-shadow-xl">{item.type}</span>
+      {/* Rainbow Flowing Product Cycle */}
+      <div className="absolute inset-0 opacity-[0.25] pointer-events-none overflow-hidden flex items-center justify-center">
+        <motion.div 
+          className="absolute w-[240vh] h-[240vh] rounded-full"
+          style={{ top: '20vh' }}
+          animate={{ rotate: [0, 360] }}
+          transition={{ repeat: Infinity, duration: 100, ease: "linear" }}
+        >
+          {backgroundImages.map((item, i) => {
+             const angle = (i * (360 / backgroundImages.length));
+             return (
+               <div 
+                 key={i} 
+                 className="absolute left-1/2 top-1/2 -ml-[10vh] -mt-[14vh] w-[20vh] h-[28vh]"
+                 style={{
+                   transform: `rotate(${angle}deg) translateY(-120vh)`
+                 }}
+               >
+                  <div className="w-full h-full bg-slate-900 border-2 border-slate-700/50 rounded-2xl p-2 shadow-2xl">
+                    <div className="w-full h-full rounded-xl overflow-hidden relative bg-slate-800">
+                      <img src={item} alt="" className="w-full h-full object-cover opacity-100 saturate-[1.3] shadow-2xl" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                     </div>
-                  )}
-                  {typeof item === 'string' && <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent pointer-events-none"></div>}
-                </div>
-                <div className="h-2 bg-slate-800 rounded w-3/4 mb-1"></div>
-                <div className="h-2 bg-slate-800 rounded w-1/2"></div>
-              </div>
-            ))}
-          </motion.div>
-        )})}
+                  </div>
+               </div>
+             );
+          })}
+        </motion.div>
       </div>
 
       <div className="absolute top-8 left-0 right-0 flex justify-center z-50">
