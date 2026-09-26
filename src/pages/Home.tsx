@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { QuickSearchResults } from '../components/QuickSearchResults.tsx';
+import { Globe } from '../components/Globe.tsx';
 import { useQuery } from '@tanstack/react-query';
 import { BadgeCheck, PackageSearch, Filter, MapPin, Building2, Package, Tag, X, ChevronRight, ChevronLeft, Star, Users, Store } from 'lucide-react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';

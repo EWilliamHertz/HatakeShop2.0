@@ -7,6 +7,7 @@ import { playSound } from '../lib/soundDesign.ts';
 export const CommandPalette = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
   const { addItem, setCartOpen } = useCart();
   
@@ -31,8 +32,31 @@ export const CommandPalette = () => {
         e.preventDefault();
         setIsOpen(prev => !prev);
       }
+      if (!isOpen) return;
+
       if (e.key === 'Escape') {
         setIsOpen(false);
+      }
+      
+      // Navigate down
+      if (e.key === 'ArrowDown' || (e.ctrlKey && e.key === 'j')) {
+        e.preventDefault();
+        setSelectedIndex(prev => prev < filteredProducts.length - 1 ? prev + 1 : prev);
+      }
+      
+      // Navigate up
+      if (e.key === 'ArrowUp' || (e.ctrlKey && e.key === 'k')) {
+        e.preventDefault();
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : 0);
+      }
+      
+      // Select
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const selected = filteredProducts[selectedIndex];
+        if (selected) {
+           handleQuickAdd(selected);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -69,7 +93,7 @@ export const CommandPalette = () => {
             type="text"
             autoFocus
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value); setSelectedIndex(0);}
             placeholder="Search products by SKU or name... (Quick Order)"
             className="flex-1 bg-transparent border-none text-white text-lg focus:outline-none focus:ring-0 placeholder-slate-500"
           />
@@ -94,7 +118,7 @@ export const CommandPalette = () => {
                 {search ? 'Search Results' : 'Suggested Products'}
               </div>
               {filteredProducts.map(product => (
-                <div key={product.id} className="group flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/80 cursor-pointer transition-colors" onClick={() => { setIsOpen(false); navigate(`/products/${product.id}`); }}>
+                <div key={product.id} className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${selectedIndex === filteredProducts.indexOf(product) ? 'bg-slate-800 border-indigo-500/50' : 'hover:bg-slate-800/80'}`} onClick={() => { setIsOpen(false); navigate(`/products/${product.id}`); }}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
                        <Package className="w-5 h-5 text-cyan-400" />
