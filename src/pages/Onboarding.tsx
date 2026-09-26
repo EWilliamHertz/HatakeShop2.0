@@ -4,12 +4,14 @@ import { Sparkles, ArrowRight, Loader2, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const MOCK_PRODUCTS = [
-  { img: "https://i.ibb.co/d4NFtnjQ/Gem-Pack-V5.jpg", name: "Pokemon Gem Pack V.5" },
-  { img: "https://i.ibb.co/3sXzj9H/OP05.jpg", name: "One Piece OP-05" },
-  { img: "https://i.ibb.co/Pzhd8kK/Lorcana.jpg", name: "Disney Lorcana First Chapter" },
-  { img: "https://i.ibb.co/C0W2kQp/Naruto.jpg", name: "Naruto Kayou Tier 4" },
-  { img: "https://i.ibb.co/m0fTjF1/DBZ.jpg", name: "Dragon Ball Super" },
-  { img: "https://i.ibb.co/F8qG6Kx/YGO.jpg", name: "Yu-Gi-Oh 25th Anniversary" }
+  { bg: "bg-gradient-to-br from-red-600 to-yellow-500", name: "Pokemon Gem Pack V.5", type: "Pokemon" },
+  { bg: "bg-gradient-to-br from-blue-600 to-cyan-400", name: "One Piece OP-05", type: "One Piece" },
+  { bg: "bg-gradient-to-br from-purple-600 to-pink-500", name: "Disney Lorcana First Chapter", type: "Lorcana" },
+  { bg: "bg-gradient-to-br from-orange-600 to-red-500", name: "Naruto Kayou Tier 4", type: "Naruto" },
+  { bg: "bg-gradient-to-br from-yellow-500 to-green-600", name: "Dragon Ball Super", type: "DBZ" },
+  { bg: "bg-gradient-to-br from-slate-700 to-slate-900", name: "Yu-Gi-Oh 25th Anniversary", type: "Yu-Gi-Oh" },
+  { bg: "bg-gradient-to-br from-teal-500 to-emerald-600", name: "Weiss Schwarz", type: "Weiss" },
+  { bg: "bg-gradient-to-br from-indigo-600 to-violet-500", name: "Magic The Gathering", type: "MTG" }
 ];
 
 export function Onboarding({ onComplete }: { onComplete: () => void }) {
@@ -34,9 +36,6 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       localStorage.setItem('onboardingPreferences', JSON.stringify(data));
       localStorage.setItem('onboardingCompleted', 'true');
       setStep(2);
-      setTimeout(() => {
-        onComplete();
-      }, 2000);
     } catch (error) {
       console.error(error);
       setIsLoading(false);
@@ -65,7 +64,9 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
             {[...MOCK_PRODUCTS, ...MOCK_PRODUCTS, ...MOCK_PRODUCTS].map((p, i) => (
               <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-2xl">
                 <div className="aspect-[3/4] rounded-xl overflow-hidden mb-2 bg-slate-800">
-                  <img src={p.img} alt={p.name} className="w-full h-full object-cover grayscale opacity-50" />
+                  <div className={`w-full h-full ${p.bg} flex items-center justify-center opacity-60`}>
+                    <span className="text-white/80 font-black text-2xl rotate-[-45deg] whitespace-nowrap tracking-wider drop-shadow-md">{p.type}</span>
+                  </div>
                 </div>
                 <div className="h-2 bg-slate-800 rounded w-3/4 mb-1"></div>
                 <div className="h-2 bg-slate-800 rounded w-1/2"></div>
@@ -130,12 +131,29 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
           )}
 
           {step === 2 && (
-            <div className="bg-cyan-500/10 backdrop-blur border border-cyan-500/30 rounded-3xl p-12 text-center shadow-[0_0_50px_rgba(6,182,212,0.15)]">
+            <div className="bg-cyan-500/10 backdrop-blur border border-cyan-500/30 rounded-3xl p-10 text-center shadow-[0_0_50px_rgba(6,182,212,0.15)]">
               <div className="w-16 h-16 bg-cyan-400 text-slate-950 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Search className="w-8 h-8" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Profile Configured!</h2>
-              <p className="text-cyan-100/70">Entering your personalized marketplace...</p>
+              <h2 className="text-3xl font-bold text-white mb-4">Profile Configured!</h2>
+              <p className="text-cyan-100/70 mb-8 text-lg">Your personalized marketplace is ready. How would you like to proceed?</p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button 
+                  onClick={() => { onComplete(); }}
+                  className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-4 px-6 rounded-2xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)]"
+                >
+                  Start Buying
+                  <div className="text-xs font-medium opacity-75 mt-0.5">Enter the Marketplace</div>
+                </button>
+                <button 
+                  onClick={() => { window.location.href = '/apply-seller'; }}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 px-6 rounded-2xl transition-all border border-slate-700"
+                >
+                  Start Supplying
+                  <div className="text-xs font-medium text-slate-400 mt-0.5">Submit an Application</div>
+                </button>
+              </div>
             </div>
           )}
         </motion.div>
