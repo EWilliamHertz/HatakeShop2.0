@@ -13,15 +13,31 @@ export function Storefront() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const search = searchParams.get('search') || '';
-  const selectedCategory = searchParams.get('category') || 'all';
+  const selectedCategories = searchParams.get('categories') ? searchParams.get('categories')!.split(',') : [];
+  const selectedLanguages = searchParams.get('languages') ? searchParams.get('languages')!.split(',') : [];
+  const selectedTypes = searchParams.get('types') ? searchParams.get('types')!.split(',') : [];
   const sortOption = searchParams.get('sort') || 'newest';
 
   const updateSearchParam = (key: string, value: string) => {
     setSearchParams(prev => {
-      if (!value || (key === 'category' && value === 'all') || (key === 'sort' && value === 'newest')) {
+      if (!value || (key === 'sort' && value === 'newest')) {
         prev.delete(key);
       } else {
         prev.set(key, value);
+      }
+      return prev;
+    });
+  };
+
+  const toggleMultiParam = (key: string, value: string) => {
+    setSearchParams(prev => {
+      const current = prev.get(key) ? prev.get(key)!.split(',') : [];
+      if (current.includes(value)) {
+        const next = current.filter(v => v !== value);
+        if (next.length === 0) prev.delete(key);
+        else prev.set(key, next.join(','));
+      } else {
+        prev.set(key, [...current, value].join(','));
       }
       return prev;
     });
@@ -49,13 +65,27 @@ export function Storefront() {
 
   const safeProducts = Array.isArray(products) ? products : [];
 
-  const categories = useMemo(() => {
+  const { categories, languages, types } = useMemo(() => {
     const cats: Record<string, number> = {};
+    const langs: Record<string, number> = {};
+    const typs: Record<string, number> = {};
+
     safeProducts.forEach((p: any) => {
-      const cat = p?.category || p?.categoryName || p?.originType || 'Other';
+      const cat = p?.categoryName || p?.category || p?.originType || 'Other';
       cats[cat] = (cats[cat] || 0) + 1;
+      
+      const lang = p?.language || 'Unknown';
+      langs[lang] = (langs[lang] || 0) + 1;
+      
+      const typ = p?.sealedType || p?.productType || 'Unknown';
+      typs[typ] = (typs[typ] || 0) + 1;
     });
-    return Object.entries(cats).sort((a, b) => b[1] - a[1]);
+    
+    return {
+      categories: Object.entries(cats).sort((a, b) => b[1] - a[1]),
+      languages: Object.entries(langs).sort((a, b) => b[1] - a[1]),
+      types: Object.entries(typs).sort((a, b) => b[1] - a[1]),
+    };
   }, [safeProducts]);
 
   const filteredProducts = useMemo(() => {
@@ -68,9 +98,16 @@ export function Storefront() {
       const matchesSearch = !search ||
         pTitle.toLowerCase().includes(searchLower) ||
         pDesc.toLowerCase().includes(searchLower);
-      const matchesCategory = selectedCategory === 'all' ||
-        (p.category || p.categoryName || p.originType || 'Other') === selectedCategory;
-      return matchesSearch && matchesCategory;
+        
+      const pCat = p?.categoryName || p?.category || p?.originType || 'Other';
+      const pLang = p?.language || 'Unknown';
+      const pTyp = p?.sealedType || p?.productType || 'Unknown';
+      
+      const matchesCat = selectedCategories.length === 0 || selectedCategories.includes(pCat);
+      const matchesLang = selectedLanguages.length === 0 || selectedLanguages.includes(pLang);
+      const matchesTyp = selectedTypes.length === 0 || selectedTypes.includes(pTyp);
+      
+      return matchesSearch && matchesCat && matchesLang && matchesTyp;
     });
 
     results.sort((a: any, b: any) => {
@@ -96,7 +133,7 @@ export function Storefront() {
     });
 
     return results;
-  }, [safeProducts, search, selectedCategory, sortOption]);
+  }, [safeProducts, search, selectedCategories, selectedLanguages, selectedTypes, sortOption]);
 
   return (
     <div className="bg-slate-900 min-h-screen -mt-4 pb-12">
@@ -173,35 +210,62 @@ export function Storefront() {
                 </div>
               </div>
 
-              {/* Category pills */}
-              {categories.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Tag className="w-4 h-4 text-slate-500 shrink-0" />
-                  <button
-                    onClick={() => updateSearchParam('category', 'all')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategory === 'all' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
-                  >
-                    All ({safeProducts.length})
-                  </button>
-                  {categories.map(([cat, count]) => (
-                    <button
-                      key={cat}
-                      onClick={() => updateSearchParam('category', cat)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategory === cat ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
-                    >
-                      {cat} ({count})
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Filters Area */}
+              <div className="flex flex-col gap-3">
+                {/* Category pills */}
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Tag className="w-4 h-4 text-slate-500 shrink-0" />
+                    {categories.map(([cat, count]) => (
+                      <button
+                        key={cat}
+                        onClick={() => toggleMultiParam('categories', cat)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
+                      >
+                        {cat} ({count})
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {/* Language pills */}
+                {languages.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider w-4 text-center">L</span>
+                    {languages.map(([lang, count]) => (
+                      <button
+                        key={lang}
+                        onClick={() => toggleMultiParam('languages', lang)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedLanguages.includes(lang) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
+                      >
+                        {lang} ({count})
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {/* Type pills */}
+                {types.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Box className="w-4 h-4 text-slate-500 shrink-0" />
+                    {types.map(([typ, count]) => (
+                      <button
+                        key={typ}
+                        onClick={() => toggleMultiParam('types', typ)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedTypes.includes(typ) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
+                      >
+                        {typ} ({count})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {filteredProducts.length === 0 ? (
               <div className="bg-slate-800 border border-slate-700 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
                 <Box className="w-12 h-12 text-slate-400 mb-4" />
                 <p className="text-slate-400 font-medium">No products match your filters.</p>
-                {(search || selectedCategory !== 'all') && (
-                  <button onClick={() => { updateSearchParam('search', ''); updateSearchParam('category', 'all'); updateSearchParam('sort', 'newest'); }} className="mt-4 text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
+                {(search || selectedCategories.length > 0 || selectedLanguages.length > 0 || selectedTypes.length > 0) && (
+                  <button onClick={() => { setSearchParams(new URLSearchParams()); }} className="mt-4 text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
                     Clear filters
                   </button>
                 )}
