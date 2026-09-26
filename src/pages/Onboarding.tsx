@@ -14,7 +14,7 @@ const MOCK_PRODUCTS = [
   { bg: "bg-gradient-to-br from-indigo-600 to-violet-500", name: "Magic The Gathering", type: "MTG" }
 ];
 
-export function Onboarding({ onComplete }: { onComplete: () => void }) {
+export function Onboarding({ onComplete, backgroundImages = [] }: { onComplete: () => void, backgroundImages?: string[] }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(0); // 0: input, 1: processing, 2: success
@@ -61,12 +61,19 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
               repeatType: "loop"
             }}
           >
-            {[...MOCK_PRODUCTS, ...MOCK_PRODUCTS, ...MOCK_PRODUCTS].map((p, i) => (
+            {(backgroundImages.length > 0 
+              ? [...backgroundImages, ...backgroundImages, ...backgroundImages, ...backgroundImages].slice(0, 15)
+              : [...MOCK_PRODUCTS, ...MOCK_PRODUCTS, ...MOCK_PRODUCTS]).map((item, i) => (
               <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-2xl">
-                <div className="aspect-[3/4] rounded-xl overflow-hidden mb-2 bg-slate-800">
-                  <div className={`w-full h-full ${p.bg} flex items-center justify-center opacity-60`}>
-                    <span className="text-white/80 font-black text-2xl rotate-[-45deg] whitespace-nowrap tracking-wider drop-shadow-md">{p.type}</span>
-                  </div>
+                <div className="aspect-[3/4] rounded-xl overflow-hidden mb-2 bg-slate-800 relative">
+                  {typeof item === 'string' ? (
+                    <img src={item} alt="" className="w-full h-full object-cover grayscale opacity-50 mix-blend-screen" />
+                  ) : (
+                    <div className={`w-full h-full ${item.bg} flex items-center justify-center opacity-60`}>
+                      <span className="text-white/80 font-black text-2xl rotate-[-45deg] whitespace-nowrap tracking-wider drop-shadow-md">{item.type}</span>
+                    </div>
+                  )}
+                  {typeof item === 'string' && <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>}
                 </div>
                 <div className="h-2 bg-slate-800 rounded w-3/4 mb-1"></div>
                 <div className="h-2 bg-slate-800 rounded w-1/2"></div>
@@ -170,10 +177,13 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
                 localStorage.setItem('onboardingCompleted', 'true');
                 onComplete();
               }}
-              className="text-slate-500 hover:text-slate-300 text-sm font-medium transition-colors"
+              className="text-slate-500 hover:text-slate-300 text-sm font-medium transition-colors mb-8"
             >
               Skip this step, I'll browse manually
             </button>
+            <div className="flex justify-center opacity-30 mt-4">
+              <img src="/logo.png" alt="Hatake" className="h-8 w-auto grayscale mix-blend-screen opacity-70" />
+            </div>
           </motion.div>
         )}
       </div>

@@ -381,8 +381,22 @@ export function Home() {
     }
   }
 
+
+  const onboardingImages = React.useMemo(() => {
+    const imgs = [];
+    const source = sortedHomeProducts.length > 0 ? sortedHomeProducts : homeProducts;
+    for (const p of source) {
+      if (!p) continue;
+      let parsed = [];
+      try { parsed = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch {}
+      if (parsed[0]) imgs.push(parsed[0]);
+      if (imgs.length >= 25) break;
+    }
+    return imgs.sort(() => Math.random() - 0.5); // shuffle
+  }, [sortedHomeProducts, homeProducts]);
+
   if (showOnboarding) {
-    return <Onboarding onComplete={() => setShowOnboarding(false)} />;
+    return <Onboarding onComplete={() => setShowOnboarding(false)} backgroundImages={onboardingImages} />;
   }
 
   return (
