@@ -40,6 +40,23 @@ import webhooksRouter from "./src/routes/webhooks.js";
 import categoriesRouter from "./src/routes/categories.js";
 
 // Background task to process drip campaigns
+
+async function generateWithRetry(ai: any, params: any, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await ai.models.generateContent(params);
+    } catch (err: any) {
+      const isTransient = err.status === 503 || err.status === 429 || (err.message && (err.message.includes('503') || err.message.includes('429')));
+      if (isTransient && i < maxRetries - 1) {
+        console.warn(`AI model busy (attempt ${i + 1}/${maxRetries}). Retrying in ${Math.pow(2, i)}s...`);
+        await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 const app = express();
 app.get(["/cron/drip", "/api/cron/drip", "/api-v2/cron/drip"], async (req, res) => {
   try {
@@ -1201,7 +1218,7 @@ app.post("/api-v2/ai/onboarding", async (req, res) => {
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: "gemini-3.8-flash",
       contents: `You are an onboarding assistant for Hatake, a B2B TCG (Trading Card Game) marketplace.
 The user will describe their business needs. Extract their preferences into a JSON object with this exact schema:
@@ -1247,7 +1264,7 @@ app.post(["/sourcing/ai-match", "/api/sourcing/ai-match", "/api-v2/sourcing/ai-m
     - notes: string (any specific custom requirements mentioned)
     `;
 
-    const aiResponse = await ai.models.generateContent({
+    const aiResponse = await generateWithRetry(ai, {
       model: "gemini-3.8-flash",
       contents: aiPrompt,
       config: {
@@ -1305,7 +1322,7 @@ app.post(["/translate", "/api/translate", "/api-v2/translate"], requireAuth, asy
     const { text, targetLanguage } = req.body;
     if (!text || !targetLanguage) return res.status(400).json({ error: "Missing text or target language" });
     
-    const aiResponse = await ai.models.generateContent({
+    const aiResponse = await generateWithRetry(ai, {
        model: "gemini-3.8-flash",
        contents: `Translate the following text to ${targetLanguage}. Only return the raw translated text, without any conversational wrapping, markdown, or quotes.\n\nText: ${text}`
     });
