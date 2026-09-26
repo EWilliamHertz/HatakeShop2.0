@@ -10,6 +10,7 @@ export function Settings() {
   const { user, dbUser, updateDbUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
+  const [showApiDocsModal, setShowApiDocsModal] = useState(false);
 
   const [formData, setFormData] = useState({
     displayName: dbUser?.displayName || '',
