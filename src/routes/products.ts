@@ -153,7 +153,7 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
       const countriesParam = (req.query.countries as string) || (req.query.includeCountries as string) || '';
       
       const page = parseInt(req.query.page as string) || 1;
-      const limit = 12;
+      const limit = parseInt(req.query.limit as string) || 12; if (limit > 200) return res.status(400).json({error: "Limit too high"});
       const offset = (page - 1) * limit;
 
       let query = db.select({

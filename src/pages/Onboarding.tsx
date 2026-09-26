@@ -25,7 +25,7 @@ export function Onboarding() {
   const { data: homeProductsData } = useQuery({ 
     queryKey: ['onboardingProducts'], 
     queryFn: async () => {
-      const res = await fetch('/api-v2/products?sortBy=recommended');
+      const res = await fetch('/api-v2/products?sortBy=recommended&limit=150');
       if (!res.ok) throw new Error('Failed');
       return res.json();
     }

@@ -4,6 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
 import { MapPin, ShieldCheck, Box, Info, Search, Tag, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { VendorReviews } from '../components/VendorReviews.tsx';
+import './scrollbar.css';
+
+const formatLang = (l: string) => {
+  if (!l) return l;
+  if (l.toLowerCase() === 'zh-hans') return 'S-Chinese';
+  if (l.toLowerCase() === 'zh-hant') return 'T-Chinese';
+  return l;
+};
+
 
 export function Storefront() {
   const { slug } = useParams();
@@ -15,6 +24,7 @@ export function Storefront() {
   const search = searchParams.get('search') || '';
   const selectedCategories = searchParams.get('categories') ? searchParams.get('categories')!.split(',') : [];
   const selectedLanguages = searchParams.get('languages') ? searchParams.get('languages')!.split(',') : [];
+  const selectedBrands = searchParams.get('brands') ? searchParams.get('brands')!.split(',') : [];
   const selectedTypes = searchParams.get('types') ? searchParams.get('types')!.split(',') : [];
   const sortOption = searchParams.get('sort') || 'newest';
 
@@ -64,10 +74,11 @@ export function Storefront() {
 
   const safeProducts = Array.isArray(products) ? products : [];
 
-  const { categories, languages, types } = useMemo(() => {
+  const { categories, languages, types, brands } = useMemo(() => {
     const cats: Record<string, number> = {};
     const langs: Record<string, number> = {};
     const typs: Record<string, number> = {};
+    const brnds: Record<string, number> = {};
 
     safeProducts.forEach((p: any) => {
       const cat = p?.categoryName || p?.category || p?.originType || 'Other';
@@ -77,6 +88,8 @@ export function Storefront() {
       langs[lang] = (langs[lang] || 0) + 1;
       
       const typ = p?.sealedType || p?.productType || 'Unknown';
+      const brnd = p?.brand;
+      if (brnd) brnds[brnd] = (brnds[brnd] || 0) + 1;
       typs[typ] = (typs[typ] || 0) + 1;
     });
     
@@ -84,6 +97,7 @@ export function Storefront() {
       categories: Object.entries(cats).sort((a, b) => b[1] - a[1]),
       languages: Object.entries(langs).sort((a, b) => b[1] - a[1]),
       types: Object.entries(typs).sort((a, b) => b[1] - a[1]),
+      brands: Object.entries(brnds).sort((a, b) => b[1] - a[1]),
     };
   }, [safeProducts]);
 
@@ -104,9 +118,11 @@ export function Storefront() {
       
       const matchesCat = selectedCategories.length === 0 || selectedCategories.includes(pCat);
       const matchesLang = selectedLanguages.length === 0 || selectedLanguages.includes(pLang);
+      const pBrnd = p?.brand;
+      const matchesBrand = selectedBrands.length === 0 || (pBrnd && selectedBrands.includes(pBrnd));
       const matchesTyp = selectedTypes.length === 0 || selectedTypes.includes(pTyp);
       
-      return matchesSearch && matchesCat && matchesLang && matchesTyp;
+      return matchesSearch && matchesCat && matchesLang && matchesTyp && matchesBrand;
     });
 
     results.sort((a: any, b: any) => {
@@ -236,7 +252,7 @@ export function Storefront() {
                         onClick={() => toggleMultiParam('languages', lang)}
                         className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all ${selectedLanguages.includes(lang) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
                       >
-                        {lang} ({count})
+                        {formatLang(lang)} ({count})
                       </button>
                     ))}
                   </div>
