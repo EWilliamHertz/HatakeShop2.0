@@ -15,7 +15,8 @@ export const createPool = () => {
     const url = process.env.DATABASE_URL || '';
     const sslDisabled = /sslmode=disable/.test(url) || process.env.PGSSL === 'disable';
     const config: pg.PoolConfig = {
-      max: 10,
+      max: 5,
+      idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 30000,
       ssl: sslDisabled ? false : true,
     };

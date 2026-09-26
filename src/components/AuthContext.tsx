@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, googleAuthProvider } from '../lib/firebase.ts';
-import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signInWithCustomToken, signOut, User, sendEmailVerification } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signInWithCustomToken, signOut, User } from 'firebase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -26,22 +26,10 @@ const AuthContext = createContext<AuthContextType>({
   updateDbUser: () => {}
 });
 
-// Mirrors server: mock token flows only exist in dev (ALLOW_TEST_TOKENS=1).
-// In production builds these code paths are compiled out entirely.
-const DEV_MOCK_AUTH = import.meta.env.DEV === true;
-const isMockToken = (t: string) => DEV_MOCK_AUTH && (t === 'mock-admin-token' || t.startsWith('custom-token-'));
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [dbUser, setDbUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const mockUser = {
-    uid: 'mock-admin-uid',
-    email: 'ernst@hatake.eu',
-    displayName: 'Ernst (Admin)',
-    getIdToken: async () => 'mock-admin-token',
-  } as any;
 
   useEffect(() => {
     // Optimistically load from cache to instantly bypass 10s network throttle
@@ -75,57 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
        } catch(e) {}
     }
 
-    const mockToken = localStorage.getItem('mock_token');
-    if (mockToken && isMockToken(mockToken)) {
-      const uid = mockToken === 'mock-admin-token' ? 'mock-admin-uid' : mockToken.split('custom-token-')[1];
-      const customMockUser = { uid, email: '', name: 'Custom User', getIdToken: async () => mockToken };
-      setUser(customMockUser as any);
-      fetch('/api-v2/profile', {
-        headers: { 'Authorization': `Bearer ${mockToken}` }
-      })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          setDbUser(data);
-        } else {
-          const isErnst = uid === 'uJjvZKedn0MBrz75w6bd9Az8P0H3';
-          setDbUser({ 
-            uid, 
-            email: isErnst ? 'ernst@hatake.eu' : 'phoebe@topbestpkg.com', 
-            role: 'admin', 
-            verificationStatus: 'verified', 
-            displayName: isErnst ? 'Ernst Hatake' : 'Phoebe (Admin)' 
-          });
-        }
-      })
-      .catch(e => {
-        console.error("Mock token fetch error:", e);
-        const isErnst = uid === 'uJjvZKedn0MBrz75w6bd9Az8P0H3';
-        setDbUser({ 
-          uid, 
-          email: isErnst ? 'ernst@hatake.eu' : 'phoebe@topbestpkg.com', 
-          role: 'admin', 
-          verificationStatus: 'verified', 
-          displayName: isErnst ? 'Ernst Hatake' : 'Phoebe (Admin)' 
-        });
-      })
-      .finally(() => setLoading(false));
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      const mockToken = localStorage.getItem('mock_token');
-      if (mockToken && isMockToken(mockToken)) {
-         const uid = mockToken === 'mock-admin-token' ? 'mock-admin-uid' : mockToken.split('custom-token-')[1];
-         const customMockUser = { uid, email: '', name: 'Custom User', getIdToken: async () => mockToken };
-         setUser(customMockUser as any);
-         try {
-           const profileRes = await fetch('/api-v2/profile', { headers: { 'Authorization': `Bearer ${mockToken}` } });
-           if (profileRes.ok) setDbUser(await profileRes.json());
-         } catch(e) {}
-         setLoading(false);
-         return;
-      }
       setUser(currentUser);
       if (currentUser) {
         let profileData = null;
@@ -165,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error("Auth context outer error:", e);
         }
 
-        // 3. Fallback check: Guarantee dbUser is set even if token fetch or profile fetch crashed
+        // 3. Fallback: Guarantee dbUser is set even if token fetch or profile fetch crashed
         if (!profileData) {
           const fallbackUser = { 
             id: currentUser.uid, 
@@ -181,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setDbUser(null);
         localStorage.removeItem('cached_user_session');
         localStorage.removeItem('cached_db_user_session');
+        localStorage.removeItem('cached_token');
       }
       setLoading(false);
     });
@@ -215,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("Failed to sync new user to db");
       }
       
-      // Auto-send beautiful verification email
+      // Auto-send verification email
       try {
         await fetch('/api-v2/auth/send-verification', {
            method: 'POST',
@@ -238,19 +177,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithCustom = async (token: string) => {
-    if (isMockToken(token)) {
-      localStorage.setItem('mock_token', token);
-      const uid = token === 'mock-admin-token' ? 'mock-admin-uid' : token.split('custom-token-')[1];
-      const customMockUser = { uid, email: '', name: 'Custom User', getIdToken: async () => token };
-      setUser(customMockUser as any);
-      const profileRes = await fetch('/api-v2/profile', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      setDbUser(await profileRes.json());
-      return;
-    }
     try {
-      // Production flow: the server mints a real Firebase custom token.
+      // Server mints a real Firebase custom token.
       await signInWithCustomToken(auth, token);
     } catch (error) {
       console.error('Error signing in with Custom Token', error);
@@ -259,7 +187,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logOut = async () => {
-    localStorage.removeItem('mock_token');
     localStorage.removeItem('cached_user_session');
     localStorage.removeItem('cached_db_user_session');
     localStorage.removeItem('cached_token');

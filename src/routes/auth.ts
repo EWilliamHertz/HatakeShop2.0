@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import express from "express";
+import { adminAuth } from "../lib/firebase-admin.js";
 import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/services.js";
 
 import { Router } from "express";
@@ -14,15 +15,10 @@ import { getUserProfile, getOrCreateUser } from "../db/users.js";
 
 const router = Router();
 
-import { ALLOW_TEST_TOKENS } from '../middleware/auth.js';
-
 // ---------------------------------------------------------------------------
 // Password login → mints a REAL Firebase custom token (signed with the service
 // account). The client exchanges it via signInWithCustomToken() and from then
 // on uses normal Firebase ID tokens everywhere.
-//
-// The old `custom-token-<uid>` string scheme is only minted/accepted when
-// ALLOW_TEST_TOKENS=1 (see middleware/auth.ts) for local e2e tests.
 // ---------------------------------------------------------------------------
 router.post("/api-v2/auth/custom-login", async (req: AuthRequest, res) => {
     try {
@@ -33,9 +29,6 @@ router.post("/api-v2/auth/custom-login", async (req: AuthRequest, res) => {
       if (dbUsers.length > 0 && dbUsers[0].password) {
          const isValid = await bcrypt.compare(password, dbUsers[0].password);
          if (isValid) {
-           if (ALLOW_TEST_TOKENS) {
-             return res.json({ token: `custom-token-${dbUsers[0].uid}` });
-           }
            const firebaseToken = await adminAuth.createCustomToken(dbUsers[0].uid);
            return res.json({ token: firebaseToken });
          }
@@ -47,6 +40,7 @@ router.post("/api-v2/auth/custom-login", async (req: AuthRequest, res) => {
       res.status(500).json({ error: err.message });
     }
   });
+
 
 router.post("/api-v2/auth/sync", requireAuth, async (req: AuthRequest, res) => {
     try {

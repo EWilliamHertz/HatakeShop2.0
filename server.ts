@@ -541,7 +541,7 @@ const requireAdmin = async (req: AuthRequest, res: express.Response, next: expre
       const byEmail = await db.select().from(users).where(eq(users.email, req.user.email));
       if (byEmail.length > 0) userProfile = byEmail[0];
     }
-    if (req.user.email === 'ernst@hatake.eu' || userProfile?.role === 'admin') {
+    if (userProfile?.role === 'admin') {
       return next();
     }
     return res.status(403).send("Forbidden: Admins only");

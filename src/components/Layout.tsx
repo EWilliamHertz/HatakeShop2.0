@@ -40,7 +40,7 @@ const mainNavItems = [
     <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 font-sans">
       <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 sm:h-20 items-center">
+          <div className="flex justify-between h-20 sm:h-24 items-center">
             
             {/* LEFT: Logo & Main Nav */}
             <div className="flex items-center space-x-6 lg:space-x-8">
@@ -49,7 +49,7 @@ const mainNavItems = [
                   onClick={() => setLogoMenuOpen(!logoMenuOpen)}
                   className="flex items-center space-x-2.5 cursor-pointer outline-none focus:ring-2 focus:ring-accent/50 rounded-lg p-1.5 hover:bg-slate-700 transition-colors"
                 >
-                  <img src="/logo.png" alt="Hatake.Shop" className="h-9 w-auto" />
+                  <img src="/logo.png" alt="Hatake.Shop" className="h-14 w-auto" />
                   <ChevronDown className={cn("w-4 h-4 text-slate-400 ml-1 transition-transform", logoMenuOpen ? "rotate-180" : "")} />
                 </button>
                 {logoMenuOpen && (

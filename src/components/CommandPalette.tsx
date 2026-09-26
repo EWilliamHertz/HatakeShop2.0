@@ -93,7 +93,7 @@ export const CommandPalette = () => {
             type="text"
             autoFocus
             value={search}
-            onChange={(e) => setSearch(e.target.value); setSelectedIndex(0);}
+            onChange={(e) => { setSearch(e.target.value); setSelectedIndex(0); }}
             placeholder="Search products by SKU or name... (Quick Order)"
             className="flex-1 bg-transparent border-none text-white text-lg focus:outline-none focus:ring-0 placeholder-slate-500"
           />
