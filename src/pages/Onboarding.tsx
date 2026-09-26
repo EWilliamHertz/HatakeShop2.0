@@ -188,7 +188,7 @@ export function Onboarding() {
                     type="text"
                     value={input}
                     onChange={e => setInput(e.target.value)}
-                    placeholder="e.g., 'I got €450 to invest into Pokemon and sleeves, can you make a cart of RFQ to suppliers for me?'"
+                    placeholder="e.g., 'I got €4500 to invest into Pokemon and €3500 for Merchandise/TCG Supplies, can you make a cart of RFQ to suppliers for me?'"
                     className="w-full bg-transparent text-white px-6 py-4 outline-none placeholder-slate-500 text-base"
                     autoFocus
                   />
