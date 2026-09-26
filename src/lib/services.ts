@@ -11,7 +11,7 @@ export async function generateEmbedding(text: string) {
   if (!text) return null;
   try {
     const aiResponse = await ai.models.embedContent({
-      model: "text-embedding-004",
+      model: 'gemini-embedding-2',
       contents: text,
     });
     return aiResponse.embeddings[0].values;
