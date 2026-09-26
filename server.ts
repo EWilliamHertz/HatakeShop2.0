@@ -1202,7 +1202,7 @@ app.post("/api-v2/ai/onboarding", async (req, res) => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: `You are an onboarding assistant for Hatake, a B2B TCG (Trading Card Game) marketplace.
 The user will describe their business needs. Extract their preferences into a JSON object with this exact schema:
 {
@@ -1248,7 +1248,7 @@ app.post(["/sourcing/ai-match", "/api/sourcing/ai-match", "/api-v2/sourcing/ai-m
     `;
 
     const aiResponse = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: aiPrompt,
       config: {
           responseMimeType: "application/json",
@@ -1306,7 +1306,7 @@ app.post(["/translate", "/api/translate", "/api-v2/translate"], requireAuth, asy
     if (!text || !targetLanguage) return res.status(400).json({ error: "Missing text or target language" });
     
     const aiResponse = await ai.models.generateContent({
-       model: "gemini-1.5-flash",
+       model: "gemini-2.5-flash",
        contents: `Translate the following text to ${targetLanguage}. Only return the raw translated text, without any conversational wrapping, markdown, or quotes.\n\nText: ${text}`
     });
     
