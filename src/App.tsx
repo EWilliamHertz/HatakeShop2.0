@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import React, { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { CategorySEOPage } from "./pages/CategorySEOPage.tsx";
 import { AuthProvider, useAuth } from './components/AuthContext.tsx';
 import { CartProvider } from './components/SampleCart.tsx';
 import { CurrencyProvider } from './components/CurrencyProvider.tsx';
@@ -160,6 +161,7 @@ export default function App() {
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/company/:id" element={<CompanyProfile />} />
             <Route path="/company/:id/listings" element={<CompanyListings />} />
+            <Route path="/wholesale/:categorySlug" element={<CategorySEOPage />} />
             <Route path="/user/:id" element={<UserProfile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />

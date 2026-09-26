@@ -21,18 +21,28 @@ export function ImageUploader({ images, onChange }: ImageUploaderProps) {
     try {
       let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error("Firebase Auth Error: " + e.message); }
       const uploadPromises = Array.from(files).map(async (file: File) => {
-        const formData = new FormData();
-        formData.append('image', file);
-        const apiKey = import.meta.env.VITE_IMGBB_API_KEY || '6f1a5bbe6a6a3a4fb49fd2f8b303d8f5';
-        
-        const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-          method: 'POST',
-          body: formData
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = async () => {
+            try {
+              const response = await fetch(`/api-v2/upload`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ image: reader.result })
+              });
+              const data = await response.json();
+              if (!data.success) throw new Error(data.error || 'Failed to upload');
+              resolve(data.url);
+            } catch (err) {
+              reject(err);
+            }
+          };
+          reader.onerror = error => reject(error);
         });
-        
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error?.message || 'Failed to upload');
-        return data.data.url;
       });
 
       const newUrls = await Promise.all(uploadPromises);

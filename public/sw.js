@@ -1,17 +1,6 @@
-self.addEventListener('install', (e) => {
-  self.skipWaiting();
+self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Install');
 });
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          return caches.delete(cacheName);
-        })
-      );
-    }).then(() => {
-      self.registration.unregister();
-    })
-  );
+self.addEventListener('fetch', (event) => {
+  // Simple pass-through for now
 });

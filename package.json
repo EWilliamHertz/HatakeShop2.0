@@ -25,6 +25,7 @@
     "agora-access-token": "^2.0.4",
     "agora-rtc-sdk-ng": "^4.24.8",
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
     "clsx": "^2.1.1",
     "cobe": "^2.0.1",
     "compression": "^1.8.2",

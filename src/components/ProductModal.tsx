@@ -3,17 +3,49 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext.tsx';
 import { X, PackageSearch, Star, Building2, MapPin, Package, Clock, ShieldCheck, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useCurrency } from './CurrencyProvider.tsx';
 import { WishlistButton } from './WishlistButton.tsx';
 
 export function ProductModal({ product, onClose }: { product: any, onClose: () => void }) {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
+  const navigate = useNavigate();
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+  const [isCreatingInquiry, setIsCreatingInquiry] = useState(false);
+
+  const createInquiry = async (isSample = false) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setIsCreatingInquiry(true);
+    try {
+      const res = await fetch('/api-v2/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user.getIdToken()}` },
+        body: JSON.stringify({
+          targetProductId: product.id,
+          quantity: isSample ? 1 : (product.moq || 1),
+          targetBudget: isSample ? ((product.unitCost || 0) * 2).toFixed(2) : undefined,
+          status: 'Draft',
+          aiNotes: isSample ? 'Buyer has requested a sample of this product.' : undefined
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        navigate(`/rfq/${data.id}`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCreatingInquiry(false);
+    }
+  };
 
   const { data: reviewsData, isLoading: reviewsLoading } = useQuery({
     queryKey: ['productReviews', product.id],
@@ -219,7 +251,19 @@ export function ProductModal({ product, onClose }: { product: any, onClose: () =
           >
             {t('Close')}
           </button>
-          <button className="px-6 py-2.5 bg-[#ffcc00] hover:bg-[#ffcc00]/90 text-black font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors">
+          <button 
+            onClick={() => createInquiry(true)}
+            disabled={isCreatingInquiry}
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors border border-slate-600 disabled:opacity-50"
+          >
+            <Package className="w-4 h-4" />
+            {t('Request Sample')}
+          </button>
+          <button 
+            onClick={() => createInquiry(false)}
+            disabled={isCreatingInquiry}
+            className="px-6 py-2.5 bg-[#ffcc00] hover:bg-[#ffcc00]/90 text-black font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
             <Mail className="w-4 h-4" />
             {t('Contact Supplier')}
           </button>

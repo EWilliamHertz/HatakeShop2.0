@@ -38,6 +38,7 @@ import rfqsRouter from "./src/routes/rfqs.js";
 import leadsRouter from "./src/routes/leads.js";
 import webhooksRouter from "./src/routes/webhooks.js";
 import categoriesRouter from "./src/routes/categories.js";
+import cartRouter from "./src/routes/cart.js";
 
 // Background task to process drip campaigns
 
@@ -288,7 +289,9 @@ app.get(["/health", "/api/health", "/api-v2/health"], async (req, res) => {
 // --- ROUTE MOUNTING (Supporting both /api/ and /api-v2/ prefixes to prevent 404s) ---
 import feedRouter from "./src/routes/feed.js";
 import notificationsRouter from "./src/routes/notifications.js";
-const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter, notificationsRouter];
+import seoRouter from "./src/routes/seo.js";
+import uploadRouter from "./src/routes/upload.js";
+const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter, notificationsRouter, cartRouter, seoRouter, uploadRouter];
 
 // Attach the Socket.IO instance to every request BEFORE the routers mount, so
 // route handlers can emit real-time events via `(req as any).io?.emit(...)`.

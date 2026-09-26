@@ -8,12 +8,13 @@ import { CurrencyProvider } from './components/CurrencyProvider.tsx';
 import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
-// UNREGISTER ANY ROGUE SERVICE WORKERS THAT MIGHT BE CACHING OLD CRASHING CODE
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister();
-    }
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then((registration) => {
+      console.log('SW registered: ', registration);
+    }).catch((registrationError) => {
+      console.log('SW registration failed: ', registrationError);
+    });
   });
 }
 
