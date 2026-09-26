@@ -155,6 +155,7 @@ export default function App() {
             <Route index element={<Home />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/products/:id" element={<ProductPage />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/company/:id" element={<CompanyProfile />} />
             <Route path="/company/:id/listings" element={<CompanyListings />} />
