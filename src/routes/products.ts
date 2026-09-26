@@ -60,8 +60,15 @@ router.get("/api-v2/marketplace/facets", async (req, res) => {
 
     const q = req.query.q;
     if (q) {
-      const qStr = String(q);
-      conditions.push(or(ilike(products.title, `%${qStr}%`), ilike(products.description, `%${qStr}%`)));
+        const qStr = String(q).trim();
+      if (qStr) {
+        conditions.push(
+          sql`(
+            websearch_to_tsquery('simple', ${qStr}) @@ to_tsvector('simple', coalesce(${products.title},'') || ' ' || coalesce(${products.description},''))
+            OR similarity(${products.title}, ${qStr}) > 0.2
+          )` as any
+        );
+      }
     }
 
     // When calculating facets, we usually want to know how many WOULD match if we selected it.

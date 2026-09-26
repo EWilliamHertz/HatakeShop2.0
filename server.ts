@@ -1702,7 +1702,7 @@ app.post(["/cart/rfq", "/api/cart/rfq", "/api-v2/cart/rfq"], requireAuth, async 
 import fs from 'fs';
 
 // SEO Injection routes for Vercel Serverless
-const injectSEO = async (req: any, res: any, fetchMetadata: () => Promise<{title: string, description: string, image?: string}>) => {
+const injectSEO = async (req: any, res: any, fetchMetadata: () => Promise<{title: string, description: string, image?: string, jsonLd?: any}>) => {
   try {
     const isVercel = !!process.env.VERCEL;
     const indexPath = isVercel ? path.join(process.cwd(), 'dist', 'index.html') : path.join(process.cwd(), 'index.html');
@@ -1716,6 +1716,12 @@ const injectSEO = async (req: any, res: any, fetchMetadata: () => Promise<{title
     }
     html = html.replace(/<head>/, `<head>\n    <meta property="og:title" content="${meta.title} | Hatake.Shop" />\n    <meta property="og:description" content="${meta.description}" />`);
     
+    // Inject JSON-LD Structured Data
+    if (meta.jsonLd) {
+      const jsonLdScript = `<script type="application/ld+json">\n${JSON.stringify(meta.jsonLd, null, 2)}\n</script>`;
+      html = html.replace(/<\/head>/, `  ${jsonLdScript}\n</head>`);
+    }
+
     res.send(html);
   } catch (err) {
     console.error("SEO Injection error:", err);
@@ -1739,10 +1745,29 @@ app.get("/product/:id", async (req, res, next) => {
       const imgs = JSON.parse(p[0].images as string || '[]');
       if (imgs.length) img = imgs[0];
     } catch(e) {}
+    
+    // Add Product JSON-LD schema
+    const jsonLd = {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": p[0].title,
+      "image": img ? [img] : [],
+      "description": p[0].description || `Buy ${p[0].title} wholesale on Hatake.`,
+      "sku": p[0].id.toString(),
+      "offers": {
+        "@type": "AggregateOffer",
+        "priceCurrency": "USD",
+        "lowPrice": p[0].unitCost || 0,
+        "offerCount": 1,
+        "availability": "https://schema.org/InStock"
+      }
+    };
+
     return {
       title: p[0].title,
       description: `Wholesale B2B marketplace. Buy ${p[0].title} from trusted suppliers.`,
-      image: img
+      image: img,
+      jsonLd
     };
   });
 });
@@ -1755,10 +1780,22 @@ app.get("/company/:id", async (req, res, next) => {
     if (isNaN(compId)) return { title: "Company Not Found", description: "This company could not be found." };
     const c = await db.select().from(users).where(eq(users.id, compId));
     if (!c.length) return { title: "Company Not Found", description: "This company could not be found." };
+    
+    // Add Organization JSON-LD schema
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": c[0].companyName || c[0].displayName || "Company",
+      "url": `${process.env.APP_URL || 'https://www.hatake.shop'}/company/${compId}`,
+      "logo": c[0].profilePictureUrl || "",
+      "description": `Wholesale B2B supplier profile for ${c[0].companyName || c[0].displayName}.`
+    };
+
     return {
       title: c[0].companyName || c[0].displayName || "Company Profile",
       description: `View the B2B wholesale profile, reviews, and products for ${c[0].companyName || c[0].displayName}.`,
-      image: c[0].profilePictureUrl
+      image: c[0].profilePictureUrl,
+      jsonLd
     };
   });
 });

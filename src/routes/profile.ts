@@ -387,4 +387,71 @@ router.get(["/company/:id/follow", "/api/company/:id/follow", "/api-v2/company/:
   }
 });
 
+// ---------------------------------------------------------------------------
+// VIES EU VAT Auto-Verification (free EU API, no cost)
+// Checks if a VAT number is valid against the EU VIES database.
+// On success: sets kybAutoVerified=true + supplierTier='Verified Supplier'.
+// ---------------------------------------------------------------------------
+router.post(["/api-v2/profile/verify-vat", "/api/profile/verify-vat"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) return res.status(404).json({ error: "User not found" });
+
+    const { vatNumber } = req.body;
+    if (!vatNumber || typeof vatNumber !== 'string') {
+      return res.status(400).json({ error: "vatNumber is required" });
+    }
+
+    // VAT format: first 2 chars = country code (e.g. SE123456789)
+    const countryCode = vatNumber.trim().substring(0, 2).toUpperCase();
+    const vatNum = vatNumber.trim().substring(2).replace(/[\s\-\.]/g, '');
+
+    // VIES SOAP request (free, no key needed)
+    const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:urn="urn:ec.europa.eu:taxud:vies:services:checkVat:types">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <urn:checkVat>
+      <urn:countryCode>${countryCode}</urn:countryCode>
+      <urn:vatNumber>${vatNum}</urn:vatNumber>
+    </urn:checkVat>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+    const viesRes = await fetch('https://ec.europa.eu/taxation_customs/vies/services/checkVatService', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': '' },
+      body: soapBody,
+      signal: AbortSignal.timeout(8000),
+    });
+
+    const xml = await viesRes.text();
+    const isValid = xml.includes('<valid>true</valid>');
+    // Extract company name from VIES response if available
+    const nameMatch = xml.match(/<name>([^<]+)<\/name>/);
+    const viesName = nameMatch ? nameMatch[1].trim() : null;
+
+    if (isValid) {
+      await db.update(users)
+        .set({
+          kybAutoVerified: true,
+          supplierTier: 'Verified Supplier',
+          verificationStatus: 'verified',
+          ...(viesName && viesName !== '---' ? { companyName: viesName } : {}),
+        })
+        .where(eq(users.id, userProfile.id));
+
+      return res.json({ verified: true, companyName: viesName, message: 'VAT verified via EU VIES — Verified Supplier badge granted.' });
+    }
+
+    res.json({ verified: false, message: 'VAT number not found in EU VIES database. Please check the number and try again.' });
+  } catch (err: any) {
+    console.error('VIES VAT verification error:', err);
+    // Don't expose network errors to the client
+    res.status(502).json({ error: 'Could not reach EU VIES service. Please try again later.' });
+  }
+});
+
 export default router;
+

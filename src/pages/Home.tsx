@@ -403,7 +403,7 @@ export function Home() {
           {/* Epic Typography */}
           <div className="text-center space-y-8 max-w-5xl mx-auto">
             {/* Logo above heading — no extra gap, tight mb-0 so it flows into the h1 */}
-            <img src="/logo.png" alt="Hatake.Shop" className="h-16 md:h-20 w-auto mx-auto mb-0 drop-shadow-[0_0_24px_rgba(99,102,241,0.35)]" />
+            <img src="/logo.png" alt="Hatake.Shop" className="h-24 md:h-32 w-auto mx-auto mb-0 drop-shadow-[0_0_24px_rgba(99,102,241,0.35)]" />
             <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 drop-shadow-sm !mt-4">
               {t('Next-Generation')} <br/>
               <span className="bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent filter drop-shadow-[0_0_20px_rgba(99,102,241,0.3)]">{t('B2B TCG Sourcing')}</span>

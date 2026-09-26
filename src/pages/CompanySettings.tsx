@@ -12,6 +12,7 @@ export function CompanySettings() {
   const { user, dbUser, updateDbUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingKyb, setUploadingKyb] = useState(false);
+  const [vatVerifying, setVatVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const navigate = useNavigate();
 
@@ -373,12 +374,51 @@ export function CompanySettings() {
                       <div className="space-y-2 flex flex-col">
                         <label className="text-sm font-semibold tracking-tight text-slate-300 flex items-center">
                           <FileText className="w-4 h-4 mr-2 text-slate-400" /> {t('VAT / Tax ID Number')}
+                          {dbUser?.kybAutoVerified && (
+                            <span className="ml-2 flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/30">
+                              <ShieldCheck className="w-3 h-3" /> EU Verified
+                            </span>
+                          )}
                         </label>
-                        <input
-                          type="text" name="vatNumber" required
-                          value={formData.vatNumber} onChange={handleChange}
-                          className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-mono text-sm"
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text" name="vatNumber"
+                            placeholder="e.g. SE123456789001"
+                            value={formData.vatNumber} onChange={handleChange}
+                            className="flex-1 bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-mono text-sm"
+                          />
+                          <button
+                            type="button"
+                            disabled={vatVerifying || !formData.vatNumber}
+                            onClick={async () => {
+                              setVatVerifying(true);
+                              try {
+                                const token = await user!.getIdToken();
+                                const res = await fetch('/api-v2/profile/verify-vat', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                  body: JSON.stringify({ vatNumber: formData.vatNumber }),
+                                });
+                                const data = await res.json();
+                                if (data.verified) {
+                                  toast.success(`✅ ${data.message}`);
+                                  updateDbUser({ ...dbUser, kybAutoVerified: true, supplierTier: 'Verified Supplier', verificationStatus: 'verified' });
+                                } else {
+                                  toast.error(data.message || data.error || 'Verification failed');
+                                }
+                              } catch (e: any) {
+                                toast.error('Could not reach EU VIES. Try again.');
+                              } finally {
+                                setVatVerifying(false);
+                              }
+                            }}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+                          >
+                            {vatVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                            {vatVerifying ? 'Checking...' : 'Verify EU VAT'}
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-500">EU VAT numbers only. Format: country code + number (e.g. SE123456789001). Verified via the free EU VIES registry.</p>
                       </div>
                       <div className="space-y-2 flex flex-col">
                         <label className="text-sm font-semibold tracking-tight text-slate-300 flex items-center">
