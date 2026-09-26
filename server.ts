@@ -1218,7 +1218,7 @@ User input: "${prompt}"`,
       }
     });
 
-    const text = typeof response.text === 'function' ? response.text() : response.text;
+    const text = typeof response.text === 'function' ? (response as any).text() : response.text;
     const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
     const json = JSON.parse(cleaned || "{}");
     res.json(json);
