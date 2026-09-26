@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { FeedbackModal } from './FeedbackModal';
 import { useCart } from './SampleCart.tsx';
-import { Package, Search, MessageSquare, Settings, LogIn, LogOut, Hexagon, Shield, Store, Menu, X, ChevronDown, ShoppingCart, TrendingUp, Users } from 'lucide-react';
+import { Package, Search, MessageSquare, Settings, LogIn, LogOut, Hexagon, Shield, Store, Menu, X, ChevronDown, ShoppingCart, TrendingUp, Users, Home, Bot } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Notifications } from './Notifications.tsx';
@@ -25,7 +25,8 @@ export function Layout() {
   const [logoMenuOpen, setLogoMenuOpen] = useState(false);
 
 const mainNavItems = [
-    { name: 'Home', path: '/', icon: Package },
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'AI Sourcing Agent', path: '/onboarding', icon: Bot },
     { name: 'Directory', path: '/suppliers', icon: Users },
     { name: 'Marketplace', path: '/marketplace', icon: Store },
     { name: 'Feed', path: '/feed', icon: Users },
@@ -42,30 +43,12 @@ const mainNavItems = [
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 sm:h-20 items-center">
             
-            {/* LEFT: Wordmark & Main Nav */}
-            <div className="flex items-center space-x-4 lg:space-x-6">
-              <div className="relative flex flex-col justify-center h-full">
-                <button 
-                  onClick={() => setLogoMenuOpen(!logoMenuOpen)}
-                  className="flex items-center space-x-1.5 cursor-pointer outline-none focus:ring-2 focus:ring-accent/50 rounded-lg px-2 py-1.5 hover:bg-slate-700 transition-colors"
-                >
-                  <span className="text-white font-bold text-xl tracking-tight">Hatake<span className="text-cyan-400">.Shop</span></span>
-                  <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", logoMenuOpen ? "rotate-180" : "")} />
-                </button>
-                {logoMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setLogoMenuOpen(false)}></div>
-                    <div className="absolute top-full left-0 mt-2 w-56 bg-slate-800 rounded-xl shadow-lg border border-slate-700 transition-all duration-200 z-50 overflow-hidden py-1">
-                      <Link to="/" onClick={() => setLogoMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-100 hover:bg-slate-700 font-medium">{t('Home')}</Link>
-                      <Link to="/marketplace" onClick={() => setLogoMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-100 hover:bg-slate-700 font-medium">{t('Marketplace')}</Link>
-                      <Link to="/onboarding" onClick={() => setLogoMenuOpen(false)} className="block px-4 py-2.5 text-sm text-cyan-400 hover:bg-slate-700 font-bold">{t('AI Sourcing Agent')}</Link>
-                    </div>
-                  </>
-                )}
-              </div>
-              
-              {/* Desktop Main Nav */}
-              <nav className="hidden md:flex space-x-2 border-l border-slate-700 pl-6 lg:pl-8">
+            {/* LEFT: Main Nav (Icons Only) */}
+            <div className="flex items-center space-x-2">
+              <Link to="/" className="md:hidden text-white font-bold text-xl tracking-tight pr-2">
+                Hatake<span className="text-cyan-400">.Shop</span>
+              </Link>
+              <nav className="hidden md:flex space-x-1">
                 {mainNavItems.map((item) => {
                   if (item.protected && !user) return null;
                   const active = location.pathname === item.path;
@@ -73,15 +56,15 @@ const mainNavItems = [
                     <Link
                       key={item.path}
                       to={item.path}
+                      title={t(item.name)}
                       className={cn(
-                        "px-3 py-2 rounded-lg text-sm font-semibold tracking-wide flex items-center space-x-2 transition-all duration-200",
+                        "p-2.5 rounded-lg flex items-center transition-all duration-200",
                         active 
                           ? "bg-accent/10 text-[#ffcc00]" 
                           : "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
                       )}
                     >
-                      <item.icon className="w-4 h-4" />
-                      <span>{t(item.name)}</span>
+                      <item.icon className="w-5 h-5" />
                     </Link>
                   )
                 })}
