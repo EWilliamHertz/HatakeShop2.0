@@ -109,9 +109,10 @@ export function Onboarding() {
       <div className="absolute inset-0 opacity-[0.25] pointer-events-none overflow-hidden flex items-center justify-center">
         <motion.div 
           className="absolute w-[240vh] h-[240vh] rounded-full"
-          style={{ top: '20vh' }}
-          animate={{ rotate: [0, 360] }}
-          transition={{ repeat: Infinity, duration: 100, ease: "linear" }}
+          style={{ top: '30vh', left: '50%' }}
+          initial={{ x: "-50%" }}
+          animate={{ x: "-50%", rotate: [0, 360] }}
+          transition={{ repeat: Infinity, duration: 150, ease: "linear" }}
         >
           {backgroundImages.map((item, i) => {
              const angle = (i * (360 / backgroundImages.length));
