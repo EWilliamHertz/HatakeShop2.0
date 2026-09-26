@@ -2,6 +2,8 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
+export let firebaseInitError = '';
+
 if (getApps().length === 0) {
   try {
     let credentialConfig;
@@ -22,6 +24,7 @@ if (getApps().length === 0) {
     });
     console.log("Firebase Admin Initialized Successfully");
   } catch (error: any) {
+    firebaseInitError = error.message;
     console.error('Firebase admin initialization error:', error.message);
   }
 }

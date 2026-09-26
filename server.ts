@@ -37,6 +37,7 @@ import profileRouter from "./src/routes/profile.js";
 import rfqsRouter from "./src/routes/rfqs.js";
 import leadsRouter from "./src/routes/leads.js";
 import webhooksRouter from "./src/routes/webhooks.js";
+app.get("/api-v2/debug-firebase", (req, res) => { import("./src/lib/firebase-admin.js").then(m => { res.json({ error: m.firebaseInitError, hasJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, hasPrivKey: !!process.env.FIREBASE_PRIVATE_KEY }) }) });
 import categoriesRouter from "./src/routes/categories.js";
 
 // Background task to process drip campaigns
