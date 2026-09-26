@@ -8,6 +8,7 @@ export interface CartItem {
   image: string;
   sellerName: string;
   sellerId: number;
+  quantity?: number;
 }
 
 interface CartContextType {
@@ -45,6 +46,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('sample_cart', JSON.stringify(items));
   }, [items]);
 
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const saved = localStorage.getItem('sample_cart');
+        if (saved) setItems(JSON.parse(saved));
+      } catch(e) {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const addItem = (item: CartItem) => {
     setItems(prev => {
       if (prev.find(i => i.productId === item.productId)) return prev;
@@ -81,7 +93,7 @@ const CartDrawer = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}` // assuming token is used
         },
-        body: JSON.stringify({ items: items.map(i => ({ productId: i.productId, quantity: 1 })) }), // sample quantity is 1
+        body: JSON.stringify({ items: items.map(i => ({ productId: i.productId, quantity: i.quantity || 1 })) }),
       });
       const data = await response.json();
       if (data.url) {
@@ -162,7 +174,7 @@ const CartDrawer = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold tracking-tight text-slate-100 truncate">{item.title}</p>
-                          <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mt-1">Item</p>
+                          <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mt-1">Qty: {item.quantity || 1}</p>
                         </div>
                         <button onClick={() => removeItem(item.productId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100">
                           <Trash2 className="w-4 h-4" />

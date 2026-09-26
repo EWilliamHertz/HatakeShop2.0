@@ -265,7 +265,7 @@ export function Onboarding() {
                 <Search className="w-8 h-8" />
               </div>
               <h2 className="text-3xl font-bold text-white mb-4">{historyLog?.wantsCart && historyLog?.cartItems?.length ? "Profile & Cart Ready!" : "Profile Configured!"}</h2>
-              <p className="text-cyan-100/70 mb-8 text-lg">{historyLog?.wantsCart && historyLog?.cartItems?.length ? `We automatically added ${historyLog.cartItems.length} recommended products to your cart based on your budget! How would you like to proceed?` : "Your personalized marketplace is ready. How would you like to proceed?"}</p>
+              <p className="text-cyan-100/70 mb-8 text-lg">{historyLog?.wantsCart && historyLog?.cartItems?.length ? `We automatically added ${historyLog.cartItems.reduce((acc: any, item: any) => acc + (item.quantity || 1), 0)} total units (across ${historyLog.cartItems.length} distinct products) to your cart based on your budget! How would you like to proceed?` : "Your personalized marketplace is ready. How would you like to proceed?"}</p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button 
