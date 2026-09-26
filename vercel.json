@@ -3,6 +3,10 @@
     {
       "path": "/api/health",
       "schedule": "*/10 6-20 * * *"
+    },
+    {
+      "path": "/api-v2/cron/drip",
+      "schedule": "0 10 * * *"
     }
   ],
   "rewrites": [

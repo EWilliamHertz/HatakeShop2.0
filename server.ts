@@ -40,40 +40,6 @@ import webhooksRouter from "./src/routes/webhooks.js";
 import categoriesRouter from "./src/routes/categories.js";
 
 // Background task to process drip campaigns
-if (!process.env.VERCEL) {
-  setInterval(async () => {
-    try {
-      console.log("Running CRM Drip processor...");
-      const now = new Date();
-      const pendingLeads = await db.select().from(leads).where(eq(leads.status, 'sent'));
-      for (const lead of pendingLeads) {
-         if (!lead.sentAt) continue;
-         const daysSinceSent = (now.getTime() - new Date(lead.sentAt).getTime()) / (1000 * 3600 * 24);
-         const lastEmailedDays = lead.lastEmailedAt ? (now.getTime() - new Date(lead.lastEmailedAt).getTime()) / (1000 * 3600 * 24) : daysSinceSent;
-         
-         let shouldSend = false;
-         let nextStep = lead.dripStep || 1;
-         
-         if (nextStep === 1 && daysSinceSent >= 3) {
-           shouldSend = true; nextStep = 2;
-         } else if (nextStep === 2 && daysSinceSent >= 7 && lastEmailedDays >= 4) {
-           shouldSend = true; nextStep = 3;
-         } else if (nextStep === 3 && daysSinceSent >= 14 && lastEmailedDays >= 7) {
-           shouldSend = true; nextStep = 4;
-         }
-         
-         if (shouldSend) {
-            console.log(`Sending Drip Step ${nextStep} to ${lead.email}`);
-            await db.update(leads).set({ dripStep: nextStep, lastEmailedAt: now }).where(eq(leads.id, lead.id));
-         }
-      }
-    } catch (e) {
-      console.error("Drip processor error:", e);
-    }
-  }, 1000 * 60 * 60);
-}
-
-const app = express();
 app.get("/api-v2/debug-firebase", (req, res) => { import("./src/lib/firebase-admin.js").then(m => { res.json({ error: m.firebaseInitError, hasJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, hasPrivKey: !!process.env.FIREBASE_PRIVATE_KEY }) }) });
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
