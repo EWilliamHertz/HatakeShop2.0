@@ -259,10 +259,17 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
       }
       
       if (textSearchFailed) {
-         conditions.push(or(
-           ilike(products.title, `%${q}%`),
-           ilike(products.description, `%${q}%`)
-         ) as any);
+         const qStr = String(q || '').trim();
+         if (qStr) {
+           // Tier 1: full-text search (uses the GIN index we created)
+           // websearch_to_tsquery handles multi-word, boolean, quoted phrases
+           conditions.push(
+             sql`(
+               websearch_to_tsquery('simple', ${qStr}) @@ to_tsvector('simple', coalesce(${products.title},'') || ' ' || coalesce(${products.description},''))
+               OR similarity(${products.title}, ${qStr}) > 0.2
+             )` as any
+           );
+         }
       }
       
       query = query.where(and(...conditions)) as any;
