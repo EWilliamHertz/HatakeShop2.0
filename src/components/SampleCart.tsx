@@ -36,7 +36,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('sample_cart');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       return [];
     }
@@ -51,7 +53,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const handleStorage = () => {
       try {
         const saved = localStorage.getItem('sample_cart');
-        if (saved) setItems(JSON.parse(saved));
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setItems(parsed);
+        }
       } catch(e) {}
     };
     window.addEventListener('storage', handleStorage);
@@ -67,7 +72,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeItem = (productId: number) => {
-    setItems(prev => prev.filter(i => i.productId !== productId));
+    setItems(prev => prev.filter(i => String(i.productId) !== String(productId)));
   };
 
   const clearCart = () => setItems([]);
@@ -143,9 +148,14 @@ const CartDrawer = () => {
             <Package className="w-5 h-5 mr-2 text-[#ffcc00]" />
             Cart ({items.length})
           </h2>
-          <button onClick={() => setCartOpen(false)} className="p-2 text-slate-400 hover:text-slate-400 hover:bg-slate-600 rounded-full transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {items.length > 0 && (
+               <button onClick={clearCart} className="text-xs text-slate-400 hover:text-rose-400 font-medium transition-colors uppercase tracking-wider px-2 py-1">Clear</button>
+            )}
+            <button onClick={() => setCartOpen(false)} className="p-2 text-slate-400 hover:text-slate-400 hover:bg-slate-600 rounded-full transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
