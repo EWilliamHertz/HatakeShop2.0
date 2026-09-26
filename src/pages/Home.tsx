@@ -383,16 +383,15 @@ export function Home() {
 
 
   const onboardingImages = React.useMemo(() => {
-    const imgs = [];
+    const imgs = new Set();
     const source = sortedHomeProducts.length > 0 ? sortedHomeProducts : homeProducts;
     for (const p of source) {
       if (!p) continue;
       let parsed = [];
       try { parsed = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch {}
-      if (parsed[0]) imgs.push(parsed[0]);
-      if (imgs.length >= 25) break;
+      if (parsed[0]) imgs.add(parsed[0]);
     }
-    return imgs.sort(() => Math.random() - 0.5); // shuffle
+    return Array.from(imgs).sort(() => Math.random() - 0.5); // shuffle
   }, [sortedHomeProducts, homeProducts]);
 
   if (showOnboarding) {
