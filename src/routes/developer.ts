@@ -97,3 +97,38 @@ router.post(["/inventory/sync"], requireApiKey, async (req: any, res: any) => {
 });
 
 export default router;
+
+// POST /api-v2/webhook/bokio-test
+// Simulates Hatake sending a paid invoice directly to Bokio's REST API
+router.post(["/webhook/bokio-test"], requireApiKey, async (req: any, res: any) => {
+  try {
+    const user = req.apiUser;
+    
+    // In a real scenario, this would be triggered internally by our Stripe webhook.
+    // For this demonstration, we allow the user to trigger a test journal entry sync.
+    const mockJournalEntry = {
+      date: new Date().toISOString().split('T')[0],
+      description: "Hatake.Shop B2B Order #HTK-9921",
+      rows: [
+        { account: 3000, amount: 1500.00, type: 'credit' }, // Sales
+        { account: 2611, amount: 375.00, type: 'credit' },  // VAT
+        { account: 1930, amount: 1875.00, type: 'debit' }   // Bank
+      ]
+    };
+
+    console.log(`[Bokio Sync] Pushing journal entry for user ${user.id}...`, mockJournalEntry);
+    
+    // Simulate API delay to Bokio
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    return res.json({
+      success: true,
+      message: "Successfully synchronized journal entry to Bokio.",
+      bokioReference: "BOK-JE-77291-HTK",
+      syncedData: mockJournalEntry
+    });
+  } catch (error: any) {
+    console.error("Bokio Sync Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
