@@ -179,16 +179,16 @@ export function CompanyListings() {
           </div>
 
           {/* Filters Area */}
-          <div className="flex flex-col gap-3 w-full">
+          <div className="flex flex-col gap-5 w-full">
             {/* Category pills */}
             {categories.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
                 <Tag className="w-4 h-4 text-slate-500 shrink-0" />
                 {categories.map(([cat, count]) => (
                   <button
                     key={cat}
                     onClick={() => toggleMultiParam('categories', cat)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
+                    className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
                   >
                     {cat} ({count})
                   </button>
@@ -197,34 +197,20 @@ export function CompanyListings() {
             )}
             {/* Language pills */}
             {languages.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider w-4 text-center">L</span>
                 {languages.map(([lang, count]) => (
                   <button
                     key={lang}
                     onClick={() => toggleMultiParam('languages', lang)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedLanguages.includes(lang) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
+                    className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all ${selectedLanguages.includes(lang) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
                   >
                     {lang} ({count})
                   </button>
                 ))}
               </div>
             )}
-            {/* Type pills */}
-            {types.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Box className="w-4 h-4 text-slate-500 shrink-0" />
-                {types.map(([typ, count]) => (
-                  <button
-                    key={typ}
-                    onClick={() => toggleMultiParam('types', typ)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedTypes.includes(typ) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
-                  >
-                    {typ} ({count})
-                  </button>
-                ))}
-              </div>
-            )}
+            
           </div>
 
           {/* Sort Dropdown */}
