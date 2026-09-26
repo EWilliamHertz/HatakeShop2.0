@@ -164,7 +164,7 @@ const CartDrawer = () => {
           <div className="flex justify-between items-end">
              <div>
                 <p className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-1">Gold Tier</p>
-                <p className="text-sm text-slate-300">You are <span className="font-bold text-white">€1,200</span> away from unlocking <span className="text-[#ffcc00] font-bold">Platinum Tier (5% off)</span>.</p>
+                <p className="text-sm text-slate-300">You are <span className="font-bold text-white">€1,200</span> away from unlocking <span className="text-[#ffcc00] font-bold">Platinum Tier (Reduced Platform Commission)</span>.</p>
              </div>
           </div>
           <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden mt-1 border border-slate-700">
@@ -206,7 +206,7 @@ const CartDrawer = () => {
                             </p>
                           </div>
                         </div>
-                        <button onClick={() => removeItem(item.productId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100 shrink-0">
+                        <button onClick={() => removeItem(item.productId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-800 rounded-xl transition-colors shrink-0">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
