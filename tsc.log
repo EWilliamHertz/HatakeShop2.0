@@ -1,0 +1,135 @@
+npm notice run hatake-shop@0.0.0 npx
+npm notice run 'tsc' --noEmit
+fix_old_inquiries.ts(4,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+server.ts(29,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+server.ts(29,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+server.ts(29,18): error TS2305: Module '"drizzle-orm"' has no exported member 'ilike'.
+server.ts(29,25): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+server.ts(29,30): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+server.ts(29,35): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+server.ts(29,41): error TS2724: '"drizzle-orm"' has no exported member named 'isNotNull'. Did you mean 'NotNull'?
+server.ts(29,52): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+server.ts(29,61): error TS2305: Module '"drizzle-orm"' has no exported member 'ne'.
+server.ts(29,65): error TS2305: Module '"drizzle-orm"' has no exported member 'not'.
+server.ts(29,70): error TS2305: Module '"drizzle-orm"' has no exported member 'asc'.
+server.ts(29,75): error TS2305: Module '"drizzle-orm"' has no exported member 'gte'.
+server.ts(29,80): error TS2305: Module '"drizzle-orm"' has no exported member 'lte'.
+server.ts(1221,27): error TS6234: This expression is not callable because it is a 'get' accessor. Did you mean to use it without '()'?
+  Type 'String' has no call signatures.
+server.ts(1396,18): error TS2304: Cannot find name 'quantity'.
+server.ts(1587,21): error TS2339: Property 'eq' does not exist on type 'typeof import("/home/ewilliamhe/HatakeShop2.0/node_modules/drizzle-orm/index")'.
+server.ts(1607,24): error TS2304: Cannot find name 'totalQuantity'.
+src/db/schema.ts(1,10): error TS2305: Module '"drizzle-orm"' has no exported member 'relations'.
+src/db/schema.ts(1,21): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/db/schema.ts(2,10): error TS2305: Module '"drizzle-orm/pg-core"' has no exported member 'integer'.
+src/db/schema.ts(2,19): error TS2305: Module '"drizzle-orm/pg-core"' has no exported member 'pgTable'.
+src/db/schema.ts(2,28): error TS2305: Module '"drizzle-orm/pg-core"' has no exported member 'serial'.
+src/db/schema.ts(2,36): error TS2305: Module '"drizzle-orm/pg-core"' has no exported member 'text'.
+src/db/schema.ts(2,42): error TS2305: Module '"drizzle-orm/pg-core"' has no exported member 'timestamp'.
+src/db/schema.ts(2,53): error TS2305: Module '"drizzle-orm/pg-core"' has no exported member 'jsonb'.
+src/db/schema.ts(2,60): error TS2305: Module '"drizzle-orm/pg-core"' has no exported member 'numeric'.
+src/db/schema.ts(2,90): error TS2305: Module '"drizzle-orm/pg-core"' has no exported member 'index'.
+src/db/schema.ts(107,14): error TS2349: This expression is not callable.
+  Each member of the union type '{ <TConfig extends Record<string, any>>(fieldConfig: TConfig): PgCustomColumnBuilder<{ name: ""; dataType: "custom"; columnType: "PgCustomColumn"; data: number[]; driverParam: string; enumValues: undefined; }>; <TName extends string>(dbName: TName, fieldConfig: unknown): PgCustomColumnBuilder<...>; } | { ...; }' has signatures, but none of those signatures are compatible with each other.
+src/db/users.ts(3,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/db/users.ts(3,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/lib/translate.ts(3,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/lib/translate.ts(3,14): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/middleware/roles.ts(5,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/middleware/roles.ts(5,14): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/pages/Storefront.tsx(246,26): error TS2552: Cannot find name 'formatLang'. Did you mean 'FormData'?
+src/routes/admin.ts(9,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/admin.ts(9,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/admin.ts(9,18): error TS2305: Module '"drizzle-orm"' has no exported member 'ilike'.
+src/routes/admin.ts(9,25): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/admin.ts(9,30): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/admin.ts(9,35): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/admin.ts(9,41): error TS2724: '"drizzle-orm"' has no exported member named 'isNotNull'. Did you mean 'NotNull'?
+src/routes/admin.ts(9,52): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/admin.ts(9,61): error TS2305: Module '"drizzle-orm"' has no exported member 'ne'.
+src/routes/admin.ts(9,65): error TS2305: Module '"drizzle-orm"' has no exported member 'not'.
+src/routes/admin.ts(9,70): error TS2305: Module '"drizzle-orm"' has no exported member 'asc'.
+src/routes/admin.ts(784,13): error TS2339: Property 'eq' does not exist on type 'typeof import("/home/ewilliamhe/HatakeShop2.0/node_modules/drizzle-orm/index")'.
+src/routes/auth.ts(8,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/auth.ts(8,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/auth.ts(8,18): error TS2305: Module '"drizzle-orm"' has no exported member 'ilike'.
+src/routes/auth.ts(8,25): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/auth.ts(8,30): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/auth.ts(8,35): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/auth.ts(8,41): error TS2724: '"drizzle-orm"' has no exported member named 'isNotNull'. Did you mean 'NotNull'?
+src/routes/auth.ts(8,52): error TS2305: Module '"drizzle-orm"' has no exported member 'isNull'.
+src/routes/auth.ts(8,60): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/auth.ts(8,69): error TS2305: Module '"drizzle-orm"' has no exported member 'ne'.
+src/routes/auth.ts(8,73): error TS2305: Module '"drizzle-orm"' has no exported member 'not'.
+src/routes/auth.ts(8,78): error TS2305: Module '"drizzle-orm"' has no exported member 'asc'.
+src/routes/categories.ts(7,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/categories.ts(7,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/categories.ts(7,18): error TS2305: Module '"drizzle-orm"' has no exported member 'ilike'.
+src/routes/categories.ts(7,25): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/categories.ts(7,30): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/categories.ts(7,35): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/categories.ts(7,41): error TS2724: '"drizzle-orm"' has no exported member named 'isNotNull'. Did you mean 'NotNull'?
+src/routes/categories.ts(7,52): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/categories.ts(7,61): error TS2305: Module '"drizzle-orm"' has no exported member 'ne'.
+src/routes/categories.ts(7,65): error TS2305: Module '"drizzle-orm"' has no exported member 'not'.
+src/routes/categories.ts(7,70): error TS2305: Module '"drizzle-orm"' has no exported member 'asc'.
+src/routes/feed.ts(4,10): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/feed.ts(6,10): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/feed.ts(6,16): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/feed.ts(6,20): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/feed.ts(8,10): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/leads.ts(7,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/leads.ts(7,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/leads.ts(7,18): error TS2305: Module '"drizzle-orm"' has no exported member 'ilike'.
+src/routes/leads.ts(7,25): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/leads.ts(7,30): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/leads.ts(7,35): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/leads.ts(7,41): error TS2724: '"drizzle-orm"' has no exported member named 'isNotNull'. Did you mean 'NotNull'?
+src/routes/leads.ts(7,52): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/leads.ts(7,61): error TS2305: Module '"drizzle-orm"' has no exported member 'ne'.
+src/routes/leads.ts(7,65): error TS2305: Module '"drizzle-orm"' has no exported member 'not'.
+src/routes/leads.ts(7,70): error TS2305: Module '"drizzle-orm"' has no exported member 'asc'.
+src/routes/notifications.ts(4,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/notifications.ts(4,14): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/products.ts(7,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/products.ts(7,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/products.ts(7,18): error TS2305: Module '"drizzle-orm"' has no exported member 'ilike'.
+src/routes/products.ts(7,25): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/products.ts(7,30): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/products.ts(7,35): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/products.ts(7,41): error TS2724: '"drizzle-orm"' has no exported member named 'isNotNull'. Did you mean 'NotNull'?
+src/routes/products.ts(7,52): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/products.ts(7,61): error TS2305: Module '"drizzle-orm"' has no exported member 'ne'.
+src/routes/products.ts(7,65): error TS2305: Module '"drizzle-orm"' has no exported member 'not'.
+src/routes/products.ts(7,70): error TS2305: Module '"drizzle-orm"' has no exported member 'asc'.
+src/routes/profile.ts(4,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/profile.ts(4,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/profile.ts(4,18): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/profile.ts(4,23): error TS2305: Module '"drizzle-orm"' has no exported member 'isNull'.
+src/routes/profile.ts(4,31): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/rfqs.ts(4,10): error TS2305: Module '"drizzle-orm"' has no exported member 'not'.
+src/routes/rfqs.ts(4,15): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/rfqs.ts(4,19): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/rfqs.ts(4,23): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/rfqs.ts(4,28): error TS2305: Module '"drizzle-orm"' has no exported member 'isNull'.
+src/routes/rfqs.ts(4,36): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/rfqs.ts(4,42): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/rfqs.ts(4,51): error TS2305: Module '"drizzle-orm"' has no exported member 'asc'.
+src/routes/seller.ts(4,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/seller.ts(4,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/seller.ts(4,18): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/seller.ts(4,23): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/seller.ts(4,29): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/seller.ts(4,34): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/seller.ts(4,43): error TS2305: Module '"drizzle-orm"' has no exported member 'ilike'.
+src/routes/webhooks.ts(7,10): error TS2305: Module '"drizzle-orm"' has no exported member 'eq'.
+src/routes/webhooks.ts(7,14): error TS2305: Module '"drizzle-orm"' has no exported member 'or'.
+src/routes/webhooks.ts(7,18): error TS2305: Module '"drizzle-orm"' has no exported member 'ilike'.
+src/routes/webhooks.ts(7,25): error TS2305: Module '"drizzle-orm"' has no exported member 'sql'.
+src/routes/webhooks.ts(7,30): error TS2305: Module '"drizzle-orm"' has no exported member 'and'.
+src/routes/webhooks.ts(7,35): error TS2305: Module '"drizzle-orm"' has no exported member 'desc'.
+src/routes/webhooks.ts(7,41): error TS2724: '"drizzle-orm"' has no exported member named 'isNotNull'. Did you mean 'NotNull'?
+src/routes/webhooks.ts(7,52): error TS2305: Module '"drizzle-orm"' has no exported member 'inArray'.
+src/routes/webhooks.ts(7,61): error TS2305: Module '"drizzle-orm"' has no exported member 'ne'.
+src/routes/webhooks.ts(7,65): error TS2305: Module '"drizzle-orm"' has no exported member 'not'.
+src/routes/webhooks.ts(7,70): error TS2305: Module '"drizzle-orm"' has no exported member 'asc'.

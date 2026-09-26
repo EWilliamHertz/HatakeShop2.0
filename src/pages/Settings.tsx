@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useAuth } from '../components/AuthContext.tsx';
 import { toast } from 'sonner';
-import { Loader2, Save, Languages, Users, Upload, User, Mail, Lock } from 'lucide-react';
+import { Loader2, Save, Languages, Users, Upload, User, Mail, Lock , Code} from 'lucide-react';
 import { AffiliateDashboard } from './AffiliateDashboard.tsx';
 
 export function Settings() {
@@ -117,6 +117,7 @@ export function Settings() {
     { id: 'personal', name: 'Personal Profile', icon: User },
     { id: 'preferences', name: 'Preferences', icon: Languages },
     { id: 'referral', name: 'Partner Referral Program', icon: Users },
+    { id: 'api', name: 'Developer API', icon: Code },
   ];
 
   return (
