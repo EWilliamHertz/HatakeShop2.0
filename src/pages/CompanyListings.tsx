@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
-import { Package, BadgeCheck, Search, ArrowLeft, Tag, ChevronDown, ArrowUpDown } from 'lucide-react';
+import { Package, BadgeCheck, Search, ArrowLeft, Tag, ChevronDown, ArrowUpDown, Box } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
