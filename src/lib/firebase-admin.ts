@@ -8,7 +8,11 @@ if (getApps().length === 0) {
   try {
     let credentialConfig;
     if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      credentialConfig = cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON));
+      let rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+      if (!rawJson.trim().startsWith('{')) {
+        rawJson = Buffer.from(rawJson, 'base64').toString('utf-8');
+      }
+      credentialConfig = cert(JSON.parse(rawJson));
     } else {
       credentialConfig = cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
