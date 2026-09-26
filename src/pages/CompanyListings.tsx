@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
-import { Package, BadgeCheck, Search, ArrowLeft, Tag, ChevronDown } from 'lucide-react';
+import { Package, BadgeCheck, Search, ArrowLeft, Tag, ChevronDown, ArrowUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
@@ -12,8 +12,23 @@ export function CompanyListings() {
   const { formatPrice } = useCurrency();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const search = searchParams.get('search') || '';
+  const selectedCategory = searchParams.get('category') || 'all';
+  const sortOption = searchParams.get('sort') || 'newest';
+
+  const updateSearchParam = (key: string, value: string) => {
+    setSearchParams(prev => {
+      if (!value || (key === 'category' && value === 'all') || (key === 'sort' && value === 'newest')) {
+        prev.delete(key);
+      } else {
+        prev.set(key, value);
+      }
+      return prev;
+    });
+  };
+
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   const { data, isLoading } = useQuery({
@@ -44,19 +59,45 @@ export function CompanyListings() {
     return Object.entries(cats).sort((a, b) => b[1] - a[1]);
   }, [safeProducts]);
 
-  const filtered = useMemo(() => safeProducts.filter((p: any) => {
-    if (!p) return false;
-    const pTitle = String(p.title || '');
-    const pDesc = String(p.description || '');
-    const searchLower = String(search || '').toLowerCase();
-    
-    const matchesSearch = !search ||
-      pTitle.toLowerCase().includes(searchLower) ||
-      pDesc.toLowerCase().includes(searchLower);
-    const matchesCategory = selectedCategory === 'all' ||
-      (p.category || p.categoryName || p.originType || 'Other') === selectedCategory;
-    return matchesSearch && matchesCategory;
-  }), [safeProducts, search, selectedCategory]);
+  const filtered = useMemo(() => {
+    const results = safeProducts.filter((p: any) => {
+      if (!p) return false;
+      const pTitle = String(p.title || '');
+      const pDesc = String(p.description || '');
+      const searchLower = String(search || '').toLowerCase();
+      
+      const matchesSearch = !search ||
+        pTitle.toLowerCase().includes(searchLower) ||
+        pDesc.toLowerCase().includes(searchLower);
+      const matchesCategory = selectedCategory === 'all' ||
+        (p.category || p.categoryName || p.originType || 'Other') === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+
+    results.sort((a: any, b: any) => {
+      const getLowestPrice = (p: any) => {
+        let tiers: any[] = [];
+        try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch {}
+        const tierPrices = (Array.isArray(tiers) ? tiers : []).map((t: any) => Number(t.price ?? t.unitPrice)).filter((n: number) => Number.isFinite(n) && n > 0);
+        const basePrice = Number(p.unitCost ?? p.unitPrice);
+        return tierPrices.length > 0 ? Math.min(...tierPrices) : (Number.isFinite(basePrice) && basePrice > 0 ? basePrice : Infinity);
+      };
+
+      switch (sortOption) {
+        case 'price-low':
+          return getLowestPrice(a) - getLowestPrice(b);
+        case 'price-high':
+          return getLowestPrice(b) - getLowestPrice(a);
+        case 'oldest':
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        case 'newest':
+        default:
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
+    });
+
+    return results;
+  }, [safeProducts, search, selectedCategory, sortOption]);
 
   return (
     <div className="min-h-screen bg-slate-950 pb-24">
@@ -93,7 +134,7 @@ export function CompanyListings() {
               type="text"
               placeholder="Search listings..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => updateSearchParam('search', e.target.value)}
               className="w-full pl-11 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all text-sm"
             />
           </div>
@@ -103,7 +144,7 @@ export function CompanyListings() {
             <div className="flex flex-wrap items-center gap-2">
               <Tag className="w-4 h-4 text-slate-500 shrink-0" />
               <button
-                onClick={() => setSelectedCategory('all')}
+                onClick={() => updateSearchParam('category', 'all')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategory === 'all' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
               >
                 All ({safeProducts.length})
@@ -111,7 +152,7 @@ export function CompanyListings() {
               {categories.map(([cat, count]) => (
                 <button
                   key={cat}
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => updateSearchParam('category', cat)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategory === cat ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
                 >
                   {cat} ({count})
@@ -119,6 +160,24 @@ export function CompanyListings() {
               ))}
             </div>
           )}
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-2 md:ml-auto">
+            <ArrowUpDown className="w-4 h-4 text-slate-500 shrink-0" />
+            <div className="relative">
+              <select
+                value={sortOption}
+                onChange={(e) => updateSearchParam('sort', e.target.value)}
+                className="bg-slate-900 border border-slate-800 rounded-xl text-slate-300 py-1.5 pl-3 pr-8 text-xs font-semibold focus:outline-none focus:border-cyan-500/50 appearance-none cursor-pointer"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+              </select>
+              <ChevronDown className="w-3 h-3 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
         </div>
 
         {/* Grid */}
@@ -177,7 +236,7 @@ export function CompanyListings() {
             <Package className="w-12 h-12 mx-auto mb-4 opacity-30" />
             <p className="text-lg">{search || selectedCategory !== 'all' ? 'No listings match your filters.' : 'No listings available.'}</p>
             {(search || selectedCategory !== 'all') && (
-              <button onClick={() => { setSearch(''); setSelectedCategory('all'); }} className="mt-4 text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
+              <button onClick={() => { updateSearchParam('search', ''); updateSearchParam('category', 'all'); updateSearchParam('sort', 'newest'); }} className="mt-4 text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
                 Clear filters
               </button>
             )}

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
-import { MapPin, ShieldCheck, Box, Info } from 'lucide-react';
+import { MapPin, ShieldCheck, Box, Info, Search, Tag, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { VendorReviews } from '../components/VendorReviews.tsx';
 
 export function Storefront() {
@@ -10,7 +10,22 @@ export function Storefront() {
   const { t } = useTranslation();
   const [storeData, setStoreData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  const search = searchParams.get('search') || '';
+  const selectedCategory = searchParams.get('category') || 'all';
+  const sortOption = searchParams.get('sort') || 'newest';
+
+  const updateSearchParam = (key: string, value: string) => {
+    setSearchParams(prev => {
+      if (!value || (key === 'category' && value === 'all') || (key === 'sort' && value === 'newest')) {
+        prev.delete(key);
+      } else {
+        prev.set(key, value);
+      }
+      return prev;
+    });
+  };
   useEffect(() => {
     async function fetchStore() {
       try {
@@ -31,6 +46,57 @@ export function Storefront() {
   if (!storeData?.store) return <div className="p-12 text-center text-slate-400 font-medium">Store not found.</div>;
 
   const { store, products } = storeData;
+
+  const safeProducts = Array.isArray(products) ? products : [];
+
+  const categories = useMemo(() => {
+    const cats: Record<string, number> = {};
+    safeProducts.forEach((p: any) => {
+      const cat = p?.category || p?.categoryName || p?.originType || 'Other';
+      cats[cat] = (cats[cat] || 0) + 1;
+    });
+    return Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  }, [safeProducts]);
+
+  const filteredProducts = useMemo(() => {
+    const results = safeProducts.filter((p: any) => {
+      if (!p) return false;
+      const pTitle = String(p.title || '');
+      const pDesc = String(p.description || '');
+      const searchLower = String(search || '').toLowerCase();
+      
+      const matchesSearch = !search ||
+        pTitle.toLowerCase().includes(searchLower) ||
+        pDesc.toLowerCase().includes(searchLower);
+      const matchesCategory = selectedCategory === 'all' ||
+        (p.category || p.categoryName || p.originType || 'Other') === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+
+    results.sort((a: any, b: any) => {
+      const getLowestPrice = (p: any) => {
+        let tiers: any[] = [];
+        try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch {}
+        const tierPrices = (Array.isArray(tiers) ? tiers : []).map((t: any) => Number(t.price ?? t.unitPrice)).filter((n: number) => Number.isFinite(n) && n > 0);
+        const basePrice = Number(p.unitCost ?? p.unitPrice);
+        return tierPrices.length > 0 ? Math.min(...tierPrices) : (Number.isFinite(basePrice) && basePrice > 0 ? basePrice : Infinity);
+      };
+
+      switch (sortOption) {
+        case 'price-low':
+          return getLowestPrice(a) - getLowestPrice(b);
+        case 'price-high':
+          return getLowestPrice(b) - getLowestPrice(a);
+        case 'oldest':
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        case 'newest':
+        default:
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
+    });
+
+    return results;
+  }, [safeProducts, search, selectedCategory, sortOption]);
 
   return (
     <div className="bg-slate-900 min-h-screen -mt-4 pb-12">
@@ -71,15 +137,78 @@ export function Storefront() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Products Grid */}
           <div className="flex-1">
-            <h2 className="text-3xl font-extrabold text-white text-slate-100 mb-6">Store Catalog</h2>
-            {products.length === 0 ? (
+            <h2 className="text-3xl font-extrabold text-slate-100 mb-6">Store Catalog</h2>
+            
+            {/* Filters bar */}
+            <div className="flex flex-col gap-4 mb-8">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                {/* Search */}
+                <div className="flex-1 max-w-md relative w-full">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search catalog..."
+                    value={search}
+                    onChange={e => updateSearchParam('search', e.target.value)}
+                    className="w-full pl-11 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all text-sm"
+                  />
+                </div>
+
+                {/* Sort Dropdown */}
+                <div className="flex items-center gap-2 md:ml-auto w-full md:w-auto">
+                  <ArrowUpDown className="w-4 h-4 text-slate-500 shrink-0" />
+                  <div className="relative w-full md:w-auto">
+                    <select
+                      value={sortOption}
+                      onChange={(e) => updateSearchParam('sort', e.target.value)}
+                      className="w-full md:w-auto bg-slate-800 border border-slate-700 rounded-xl text-slate-300 py-2.5 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:border-cyan-500/50 appearance-none cursor-pointer"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                      <option value="price-low">Price: Low to High</option>
+                      <option value="price-high">Price: High to Low</option>
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Category pills */}
+              {categories.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Tag className="w-4 h-4 text-slate-500 shrink-0" />
+                  <button
+                    onClick={() => updateSearchParam('category', 'all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategory === 'all' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
+                  >
+                    All ({safeProducts.length})
+                  </button>
+                  {categories.map(([cat, count]) => (
+                    <button
+                      key={cat}
+                      onClick={() => updateSearchParam('category', cat)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedCategory === cat ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
+                    >
+                      {cat} ({count})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {filteredProducts.length === 0 ? (
               <div className="bg-slate-800 border border-slate-700 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
                 <Box className="w-12 h-12 text-slate-400 mb-4" />
-                <p className="text-slate-400 font-medium">No products listed currently.</p>
+                <p className="text-slate-400 font-medium">No products match your filters.</p>
+                {(search || selectedCategory !== 'all') && (
+                  <button onClick={() => { updateSearchParam('search', ''); updateSearchParam('category', 'all'); updateSearchParam('sort', 'newest'); }} className="mt-4 text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
+                    Clear filters
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {products.map((p: any) => (
+                {filteredProducts.map((p: any) => (
                   <Link key={p.id} to={`/products/${p.id}`} className="btn-secondary">
                     <div className="h-52 bg-slate-900 flex items-center justify-center p-6 border-b border-slate-700">
                       {p.images && p.images[0] ? (
