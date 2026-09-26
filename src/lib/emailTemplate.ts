@@ -129,3 +129,85 @@ export function generateB2BEmailHtml(
 </body>
 </html>`;
 }
+
+export function generateNewRFQEmailHtml(
+  buyerName: string,
+  productTitle: string,
+  quantity: number,
+  dashboardUrl: string
+) {
+  const logoUrl = 'https://i.imgur.com/B06rBhI.png';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background-color:#0d1117;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0d1117;padding:48px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#0f172a;border-radius:20px;border:1px solid #1e293b;overflow:hidden;">
+  <tr><td style="background:linear-gradient(90deg,#0ea5e9 0%,#10b981 50%,#3b82f6 100%);height:4px;font-size:0;">&nbsp;</td></tr>
+  <tr><td align="center" style="padding:44px 40px 28px 40px;">
+    <img src="${logoUrl}" alt="Hatake" width="80" height="80" style="display:block;border-radius:50%;border:2px solid #1e293b;margin-bottom:12px;" />
+    <div style="font-size:22px;font-weight:800;color:#f8fafc;letter-spacing:-0.5px;">New RFQ Received</div>
+  </td></tr>
+  <tr><td style="padding:0 40px;"><div style="height:1px;background:#1e293b;"></div></td></tr>
+  <tr><td style="padding:36px 40px 0 40px;">
+    <p style="margin:0 0 20px 0;font-size:16px;color:#cbd5e1;line-height:1.6;">
+      <strong>${buyerName}</strong> has just submitted a Request for Quote (RFQ) for your wholesale inventory.
+    </p>
+    <div style="background:#1e293b;border-radius:12px;padding:20px;margin-bottom:28px;">
+      <div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Product</div>
+      <div style="font-size:16px;color:#f8fafc;font-weight:bold;margin-bottom:12px;">${productTitle}</div>
+      <div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Requested Quantity</div>
+      <div style="font-size:16px;color:#38bdf8;font-weight:bold;">${quantity} units</div>
+    </div>
+  </td></tr>
+  <tr><td align="center" style="padding:8px 40px 36px 40px;">
+    <a href="${dashboardUrl}" style="display:inline-block;background:#38bdf8;color:#0f172a;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:10px;">
+      View & Respond to RFQ
+    </a>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+export function generateAbandonedRFQEmailHtml(
+  buyerName: string,
+  productTitle: string,
+  resumeUrl: string
+) {
+  const logoUrl = 'https://i.imgur.com/B06rBhI.png';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background-color:#0d1117;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0d1117;padding:48px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#0f172a;border-radius:20px;border:1px solid #1e293b;overflow:hidden;">
+  <tr><td style="background:linear-gradient(90deg,#f59e0b 0%,#ef4444 100%);height:4px;font-size:0;">&nbsp;</td></tr>
+  <tr><td align="center" style="padding:44px 40px 28px 40px;">
+    <img src="${logoUrl}" alt="Hatake" width="80" height="80" style="display:block;border-radius:50%;border:2px solid #1e293b;margin-bottom:12px;" />
+    <div style="font-size:22px;font-weight:800;color:#f8fafc;letter-spacing:-0.5px;">Pending Quote Request</div>
+  </td></tr>
+  <tr><td style="padding:0 40px;"><div style="height:1px;background:#1e293b;"></div></td></tr>
+  <tr><td style="padding:36px 40px 0 40px;">
+    <p style="margin:0 0 20px 0;font-size:16px;color:#cbd5e1;line-height:1.6;">
+      Hi ${buyerName}, you started an RFQ for <strong>${productTitle}</strong> but didn't finish sending it to the supplier.
+    </p>
+    <p style="margin:0 0 28px 0;font-size:15px;color:#94a3b8;line-height:1.6;">
+      Inventory moves fast on the B2B network. Resume your negotiation now to secure the best wholesale pricing before stock runs out.
+    </p>
+  </td></tr>
+  <tr><td align="center" style="padding:8px 40px 36px 40px;">
+    <a href="${resumeUrl}" style="display:inline-block;background:#f59e0b;color:#0f172a;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:10px;">
+      Resume Negotiation
+    </a>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}

@@ -12,7 +12,7 @@ try {
 } catch (e) {
   console.warn("Env Validation Warning:", e);
 }
-import { generateB2BEmailHtml } from "./src/lib/emailTemplate.js";
+import { generateB2BEmailHtml, generateNewRFQEmailHtml, generateAbandonedRFQEmailHtml } from "./src/lib/emailTemplate.js";
 import Stripe from 'stripe';
 import crypto from "crypto";
 import { Resend } from "resend";
@@ -1248,11 +1248,18 @@ app.post(["/seller/:id/contact", "/api/seller/:id/contact", "/api-v2/seller/:id/
     });
 
     try {
+      const buyerName = userProfile.companyName || userProfile.displayName || "A buyer";
+      const productTitle = product[0]?.title || "A product";
       await resend.emails.send({
         from: "Hatake.Shop <notifications@hatake.shop>",
         to: sellerProfile.email,
-        subject: `New Message from ${userProfile.companyName || userProfile.displayName}`,
-        html: `<p>You have received a new message from ${userProfile.companyName || userProfile.displayName}.</p><p>Please log in to your dashboard to view and reply.</p>`
+        subject: `New Request for Quote: ${productTitle}`,
+        html: generateNewRFQEmailHtml(
+          buyerName, 
+          productTitle, 
+          Number(quantity), 
+          `${process.env.APP_URL || 'https://hatakeshop.vercel.app'}/rfq`
+        )
       });
     } catch (emailErr) {
       console.error("Email failed:", emailErr);
@@ -1455,17 +1462,20 @@ app.post(["/cart/rfq", "/api/cart/rfq", "/api-v2/cart/rfq"], requireAuth, async 
 
           if (seller.email) {
             try {
-              const buyerName = userProfile.companyName || userProfile.displayName;
-              const htmlBody = generateB2BEmailHtml(
-                "New Bulk Quote Request",
-                `<b>${buyerName}</b> has submitted a new bulk RFQ for multiple products.<br/><br/>Click the link below to view the items and respond with an official quote.`,
-                `${process.env.APP_URL || 'https://hatake.shop'}/rfq/${newInquiry.id}`
+              const buyerName = userProfile.companyName || userProfile.displayName || "A buyer";
+              const productTitle = "Multiple Products (Bulk RFQ)";
+              
+              const htmlBody = generateNewRFQEmailHtml(
+                buyerName,
+                productTitle,
+                Number(totalQuantity),
+                `${process.env.APP_URL || 'https://hatakeshop.vercel.app'}/rfq`
               );
 
               await resend.emails.send({
                 from: "Hatake.Shop <notifications@hatake.eu>",
                 to: seller.email,
-                subject: `New Bulk RFQ from ${buyerName}`,
+                subject: `New Bulk Request for Quote from ${buyerName}`,
                 html: htmlBody
               });
             } catch (emailErr) {
