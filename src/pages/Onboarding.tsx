@@ -13,6 +13,7 @@ export function Onboarding() {
   const [step, setStep] = useState(0); 
   const [selectedRole, setSelectedRole] = useState<'buyer'|'seller'|'both'|null>(null);
   const [historyLog, setHistoryLog] = useState<any>(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     try {
@@ -49,12 +50,14 @@ export function Onboarding() {
     return uniqueImgs;
   }, [homeProductsData]);
 
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && !selectedRole) return;
 
     setIsLoading(true);
     setStep(1);
+    setErrorMsg('');
 
     const promptContext = selectedRole ? `I am a ${selectedRole}. ${input}` : input;
 
@@ -64,13 +67,25 @@ export function Onboarding() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: promptContext })
       });
-      const data = await res.json();
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        throw new Error("Server returned an invalid response. Please try again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to process onboarding");
+      }
+
       localStorage.setItem('onboardingPreferences', JSON.stringify(data));
       localStorage.setItem('onboardingCompleted', 'true');
       setHistoryLog(data);
       setStep(2);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      setErrorMsg(error.message);
       setIsLoading(false);
       setStep(0);
     }
@@ -160,6 +175,11 @@ export function Onboarding() {
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
           {step === 0 && (
             <div className="space-y-8">
+              {errorMsg && (
+                <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-xl text-sm font-medium mb-4">
+                  {errorMsg}
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
                 <div className="relative bg-slate-900 border border-slate-800 rounded-3xl p-2 shadow-2xl flex flex-col sm:flex-row">
