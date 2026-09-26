@@ -1218,12 +1218,13 @@ User input: "${prompt}"`,
       }
     });
 
-    const text = response.text();
-    const json = JSON.parse(text || "{}");
+    const text = typeof response.text === 'function' ? response.text() : response.text;
+    const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const json = JSON.parse(cleaned || "{}");
     res.json(json);
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Onboarding Error:", error);
-    res.status(500).json({ error: "Failed to process onboarding" });
+    res.status(500).json({ error: `Failed to process onboarding: ${error.message || "Unknown error"}` });
   }
 });
 
