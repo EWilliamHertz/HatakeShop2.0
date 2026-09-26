@@ -687,7 +687,18 @@ app.get(["/store/:slug", "/api/store/:slug", "/api-v2/store/:slug"], async (req,
     if (storeUser.length === 0) return res.status(404).json({ error: "Store not found" });
     
     const store = storeUser[0];
-    const storeProducts = await db.select().from(products).where(eq(products.sellerId, store.id));
+    const rawProducts = await db.select({
+      product: products,
+      categoryName: categories.name
+    })
+    .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(eq(products.sellerId, store.id));
+
+    const storeProducts = rawProducts.map((r: any) => ({
+      ...r.product,
+      categoryName: r.categoryName
+    }));
     
     res.json({
       store: {
@@ -1650,6 +1661,22 @@ app.get("/company/:id", async (req, res, next) => {
     return {
       title: c[0].companyName || c[0].displayName || "Company Profile",
       description: `View the B2B wholesale profile, reviews, and products for ${c[0].companyName || c[0].displayName}.`,
+      image: c[0].profilePictureUrl
+    };
+  });
+});
+
+app.get("/company/:id/listings", async (req, res, next) => {
+  if (req.headers.accept?.includes('application/json')) return next();
+  
+  injectSEO(req, res, async () => {
+    const compId = parseInt(req.params.id, 10);
+    if (isNaN(compId)) return { title: "Company Not Found", description: "This company could not be found." };
+    const c = await db.select().from(users).where(eq(users.id, compId));
+    if (!c.length) return { title: "Company Not Found", description: "This company could not be found." };
+    return {
+      title: `${c[0].companyName || c[0].displayName || "Company"} Listings`,
+      description: `Browse all products and wholesale listings from ${c[0].companyName || c[0].displayName}.`,
       image: c[0].profilePictureUrl
     };
   });

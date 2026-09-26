@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, products, reviews, leads } from "../db/schema.js";
+import { users, products, reviews, leads, categories } from "../db/schema.js";
 import { eq, or, and, isNull, sql } from 'drizzle-orm';
 import { userFollowers } from "../db/schema.js";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
@@ -89,7 +89,18 @@ router.get(["/company/:id", "/api/company/:id", "/api-v2/company/:id"], async (r
       )
     );
 
-    const companyProducts = await db.select().from(products).where(eq(products.sellerId, companyId));
+    const rawProducts = await db.select({
+      product: products,
+      categoryName: categories.name
+    })
+    .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(eq(products.sellerId, companyId));
+
+    const companyProducts = rawProducts.map((r: any) => ({
+      ...r.product,
+      categoryName: r.categoryName
+    }));
     const companyReviews = await db.query.reviews.findMany({
       where: eq(reviews.targetUserId, companyId)
     });
