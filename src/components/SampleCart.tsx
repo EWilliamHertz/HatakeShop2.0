@@ -9,6 +9,7 @@ export interface CartItem {
   sellerName: string;
   sellerId: number;
   quantity?: number;
+  unitCost?: number;
 }
 
 interface CartContextType {
@@ -164,19 +165,24 @@ const CartDrawer = () => {
                   </div>
                   <div className="divide-y divide-slate-100">
                     {sellerItems.map(item => (
-                      <div key={item.productId} className="p-4 flex items-center gap-4 group">
-                        <div className="w-12 h-12 rounded-xl bg-slate-700 shrink-0 overflow-hidden">
-                          {item.image ? (
-                            <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                          ) : (
-                            <Package className="w-6 h-6 text-slate-400 m-auto mt-3" />
-                          )}
+                      <div key={item.productId} className="p-4 flex items-center gap-4 group hover:bg-slate-700/30 transition-colors">
+                        <div onClick={() => { setCartOpen(false); navigate(`/products/${item.productId}`); }} className="cursor-pointer flex items-center gap-4 flex-1 min-w-0">
+                          <div className="w-12 h-12 rounded-xl bg-slate-700 shrink-0 overflow-hidden">
+                            {item.image ? (
+                              <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="w-6 h-6 text-slate-400 m-auto mt-3" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold tracking-tight text-slate-100 truncate hover:text-cyan-400 transition-colors">{item.title}</p>
+                            <p className="text-[11px] text-slate-400 tracking-wider font-semibold mt-1 flex gap-2">
+                               <span>QTY: {item.quantity || 1}</span>
+                               {item.unitCost && <span className="text-cyan-400">| €{Number(item.unitCost).toFixed(2)} ea</span>}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold tracking-tight text-slate-100 truncate">{item.title}</p>
-                          <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mt-1">Qty: {item.quantity || 1}</p>
-                        </div>
-                        <button onClick={() => removeItem(item.productId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100">
+                        <button onClick={() => removeItem(item.productId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100 shrink-0">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>

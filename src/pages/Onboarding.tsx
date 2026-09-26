@@ -94,7 +94,8 @@ export function Onboarding() {
               image: imgs[0] || '',
               sellerName: ci.product.seller?.companyName || 'Verified Supplier',
               sellerId: ci.product.sellerId,
-              quantity: ci.quantity // For UI display if needed
+              quantity: ci.quantity, // For UI display if needed
+              unitCost: ci.product.unitCost
            };
         });
         
