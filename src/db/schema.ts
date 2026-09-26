@@ -119,7 +119,7 @@ export const inquiries = pgTable('inquiries', {
   targetBudget: numeric('target_budget'),
   currency: text('currency').default('USD'),
   shippingDestination: text('shipping_destination'),
-  status: text('status', { enum: ['Draft', 'Sent', 'Pending', 'Under Negotiation', 'Accepted', 'Declined'] }).default('Draft'),
+  status: text('status', { enum: ['Draft', 'Sent', 'Pending', 'Under Negotiation', 'Accepted', 'Declined', 'Archived'] }).default('Draft'),
   aiNotes: text('ai_notes'),
   paymentStatus: text('payment_status', { enum: ['Unpaid', 'Pending', 'Paid', 'Escrow Funded', 'Escrow Released', 'Failed', 'Refunded'] }).default('Unpaid'),
   stripePaymentIntentId: text('stripe_payment_intent_id'),

@@ -40,6 +40,99 @@ import webhooksRouter from "./src/routes/webhooks.js";
 import categoriesRouter from "./src/routes/categories.js";
 
 // Background task to process drip campaigns
+const app = express();
+app.get(["/cron/drip", "/api/cron/drip", "/api-v2/cron/drip"], async (req, res) => {
+  try {
+    const now = new Date();
+    
+    // 1. Process Marketing Leads
+    const pendingLeads = await db.select().from(leads).where(eq(leads.status, 'sent'));
+    for (const lead of pendingLeads) {
+       if (!lead.sentAt) continue;
+       const daysSinceSent = (now.getTime() - new Date(lead.sentAt).getTime()) / (1000 * 3600 * 24);
+       const lastEmailedDays = lead.lastEmailedAt ? (now.getTime() - new Date(lead.lastEmailedAt).getTime()) / (1000 * 3600 * 24) : daysSinceSent;
+       
+       let shouldSend = false;
+       let nextStep = lead.dripStep || 1;
+       
+       if (nextStep === 1 && daysSinceSent >= 3) {
+         shouldSend = true; nextStep = 2;
+       } else if (nextStep === 2 && daysSinceSent >= 7 && lastEmailedDays >= 4) {
+         shouldSend = true; nextStep = 3;
+       } else if (nextStep === 3 && daysSinceSent >= 14 && lastEmailedDays >= 7) {
+         shouldSend = true; nextStep = 4;
+       }
+       
+       if (shouldSend) {
+          console.log(`Sending Drip Step ${nextStep} to ${lead.email}`);
+          await db.update(leads).set({ dripStep: nextStep, lastEmailedAt: now }).where(eq(leads.id, lead.id));
+       }
+    }
+
+    // 2. Process Abandoned RFQs (Draft Inquiries > 24h)
+    const abandonedDrafts = await db.select({
+      id: inquiries.id,
+      buyerId: inquiries.buyerId,
+      createdAt: inquiries.createdAt,
+      productTitle: products.title,
+      buyerEmail: users.email,
+      buyerName: users.displayName
+    })
+    .from(inquiries)
+    .leftJoin(products, eq(inquiries.targetProductId, products.id))
+    .leftJoin(users, eq(inquiries.buyerId, users.id))
+    .where(eq(inquiries.status, 'Draft'));
+
+    let abandonedCount = 0;
+    for (const draft of abandonedDrafts) {
+       if (!draft.createdAt || !draft.buyerEmail) continue;
+       const hoursSinceCreation = (now.getTime() - new Date(draft.createdAt).getTime()) / (1000 * 3600);
+       
+       // Send once between 24 and 48 hours
+       if (hoursSinceCreation >= 24 && hoursSinceCreation <= 48) {
+         console.log(`Sending Abandoned RFQ reminder to ${draft.buyerEmail}`);
+         if (resend) {
+           await resend.emails.send({
+             from: 'Hatake.Shop <notifications@hatake.shop>',
+             to: draft.buyerEmail,
+             subject: `Complete your Request for Quote: ${draft.productTitle}`,
+             html: generateAbandonedRFQEmailHtml(
+               draft.buyerName || 'Buyer',
+               draft.productTitle || 'a product',
+               `${process.env.APP_URL || 'https://hatakeshop.vercel.app'}/rfq`
+             )
+           });
+         }
+         abandonedCount++;
+       }
+    }
+
+    // 3. Auto-Archive Stale Inquiries (>30 days inactive)
+    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+    const activeStatuses = ['Sent', 'Pending', 'Under Negotiation'];
+    
+    // We update where status is one of the active ones AND updatedAt < thirtyDaysAgo
+    const archivedResult = await db.update(inquiries)
+      .set({ status: 'Archived', updatedAt: now })
+      .where(
+        and(
+          inArray(inquiries.status, activeStatuses),
+          sql`${inquiries.updatedAt} < ${thirtyDaysAgo.toISOString()}`
+        )
+      )
+      .returning({ id: inquiries.id });
+
+    res.json({ 
+      success: true, 
+      processedLeads: pendingLeads.length, 
+      abandonedRFQsReminded: abandonedCount,
+      archivedInquiries: archivedResult.length
+    });
+  } catch (e: any) {
+    console.error("Cron Drip error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 app.get("/api-v2/debug-firebase", (req, res) => { import("./src/lib/firebase-admin.js").then(m => { res.json({ error: m.firebaseInitError, hasJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, hasPrivKey: !!process.env.FIREBASE_PRIVATE_KEY }) }) });
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
