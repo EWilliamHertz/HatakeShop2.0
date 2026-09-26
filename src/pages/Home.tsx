@@ -12,6 +12,7 @@ import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { LandedCostEstimator } from '../components/LandedCostEstimator.tsx';
 import { BrowseSections } from '../components/BrowseSections.tsx';
 import { ResponsiveContainer, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { Onboarding } from './Onboarding.tsx';
 
 const generatePriceTrend = (basePrice: number) => {
   return Array.from({ length: 90 }, (_, i) => {
@@ -84,6 +85,9 @@ const CardImageCarousel = ({ images, title }: { images: string[], title: string 
 };
 
 export function Home() {
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return localStorage.getItem('onboardingCompleted') !== 'true';
+  });
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
@@ -174,6 +178,49 @@ export function Home() {
     const p = item.product || item;
     return { ...p, seller: item.seller || p.seller || {} };
   });
+
+  const onboardingPrefsRaw = localStorage.getItem('onboardingPreferences');
+  let userInterests: string[] = [];
+  if (onboardingPrefsRaw) {
+    try {
+      const parsed = JSON.parse(onboardingPrefsRaw);
+      if (Array.isArray(parsed.interests)) userInterests = parsed.interests;
+    } catch (e) {}
+  }
+
+  const sortedHomeProducts = React.useMemo(() => {
+    if (!userInterests.length) return homeProducts;
+    return [...homeProducts].sort((a, b) => {
+      const aTitle = (a.title || '').toLowerCase();
+      const bTitle = (b.title || '').toLowerCase();
+      const aScore = userInterests.reduce((score, interest) => aTitle.includes(interest.toLowerCase()) ? score + 1 : score, 0);
+      const bScore = userInterests.reduce((score, interest) => bTitle.includes(interest.toLowerCase()) ? score + 1 : score, 0);
+      return bScore - aScore;
+    });
+  }, [homeProducts, userInterests.join(',')]);
+
+  const sortedProducts = React.useMemo(() => {
+    if (!userInterests.length) return products;
+    return [...products].sort((a, b) => {
+      const aTitle = (a.product?.title || '').toLowerCase();
+      const bTitle = (b.product?.title || '').toLowerCase();
+      const aScore = userInterests.reduce((score, interest) => aTitle.includes(interest.toLowerCase()) ? score + 1 : score, 0);
+      const bScore = userInterests.reduce((score, interest) => bTitle.includes(interest.toLowerCase()) ? score + 1 : score, 0);
+      return bScore - aScore;
+    });
+  }, [products, userInterests.join(',')]);
+
+  const sortedCategories = React.useMemo(() => {
+    const cats = browseData?.categories || [];
+    if (!userInterests.length) return cats;
+    return [...cats].sort((a: any, b: any) => {
+      const aName = (a.name || '').toLowerCase();
+      const bName = (b.name || '').toLowerCase();
+      const aScore = userInterests.reduce((score, interest) => aName.includes(interest.toLowerCase()) ? score + 1 : score, 0);
+      const bScore = userInterests.reduce((score, interest) => bName.includes(interest.toLowerCase()) ? score + 1 : score, 0);
+      return bScore - aScore;
+    });
+  }, [browseData?.categories, userInterests.join(',')]);
 
   const totalPages = data.totalPages || 1;
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -334,6 +381,10 @@ export function Home() {
     }
   }
 
+  if (showOnboarding) {
+    return <Onboarding onComplete={() => setShowOnboarding(false)} />;
+  }
+
   return (
     <div className="bg-slate-950 min-h-screen pb-20 flex flex-col">
       
@@ -481,7 +532,7 @@ export function Home() {
               <h2 className="heading-xl">{t('Featured Categories')}</h2>
             </div>
           <BrowseSections
-            categories={browseData?.categories || []}
+            categories={sortedCategories}
             companies={browseData?.companies || []}
             renderCard={renderBrowseCard}
             onViewCategory={(id: number) => { setSelectedCategoryId(id); setSearch(""); setPage(1); window.scrollTo(0, 0); }}
@@ -608,7 +659,7 @@ export function Home() {
         <div className="bg-slate-900 rounded-2xl border border-slate-800 text-center py-12 text-slate-400">{t('No products found.')}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 w-full justify-start place-items-stretch">
-          {(Array.isArray(products) ? products : []).map((p, i) => (
+          {(Array.isArray(sortedProducts) ? sortedProducts : []).map((p, i) => (
             <div 
               key={p.product.id || i} 
               className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full"

@@ -1195,6 +1195,38 @@ app.get(["/insights", "/api/insights", "/api-v2/insights"], async (req, res) => 
   }
 });
 
+app.post("/api-v2/ai/onboarding", async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `You are an onboarding assistant for Hatake, a B2B TCG (Trading Card Game) marketplace.
+The user will describe their business needs. Extract their preferences into a JSON object with this exact schema:
+{
+  "role": "retailer" | "distributor" | "collector" | "investor" | "other",
+  "interests": ["Pokemon", "One Piece", "Naruto", "Dragon Ball", "Disney Lorcana", "Yu-Gi-Oh", "Magic", "Flesh and Blood", "Union Arena", "Weiss Schwarz"],
+  "languages": ["English", "Japanese", "zh-Hans", "zh-Hant"],
+  "buyScale": "single_cases" | "pallets" | "containers" | "unknown"
+}
+If they don't mention something explicitly, try to infer the best fit from their text (e.g. "I retail locally" -> role: "retailer"). If you can't guess, use "unknown" or empty arrays. 
+User input: "${prompt}"`,
+      config: {
+        responseMimeType: "application/json",
+      }
+    });
+
+    const text = response.text();
+    const json = JSON.parse(text || "{}");
+    res.json(json);
+  } catch (error) {
+    console.error("AI Onboarding Error:", error);
+    res.status(500).json({ error: "Failed to process onboarding" });
+  }
+});
+
 app.post(["/sourcing/ai-match", "/api/sourcing/ai-match", "/api-v2/sourcing/ai-match"], requireAuth, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
