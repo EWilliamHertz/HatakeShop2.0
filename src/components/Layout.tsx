@@ -33,7 +33,6 @@ const mainNavItems = [
   ];
 
   const managementNavItems = [
-    ...(dbUser?.role === 'admin' ? [{ name: 'Admin Panel', path: '/admin', icon: Shield, protected: true }] : []),
     ...(dbUser?.role === 'seller' || dbUser?.role === 'both' || dbUser?.role === 'admin' ? [{ name: 'Supplier Portal', path: '/seller', icon: Store, protected: true }] : []),
   ];
 
