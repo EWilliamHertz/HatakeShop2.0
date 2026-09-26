@@ -41,11 +41,15 @@ export function Onboarding() {
       if (parsed[0]) imgs.add(parsed[0]);
     }
     let uniqueImgs = Array.from(imgs).sort(() => Math.random() - 0.5);
-    // Pad the array to ensure the rainbow circle is fully populated (e.g., at least 40 items)
+    const TARGET_DENSITY = 48; // Exactly 48 items is the perfect density
+    
     if (uniqueImgs.length > 0) {
-      while (uniqueImgs.length < 40) {
+      // If we don't have enough, pad it by repeating (fallback)
+      while (uniqueImgs.length < TARGET_DENSITY) {
         uniqueImgs = [...uniqueImgs, ...Array.from(imgs).sort(() => Math.random() - 0.5)];
       }
+      // If we have more than the target density, slice it to maintain the perfect spacing
+      uniqueImgs = uniqueImgs.slice(0, TARGET_DENSITY);
     }
     return uniqueImgs;
   }, [homeProductsData]);
