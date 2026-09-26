@@ -1226,9 +1226,12 @@ The user will describe their business needs. Extract their preferences into a JS
   "role": "retailer" | "distributor" | "collector" | "investor" | "other",
   "interests": ["Pokemon", "One Piece", "Naruto", "Dragon Ball", "Disney Lorcana", "Yu-Gi-Oh", "Magic", "Flesh and Blood", "Union Arena", "Weiss Schwarz"],
   "languages": ["English", "Japanese", "zh-Hans", "zh-Hant"],
-  "buyScale": "single_cases" | "pallets" | "containers" | "unknown"
+  "buyScale": "single_cases" | "pallets" | "containers" | "unknown",
+  "wantsCart": true | false,
+  "cartBudget": number | null
 }
-If they don't mention something explicitly, try to infer the best fit from their text (e.g. "I retail locally" -> role: "retailer"). If you can't guess, use "unknown" or empty arrays. 
+If they don't mention something explicitly, try to infer the best fit. If you can't guess, use "unknown" or empty arrays.
+CRITICAL: If the user explicitly asks you to build, create, or recommend a cart/RFQ (e.g., for a specific amount like 350), set "wantsCart" to true and extract the number into "cartBudget". 
 User input: "${prompt}"`,
       config: {
         responseMimeType: "application/json",
@@ -1238,6 +1241,50 @@ User input: "${prompt}"`,
     const text = typeof response.text === 'function' ? (response as any).text() : response.text;
     const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
     const json = JSON.parse(cleaned || "{}");
+    
+    // Auto-generate cart if requested
+    if (json.wantsCart && json.cartBudget > 0) {
+       try {
+         let conditions = [eq(products.approvalStatus, 'approved')];
+         if (json.interests && json.interests.length > 0) {
+            conditions.push(inArray(products.brand, json.interests));
+         }
+         const availableProducts = await db.select({
+             product: products,
+             seller: { companyName: users.companyName }
+           })
+           .from(products)
+           .leftJoin(users, eq(products.sellerId, users.id))
+           .where(and(...conditions))
+           .limit(50);
+           
+         let remainingBudget = json.cartBudget;
+         let cartItems = [];
+         
+         // Shuffle available products slightly for variety
+         const shuffled = availableProducts.sort(() => Math.random() - 0.5);
+         
+         for (const row of shuffled) {
+            const p = row.product;
+            const price = Number(p.unitCost);
+            const moq = p.moq || 1;
+            if (price > 0 && (price * moq) <= remainingBudget) {
+               // Recommend a sensible quantity
+               const affordableQty = Math.floor(remainingBudget / price);
+               const take = Math.min(affordableQty, p.stockQuantity || 10, moq * 5); // Don't take all stock, take up to 5x MOQ
+               if (take >= moq) {
+                  cartItems.push({ product: { ...p, seller: row.seller }, quantity: take });
+                  remainingBudget -= (take * price);
+               }
+            }
+            if (remainingBudget <= (json.cartBudget * 0.05)) break; // Stop if we used 95% of budget
+         }
+         json.cartItems = cartItems;
+       } catch (dbErr) {
+         console.error("Failed to build auto-cart:", dbErr);
+       }
+    }
+
     res.json(json);
   } catch (error: any) {
     console.error("AI Onboarding Error:", error);

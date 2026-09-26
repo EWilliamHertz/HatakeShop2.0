@@ -82,6 +82,31 @@ export function Onboarding() {
       if (!res.ok) {
         throw new Error(data.error || "Failed to process onboarding");
       }
+      
+      if (data.cartItems && Array.isArray(data.cartItems) && data.cartItems.length > 0) {
+        const cartItems = data.cartItems.map((ci: any) => {
+           let imgs = [];
+           try { imgs = typeof ci.product.images === 'string' ? JSON.parse(ci.product.images || '[]') : ci.product.images; } catch {}
+           if (!Array.isArray(imgs)) imgs = [];
+           return {
+              productId: ci.product.id,
+              title: ci.product.title,
+              image: imgs[0] || '',
+              sellerName: ci.product.seller?.companyName || 'Verified Supplier',
+              sellerId: ci.product.sellerId,
+              quantity: ci.quantity // For UI display if needed
+           };
+        });
+        
+        try {
+          const existingRaw = localStorage.getItem('sample_cart');
+          const existing = existingRaw ? JSON.parse(existingRaw) : [];
+          const combined = [...existing, ...cartItems.filter((ci: any) => !existing.find((e: any) => e.productId === ci.productId))];
+          localStorage.setItem('sample_cart', JSON.stringify(combined));
+          // We also trigger a custom event so the cart icon updates
+          window.dispatchEvent(new Event('storage'));
+        } catch(e) {}
+      }
 
       localStorage.setItem('onboardingPreferences', JSON.stringify(data));
       localStorage.setItem('onboardingCompleted', 'true');
@@ -239,8 +264,8 @@ export function Onboarding() {
               <div className="w-16 h-16 bg-cyan-400 text-slate-950 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Search className="w-8 h-8" />
               </div>
-              <h2 className="text-3xl font-bold text-white mb-4">Profile Configured!</h2>
-              <p className="text-cyan-100/70 mb-8 text-lg">Your personalized marketplace is ready. How would you like to proceed?</p>
+              <h2 className="text-3xl font-bold text-white mb-4">{historyLog?.wantsCart && historyLog?.cartItems?.length ? "Profile & Cart Ready!" : "Profile Configured!"}</h2>
+              <p className="text-cyan-100/70 mb-8 text-lg">{historyLog?.wantsCart && historyLog?.cartItems?.length ? `We automatically added ${historyLog.cartItems.length} recommended products to your cart based on your budget! How would you like to proceed?` : "Your personalized marketplace is ready. How would you like to proceed?"}</p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button 
