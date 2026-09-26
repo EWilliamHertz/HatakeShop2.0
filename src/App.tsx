@@ -40,6 +40,7 @@ const Orders = lazy(() => import('./pages/Orders.tsx').then(m => ({ default: m.O
 const RFQDetailsLazy = RFQDetails;
 const Wishlist = lazy(() => import('./pages/Wishlist.tsx').then(m => ({ default: m.Wishlist })));
 const SellerOnboarding = lazy(() => import('./pages/SellerOnboarding.tsx').then(m => ({ default: m.SellerOnboarding })));
+const ProductPage = lazy(() => import('./pages/ProductPage.tsx').then(m => ({ default: m.ProductPage })));
 
 function RouteFallback() {
   return <div className="p-8 text-center text-slate-400">Loading…</div>;
