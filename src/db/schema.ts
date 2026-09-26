@@ -40,6 +40,7 @@ export const users = pgTable('users', {
   storeSlug: text('store_slug'),
   storeBannerUrl: text('store_banner_url'),
   storePolicies: text('store_policies'),
+  apiKey: text('api_key'),
   referredById: integer('referred_by_id'),
   referralCode: text('referral_code'),
   kybDocuments: jsonb('kyb_documents').default(sql`'[]'::jsonb`),

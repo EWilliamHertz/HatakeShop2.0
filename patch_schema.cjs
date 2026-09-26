@@ -1,11 +1,10 @@
 const fs = require('fs');
+let code = fs.readFileSync('src/db/schema.ts', 'utf8');
 
-let schema = fs.readFileSync('src/db/schema.ts', 'utf8');
-
-schema = schema.replace(
-  /categoryId: integer\('category_id'\),/,
-  "categoryId: integer('category_id'),\n  categoryIds: integer('category_ids').array().default(sql`'{}'::int[]`),"
-);
-
-fs.writeFileSync('src/db/schema.ts', schema);
-console.log("Patched schema");
+if (!code.includes('apiKey: text(\'api_key\')')) {
+  code = code.replace(
+    "storePolicies: text('store_policies'),",
+    "storePolicies: text('store_policies'),\n  apiKey: text('api_key').unique(),"
+  );
+  fs.writeFileSync('src/db/schema.ts', code);
+}
