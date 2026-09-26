@@ -2,7 +2,7 @@ import { EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../components/AuthContext.tsx';
-import { MessageSquare, Clock, FileText, ArrowRight, Phone, Video, Users, User, Package } from 'lucide-react';
+import { MessageSquare, Clock, FileText, ArrowRight, Phone, Video, Users, User, Package, TrendingUp } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { VideoTour } from '../components/VideoTour.tsx';
 import { Socket } from 'socket.io-client';
@@ -190,6 +190,13 @@ export function RFQHub() {
            >
              <Users className={`w-5 h-5 ${activeTab === 'contacts' ? 'text-white/80' : 'text-slate-400'}`} />
              <span>{t('Business Contacts')}</span>
+           </button>
+           <button
+             onClick={() => setActiveTab('compare')}
+             className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'compare' ? 'bg-[var(--color-accent)] text-white' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-canvas)]'}`}
+           >
+             <TrendingUp className={`w-5 h-5 ${activeTab === 'compare' ? 'text-white/80' : 'text-slate-400'}`} />
+             <span>{t('Compare Quotes')}</span>
            </button>
         </nav>
 
@@ -435,6 +442,71 @@ export function RFQHub() {
                    </div>
                  </div>
                ))
+             )}
+           </div>
+         </div>
+       )}
+
+       {activeTab === 'compare' && (
+         <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden min-h-[500px]">
+           <div className="border-b border-slate-700 bg-slate-800 px-6 py-4">
+             <h2 className="text-2xl font-bold text-white">{t('Quote Comparison')}</h2>
+             <p className="text-sm text-slate-400 mt-1">{t('Compare offers from different suppliers side-by-side.')}</p>
+           </div>
+           
+           <div className="p-6">
+             {inquiries.length === 0 ? (
+               <div className="p-12 text-center text-slate-400">
+                 <TrendingUp className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                 <p className="font-semibold text-slate-100">{t('No active quotes to compare.')}</p>
+               </div>
+             ) : (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left border-collapse">
+                   <thead>
+                     <tr className="border-b border-slate-700 text-sm font-semibold text-slate-400">
+                       <th className="py-3 px-4">{t('Product')}</th>
+                       <th className="py-3 px-4">{t('Supplier')}</th>
+                       <th className="py-3 px-4">{t('Unit Price (Est)')}</th>
+                       <th className="py-3 px-4">{t('MOQ')}</th>
+                       <th className="py-3 px-4">{t('Lead Time')}</th>
+                       <th className="py-3 px-4">{t('Status')}</th>
+                       <th className="py-3 px-4 text-right">{t('Action')}</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-slate-700/50 text-sm text-slate-300">
+                     {inquiries.map((inq: any) => (
+                       <tr key={inq.inquiry.id} className="hover:bg-slate-700/30 transition-colors">
+                         <td className="py-3 px-4 font-medium text-slate-100">
+                           {inq.product?.title || t('Custom RFQ')}
+                         </td>
+                         <td className="py-3 px-4">
+                           {inq.seller?.companyName || inq.seller?.displayName || 'Unknown Supplier'}
+                         </td>
+                         <td className="py-3 px-4 font-mono text-cyan-400">
+                           {inq.product?.unitCost ? `$${inq.product.unitCost}` : (inq.inquiry.targetBudget ? `$${(parseFloat(inq.inquiry.targetBudget)/inq.inquiry.quantity).toFixed(2)}` : 'N/A')}
+                         </td>
+                         <td className="py-3 px-4">
+                           {inq.product?.moq || inq.inquiry.quantity} {t('Units')}
+                         </td>
+                         <td className="py-3 px-4">
+                           {inq.product?.leadTimeDays ? `${inq.product.leadTimeDays} Days` : 'N/A'}
+                         </td>
+                         <td className="py-3 px-4">
+                           <span className="bg-slate-900/50 px-2 py-1 rounded text-xs text-slate-400 font-semibold uppercase tracking-wide">
+                             {inq.inquiry.status}
+                           </span>
+                         </td>
+                         <td className="py-3 px-4 text-right">
+                           <Link to={`/rfq/${inq.inquiry.id}`} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors">
+                             {t('View')}
+                           </Link>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
              )}
            </div>
          </div>

@@ -440,10 +440,32 @@ export function RFQDetails() {
                      </button>
 
                      {(inquiry.inquiry.paymentStatus === 'Paid' || inquiry.inquiry.paymentStatus === 'Escrow Funded' || inquiry.inquiry.paymentStatus === 'Escrow Released') ? (
-                        <>
-                          <div className="py-2.5 bg-cyan-600 text-white rounded-lg text-center font-medium text-sm shadow-sm flex items-center justify-center gap-2">
-                            {inquiry.inquiry.paymentStatus} <Check className="w-4 h-4" />
+                        <div className="flex flex-col gap-3">
+                          <div className="p-3 bg-emerald-950/30 border border-emerald-500/20 rounded-lg flex flex-col gap-2 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500/50 to-emerald-400/50"></div>
+                            <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                              <Shield className="w-4 h-4" /> 
+                              {inquiry.inquiry.paymentStatus === 'Escrow Funded' ? 'Escrow Protected' : inquiry.inquiry.paymentStatus}
+                            </div>
+                            
+                            {inquiry.inquiry.paymentStatus === 'Escrow Funded' && (
+                              <>
+                                <p className="text-xs text-slate-400">Funds are securely held in Hatake Escrow. They will only be released to the seller once you confirm delivery.</p>
+                                <div className="mt-2 flex flex-col gap-2 relative">
+                                  <div className="absolute left-2.5 top-2 bottom-2 w-px bg-emerald-900"></div>
+                                  <div className="flex items-start gap-3 relative z-10">
+                                    <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" /></div>
+                                    <div className="text-xs text-emerald-200">Funds Secured</div>
+                                  </div>
+                                  <div className="flex items-start gap-3 relative z-10 opacity-60">
+                                    <div className="w-5 h-5 rounded-full bg-slate-800 border border-emerald-900 flex items-center justify-center shrink-0 mt-0.5"></div>
+                                    <div className="text-xs text-slate-300">Pending Delivery</div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
+
                           {inquiry.inquiry.paymentStatus === 'Escrow Funded' && dbUser?.id === inquiry.inquiry.buyerId && (
                              <button
                                onClick={async () => {
@@ -457,12 +479,12 @@ export function RFQDetails() {
                                    window.location.reload();
                                  } catch(e) { toast.error("Failed to release funds") }
                                }}
-                               className="py-2.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg hover:bg-slate-700 hover:text-white mt-2 font-medium text-sm transition-colors shadow-sm"
+                               className="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-center font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
                              >
-                               Confirm Delivery & Release Funds
+                               <Package className="w-4 h-4" /> Confirm Delivery & Release Funds
                              </button>
                           )}
-                        </>
+                        </div>
                      ) : (
                         dbUser?.id === inquiry.inquiry.buyerId ? (
                            <button 
