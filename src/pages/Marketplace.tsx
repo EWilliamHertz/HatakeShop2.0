@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, PackageSearch, Building2, MapPin, ChevronDown, ChevronRight, X, SlidersHorizontal, BadgeCheck } from 'lucide-react';
+import { Filter, PackageSearch, Building2, MapPin, ChevronDown, ChevronRight, X, SlidersHorizontal, BadgeCheck, Shield, Star } from 'lucide-react';
 import { languageLabel, sealedTypeLabel, PRODUCT_LANGUAGES } from '../lib/productTaxonomy.ts';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -41,8 +41,12 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
 
         <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-3 min-w-0">
           <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-          <Link to={`/company/${p.seller?.id || p.sellerId || ''}`} onClick={(e) => e.stopPropagation()} className="truncate hover:text-cyan-400 transition-colors">{p.seller?.companyName || 'Supplier'}</Link>
-          {p.seller?.verificationStatus === 'verified' && <BadgeCheck className="w-3.5 h-3.5 text-cyan-500 shrink-0" />}
+          <Link to={`/company/${p.seller?.id || p.sellerId || ''}`} onClick={(e) => e.stopPropagation()} className="truncate hover:text-cyan-400 transition-colors font-medium">{p.seller?.companyName || 'Supplier'}</Link>
+          {p.seller?.verificationStatus === 'verified' && (
+            <div className="flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase border border-emerald-500/20">
+              <BadgeCheck className="w-3 h-3" /> Verified
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-1.5 mb-4">
@@ -51,6 +55,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
            {p.sealedType && <span className="bg-slate-800 text-slate-200 text-[10px] px-2 py-1 rounded border border-slate-700 font-semibold">{sealedTypeLabel(p.sealedType)}</span>}
            {p?.seller?.country && <span className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded border border-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {p.seller.country}</span>}
            <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 uppercase tracking-wider">MOQ {p.moq}</span>
+           <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-1 rounded font-bold flex items-center gap-1 uppercase tracking-wider"><Shield className="w-3 h-3" /> Secure Escrow</span>
         </div>
         
         <div className="mt-auto space-y-3 pt-4 border-t border-slate-800">

@@ -1521,6 +1521,70 @@ app.post(["/cart/rfq", "/api/cart/rfq", "/api-v2/cart/rfq"], requireAuth, async 
   }
 });
 
+
+import fs from 'fs';
+
+// SEO Injection routes for Vercel Serverless
+const injectSEO = async (req: any, res: any, fetchMetadata: () => Promise<{title: string, description: string, image?: string}>) => {
+  try {
+    const isVercel = !!process.env.VERCEL;
+    const indexPath = isVercel ? path.join(process.cwd(), 'dist', 'index.html') : path.join(process.cwd(), 'index.html');
+    let html = fs.readFileSync(indexPath, 'utf-8');
+    
+    const meta = await fetchMetadata();
+    if (meta.title) html = html.replace(/<title>(.*?)<\/title>/, `<title>${meta.title} | Hatake.Shop</title>`);
+    if (meta.description) html = html.replace(/<meta name="description" content="(.*?)"\s*\/?>/, `<meta name="description" content="${meta.description}" />`);
+    if (meta.image) {
+      html = html.replace(/<head>/, `<head>\n    <meta property="og:image" content="${meta.image}" />\n    <meta name="twitter:image" content="${meta.image}" />`);
+    }
+    html = html.replace(/<head>/, `<head>\n    <meta property="og:title" content="${meta.title} | Hatake.Shop" />\n    <meta property="og:description" content="${meta.description}" />`);
+    
+    res.send(html);
+  } catch (err) {
+    console.error("SEO Injection error:", err);
+    // fallback to normal
+    const distPath = path.join(process.cwd(), 'dist');
+    res.sendFile(path.join(distPath, 'index.html'));
+  }
+};
+
+app.get("/product/:id", async (req, res, next) => {
+  // Only intercept normal GETs, not API requests
+  if (req.headers.accept?.includes('application/json')) return next();
+  
+  injectSEO(req, res, async () => {
+    const productId = parseInt(req.params.id, 10);
+    if (isNaN(productId)) return { title: "Product Not Found", description: "This product could not be found." };
+    const p = await db.select().from(products).where(eq(products.id, productId));
+    if (!p.length) return { title: "Product Not Found", description: "This product could not be found." };
+    let img = undefined;
+    try {
+      const imgs = JSON.parse(p[0].images as string || '[]');
+      if (imgs.length) img = imgs[0];
+    } catch(e) {}
+    return {
+      title: p[0].title,
+      description: `Wholesale B2B marketplace. Buy ${p[0].title} from trusted suppliers.`,
+      image: img
+    };
+  });
+});
+
+app.get("/company/:id", async (req, res, next) => {
+  if (req.headers.accept?.includes('application/json')) return next();
+  
+  injectSEO(req, res, async () => {
+    const compId = parseInt(req.params.id, 10);
+    if (isNaN(compId)) return { title: "Company Not Found", description: "This company could not be found." };
+    const c = await db.select().from(users).where(eq(users.id, compId));
+    if (!c.length) return { title: "Company Not Found", description: "This company could not be found." };
+    return {
+      title: c[0].companyName || c[0].displayName || "Company Profile",
+      description: `View the B2B wholesale profile, reviews, and products for ${c[0].companyName || c[0].displayName}.`,
+      image: c[0].profilePictureUrl
+    };
+  });
+});
 async function startLocalServer() {
   if (process.env.NODE_ENV !== "production") {
     const viteModule = await import("vite");

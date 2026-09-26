@@ -27,6 +27,14 @@
       "destination": "/api/index"
     },
     {
+      "source": "/product/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/company/(.*)",
+      "destination": "/api/index"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
