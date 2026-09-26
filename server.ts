@@ -1226,11 +1226,11 @@ The user will describe their business needs. Extract their preferences into a JS
   "role": "retailer" | "distributor" | "collector" | "investor" | "other",
   "interests": ["Pokemon", "One Piece", "Naruto", "Dragon Ball", "Disney Lorcana", "Yu-Gi-Oh", "Magic", "Flesh and Blood", "Union Arena", "Weiss Schwarz"],
   "languages": ["English", "Japanese", "zh-Hans", "zh-Hant"],
-  "buyScale": "single_cases" | "pallets" | "containers" | "unknown",
+  "buyScale": "retail_units" | "single_cases" | "pallets" | "containers" | "unknown",
   "wantsCart": true | false,
   "cartBudget": number | null
 }
-If they don't mention something explicitly, try to infer the best fit. If you can't guess, use "unknown" or empty arrays.
+If they don't mention something explicitly, try to infer the best fit. For "buyScale", infer based on budget if provided (< €1000 = "retail_units", €1000-€5000 = "single_cases", > €5000 = "pallets"). If you can't guess, use "unknown".
 CRITICAL: If the user explicitly asks you to build, create, or recommend a cart/RFQ (e.g., for a specific amount like 350), set "wantsCart" to true and extract the number into "cartBudget". 
 User input: "${prompt}"`,
       config: {

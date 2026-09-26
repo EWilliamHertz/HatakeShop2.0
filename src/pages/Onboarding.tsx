@@ -240,7 +240,7 @@ export function Onboarding() {
                   </div>
                   <div className="space-y-2 text-sm text-slate-300">
                     <p><span className="text-slate-500">Inferred Role:</span> <span className="capitalize">{historyLog.role}</span></p>
-                    <p><span className="text-slate-500">Buying Scale:</span> <span className="capitalize">{historyLog.buyScale}</span></p>
+                    <p><span className="text-slate-500">Buying Scale:</span> <span className="capitalize">{historyLog.buyScale.replace(/_/g, ' ')}</span></p>
                     {historyLog.interests?.length > 0 && (
                       <p><span className="text-slate-500">Top Interests:</span> {historyLog.interests.join(', ')}</p>
                     )}
