@@ -56,11 +56,7 @@ export function CompanyListings() {
     }
   });
 
-  if (isLoading) return (
-    <div className="min-h-screen bg-slate-950 flex justify-center items-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400"></div>
-    </div>
-  );
+
 
   const { company, products = [] } = data || {};
   const safeProducts = Array.isArray(products) ? products : [];
@@ -135,6 +131,12 @@ export function CompanyListings() {
 
     return results;
   }, [safeProducts, search, selectedCategories, selectedLanguages, selectedTypes, sortOption]);
+
+  if (isLoading) return (
+    <div className="min-h-screen bg-slate-950 flex justify-center items-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400"></div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 pb-24">

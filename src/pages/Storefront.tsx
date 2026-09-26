@@ -58,8 +58,7 @@ export function Storefront() {
     fetchStore();
   }, [slug]);
 
-  if (loading) return <div className="p-12 text-center text-slate-400">Loading storefront...</div>;
-  if (!storeData?.store) return <div className="p-12 text-center text-slate-400 font-medium">Store not found.</div>;
+
 
   const { store, products } = storeData;
 
