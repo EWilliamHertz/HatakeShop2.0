@@ -58,6 +58,7 @@ const mainNavItems = [
                     <div className="absolute top-full left-0 mt-2 w-56 bg-slate-800 rounded-xl shadow-lg border border-slate-700 transition-all duration-200 z-50 overflow-hidden py-1">
                       <Link to="/" onClick={() => setLogoMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-100 hover:bg-slate-700 font-medium">{t('Home')}</Link>
                       <Link to="/marketplace" onClick={() => setLogoMenuOpen(false)} className="block px-4 py-2.5 text-sm text-slate-100 hover:bg-slate-700 font-medium">{t('Marketplace')}</Link>
+                      <Link to="/onboarding" onClick={() => setLogoMenuOpen(false)} className="block px-4 py-2.5 text-sm text-cyan-400 hover:bg-slate-700 font-bold">{t('AI Sourcing Agent')}</Link>
                     </div>
                   </>
                 )}

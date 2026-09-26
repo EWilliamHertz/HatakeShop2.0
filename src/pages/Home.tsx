@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { QuickSearchResults } from '../components/QuickSearchResults.tsx';
 import { useQuery } from '@tanstack/react-query';
 import { BadgeCheck, PackageSearch, Filter, MapPin, Building2, Package, Tag, X, ChevronRight, ChevronLeft, Star, Users, Store } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { DigitalSlab } from '../components/DigitalSlab.tsx';
 import { useAuth } from '../components/AuthContext.tsx';
 import { useCart } from '../components/SampleCart.tsx';
@@ -12,7 +12,6 @@ import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { LandedCostEstimator } from '../components/LandedCostEstimator.tsx';
 import { BrowseSections } from '../components/BrowseSections.tsx';
 import { ResponsiveContainer, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
-import { Onboarding } from './Onboarding.tsx';
 
 const generatePriceTrend = (basePrice: number) => {
   return Array.from({ length: 90 }, (_, i) => {
@@ -382,20 +381,8 @@ export function Home() {
   }
 
 
-  const onboardingImages = React.useMemo(() => {
-    const imgs = new Set();
-    const source = sortedHomeProducts.length > 0 ? sortedHomeProducts : homeProducts;
-    for (const p of source) {
-      if (!p) continue;
-      let parsed = [];
-      try { parsed = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch {}
-      if (parsed[0]) imgs.add(parsed[0]);
-    }
-    return Array.from(imgs).sort(() => Math.random() - 0.5); // shuffle
-  }, [sortedHomeProducts, homeProducts]);
-
   if (showOnboarding) {
-    return <Onboarding onComplete={() => setShowOnboarding(false)} backgroundImages={onboardingImages} />;
+    return <Navigate to="/onboarding" replace />;
   }
 
   return (

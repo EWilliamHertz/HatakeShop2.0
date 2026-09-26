@@ -13,8 +13,8 @@ import { CurrencyProvider } from './components/CurrencyProvider.tsx';
 import { Toaster } from 'sonner';
 import { Layout } from './components/Layout.tsx';
 import { CookieConsent } from './components/CookieConsent.tsx';
-import { SplashModal } from './components/SplashModal.tsx';
 import { Home } from './pages/Home.tsx';
+import { Onboarding } from './pages/Onboarding.tsx';
 import { Marketplace } from './pages/Marketplace.tsx';
 import { RFQHub } from './pages/RFQHub.tsx';
 import { RFQDetails } from './pages/RFQDetails.tsx';
@@ -149,11 +149,11 @@ export default function App() {
       <CurrencyProvider>
       <CartProvider>
         <CookieConsent />
-        <SplashModal />
-        <Suspense fallback={<RouteFallback />}>
+                <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/company/:id" element={<CompanyProfile />} />
