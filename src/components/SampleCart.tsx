@@ -64,6 +64,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const addItem = (item: CartItem) => {
+    playSound('pop');
     setItems(prev => {
       if (prev.find(i => i.productId === item.productId)) return prev;
       return [...prev, item];

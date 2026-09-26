@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Package, ExternalLink, X, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from './SampleCart';
+import { playSound } from '../lib/soundDesign.ts';
 
 export const CommandPalette = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +40,7 @@ export const CommandPalette = () => {
   }, []);
 
   const handleQuickAdd = (product: any) => {
+    playSound('click');
     addItem({
       productId: product.id,
       title: product.title,

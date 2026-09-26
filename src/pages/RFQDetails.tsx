@@ -17,6 +17,7 @@ import { Video, Phone, PhoneIncoming, Check, X as XIcon } from 'lucide-react';
 import { CheckCheck } from 'lucide-react'; // Ensure this gets added to imports
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { ContractModal } from '../components/ContractModal.tsx';
+import { playSound } from '../lib/soundDesign.ts';
 
 function ChatMessage({ msg, user, dbUser, onImageClick }: { msg: any, user: any, dbUser: any, onImageClick?: (url: string) => void }) {
   const { t } = useTranslation();
@@ -579,6 +580,7 @@ export function RFQDetails() {
                   <button onClick={async () => {
                      const toggle = document.getElementById('hagglerToggle') as HTMLInputElement;
                      if(toggle && !toggle.checked) toggle.checked = true;
+                     playSound('success');
                      toast.success("AI Auto-Haggler activated for this Deal Room.");
                      
                      // Simulate AI sending a message
