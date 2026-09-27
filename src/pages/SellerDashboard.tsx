@@ -349,12 +349,21 @@ export function SellerDashboard() {
                 <div>
            <div className="flex items-center gap-3">
              <h2 className="text-3xl font-extrabold text-white capitalize">{activeTab === 'listings' ? 'Product Listings' : activeTab}</h2>
-             <div className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-100 to-yellow-100 border border-yellow-200 text-yellow-800 rounded-full text-xs font-semibold tracking-tight shadow-none">
-               <Medal className="w-3.5 h-3.5" /> Gold Vendor
-             </div>
-             <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-xs font-semibold tracking-tight shadow-none">
-               <ShieldCheck className="w-3.5 h-3.5" /> Top Exporter
-             </div>
+             {dbUser?.supplierTier === 'Gold Vendor' && (
+               <div className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-100 to-yellow-100 border border-yellow-200 text-yellow-800 rounded-full text-xs font-semibold tracking-tight shadow-none">
+                 <Medal className="w-3.5 h-3.5" /> Gold Vendor
+               </div>
+             )}
+             {dbUser?.supplierTier === 'Top Exporter' && (
+               <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-xs font-semibold tracking-tight shadow-none">
+                 <ShieldCheck className="w-3.5 h-3.5" /> Top Exporter
+               </div>
+             )}
+             {dbUser?.supplierTier === 'Verified Supplier' && (
+               <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-xs font-semibold tracking-tight shadow-none">
+                 <ShieldCheck className="w-3.5 h-3.5" /> Verified Supplier
+               </div>
+             )}
            </div>
         </div>
         
