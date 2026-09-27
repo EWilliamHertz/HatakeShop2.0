@@ -8,8 +8,12 @@ const router = Router();
 
 router.get("/workspaces", requireAuth, async (req: any, res) => {
   try {
-    const userId = req.user.id;
-    
+    const uid = req.user.uid;
+
+    // Look up the DB user by Firebase UID
+    const [dbUser] = await db.select({ id: users.id }).from(users).where(eq(users.uid, uid)).limit(1);
+    if (!dbUser) return res.status(404).json({ companies: [] });
+
     // Fetch all companies the user is a member of
     const userCompanies = await db.select({
       id: companies.id,
@@ -20,7 +24,7 @@ router.get("/workspaces", requireAuth, async (req: any, res) => {
     })
     .from(companyMembers)
     .innerJoin(companies, eq(companyMembers.companyId, companies.id))
-    .where(eq(companyMembers.userId, userId));
+    .where(eq(companyMembers.userId, dbUser.id));
 
     res.json({ companies: userCompanies });
   } catch (err) {
@@ -32,12 +36,16 @@ router.get("/workspaces", requireAuth, async (req: any, res) => {
 router.post("/workspaces/active", requireAuth, async (req: any, res) => {
   try {
     const { activeCompanyId } = req.body;
-    const userId = req.user.id;
+    const uid = req.user.uid;
+
+    // Look up the DB user by Firebase UID
+    const [dbUser] = await db.select({ id: users.id }).from(users).where(eq(users.uid, uid)).limit(1);
+    if (!dbUser) return res.status(404).json({ error: "User not found" });
 
     // Verify membership
     if (activeCompanyId) {
       const [membership] = await db.select().from(companyMembers)
-        .where(and(eq(companyMembers.companyId, activeCompanyId), eq(companyMembers.userId, userId)));
+        .where(and(eq(companyMembers.companyId, activeCompanyId), eq(companyMembers.userId, dbUser.id)));
       
       if (!membership) {
         return res.status(403).json({ error: "Not a member of this workspace" });
@@ -46,7 +54,7 @@ router.post("/workspaces/active", requireAuth, async (req: any, res) => {
 
     await db.update(users)
       .set({ activeCompanyId: activeCompanyId || null })
-      .where(eq(users.id, userId));
+      .where(eq(users.id, dbUser.id));
 
     res.json({ success: true });
   } catch (err) {
