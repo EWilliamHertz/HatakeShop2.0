@@ -8,19 +8,19 @@ import { FileText, BadgeCheck, FileBadge, PackagePlus, LayoutList, Factory, Load
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase.ts';
 import { toast } from 'sonner';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Papa from 'papaparse';
 import { ProductForm, ProductFormValues } from '../components/ProductForm.tsx';
 
-import { TeamSettings } from "../components/TeamSettings.tsx";
-import { cn } from "../components/Layout.tsx";
+import { WorkspaceSettings } from "../components/WorkspaceSettings.tsx";
 import { useWorkspace } from '../components/WorkspaceContext.tsx';
 
 export function SellerDashboard() {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
   const { user, dbUser } = useAuth();
-  const { activeCompanyId } = useWorkspace();
+  const { activeCompanyId, companies } = useWorkspace();
+  const activeCompany = companies.find(c => c.id === activeCompanyId) ?? null;
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<any[]>([]);
   
@@ -284,9 +284,19 @@ export function SellerDashboard() {
     <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
       {/* Sidebar Navigation */}
       <div className="w-full md:w-72 shrink-0">
-        <h1 className="heading-xl mb-2">
+        <h1 className="heading-xl mb-1">
           Supplier Portal
         </h1>
+        {activeCompany && (
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-full bg-slate-700 border border-slate-600 overflow-hidden flex items-center justify-center shrink-0">
+              {activeCompany.logoUrl
+                ? <img src={activeCompany.logoUrl} alt={activeCompany.name} className="w-full h-full object-cover" />
+                : <span className="text-[10px] font-bold text-slate-300">{activeCompany.name?.[0]?.toUpperCase()}</span>}
+            </div>
+            <span className="text-sm font-semibold text-slate-300 truncate">{activeCompany.name}</span>
+          </div>
+        )}
         <p className="text-sm text-slate-400 mb-6">
           Manage your wholesale catalog, track buyers, and forecast inventory.
         </p>
@@ -298,13 +308,6 @@ export function SellerDashboard() {
            >
              <Package className={`w-5 h-5 ${activeTab === 'listings' ? 'text-white/80' : 'text-slate-400'}`} />
              <span>{t('Listings')}</span>
-           </button>
-           <button
-             onClick={() => setActiveTab('team')}
-             className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'team' ? 'bg-[var(--color-accent)] text-white shadow-sm' : 'text-slate-400 hover:bg-[var(--color-canvas)] hover:text-slate-100'}`}
-           >
-             <Users className={`w-5 h-5 ${activeTab === 'team' ? 'text-white/80' : 'text-slate-400'}`} />
-             <span>{t('Team Settings')}</span>
            </button>
            <button
              onClick={() => setActiveTab('analytics')}
@@ -327,19 +330,21 @@ export function SellerDashboard() {
              <ShieldCheck className={`w-5 h-5 ${activeTab === 'verification' ? 'text-white/80' : 'text-slate-400'}`} />
              <span>{t('Verification Center')}</span>
            </button>
-           <Link
-             to="/seller/settings"
-             className="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:bg-[var(--color-canvas)] hover:text-slate-100"
+           {/* Workspace tab — replaces old Team Settings + Company Settings link */}
+           <button
+             onClick={() => setActiveTab('workspace')}
+             className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'workspace' ? 'bg-[var(--color-accent)] text-white shadow-sm' : 'text-slate-400 hover:bg-[var(--color-canvas)] hover:text-slate-100'}`}
            >
-             <Building2 className="w-5 h-5 text-slate-400" />
-             <span>{t('Company Settings')}</span>
-           </Link>
+             <Building2 className={`w-5 h-5 ${activeTab === 'workspace' ? 'text-white/80' : 'text-slate-400'}`} />
+             <span>Workspace</span>
+           </button>
         </nav>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1">
         <div className="bg-slate-800 border border-slate-700 rounded-2xl min-h-[600px] overflow-hidden p-0">
+          {activeTab !== 'workspace' && (
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 md:p-8 bg-[var(--color-canvas)] border-b border-[var(--color-hairline)]">
                 <div>
            <div className="flex items-center gap-3">
@@ -381,6 +386,7 @@ export function SellerDashboard() {
            )}
         </div>
       </div>
+          )}
 
             {activeTab === 'finance' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 p-6 md:p-8">
@@ -620,11 +626,13 @@ export function SellerDashboard() {
         </div>
       )}
 
-      {activeTab === 'team' ? (
-        <TeamSettings />
 
+      {/* Workspace Tab — full-panel, no inner padding from parent */}
+      {activeTab === 'workspace' && (
+        <WorkspaceSettings />
+      )}
 
-      ) : (
+      {activeTab !== 'workspace' && (
         <>
           {showAddForm && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 animate-in fade-in slide-in-from-top-4 m-6 md:mx-8">
@@ -712,6 +720,7 @@ export function SellerDashboard() {
       </div>
         </>
       )}
+
       {csvPreviewData && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setCsvPreviewData(null)}>
           <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-4xl overflow-hidden max-h-[90vh] flex flex-col p-0" onClick={(e) => e.stopPropagation()}>
