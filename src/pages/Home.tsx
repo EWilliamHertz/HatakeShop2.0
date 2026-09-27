@@ -12,6 +12,7 @@ import { cn } from '../components/Layout.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { LandedCostEstimator } from '../components/LandedCostEstimator.tsx';
 import { BrowseSections } from '../components/BrowseSections.tsx';
+import { SkeletonGrid } from '../components/SkeletonGrid.tsx';
 import { ResponsiveContainer, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 const generatePriceTrend = (basePrice: number) => {
@@ -657,7 +658,7 @@ export function Home() {
         <div className="flex-1">
 
       {loading ? (
-        <div className="text-center py-12 text-slate-400">{t('Loading catalog...')}</div>
+        <SkeletonGrid count={12} />
       ) : products.length === 0 ? (
         <div className="bg-slate-900 rounded-2xl border border-slate-800 text-center py-12 text-slate-400">{t('No products found.')}</div>
       ) : (

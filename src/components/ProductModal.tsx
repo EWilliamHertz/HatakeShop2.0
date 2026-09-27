@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from './CurrencyProvider.tsx';
 import { WishlistButton } from './WishlistButton.tsx';
+import { ImageMagnifier } from './ImageMagnifier.tsx';
 
 export function ProductModal({ product, onClose }: { product: any, onClose: () => void }) {
   const { t } = useTranslation();
@@ -105,7 +106,7 @@ export function ProductModal({ product, onClose }: { product: any, onClose: () =
               <div className="aspect-square bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center relative">
                 <WishlistButton productId={product.id} />
                 {activeImage ? (
-                  <img src={activeImage} alt={product.title} className="w-full h-full object-contain" />
+                  <ImageMagnifier src={activeImage} alt={product.title} />
                 ) : (
                   <PackageSearch className="w-20 h-20 text-slate-600" />
                 )}

@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { CategorySEOPage } from "./pages/CategorySEOPage.tsx";
 import { AuthProvider, useAuth } from './components/AuthContext.tsx';
+import { CommandPalette } from "./components/CommandPalette.tsx";
 import { CartProvider } from './components/SampleCart.tsx';
 import { CurrencyProvider } from './components/CurrencyProvider.tsx';
 import { Toaster } from 'sonner';
@@ -145,6 +146,7 @@ const queryClient = new QueryClient();
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
+    <CommandPalette />
     <Toaster position="top-center" richColors />
     <AuthProvider>
       <BrowserRouter>
