@@ -166,14 +166,11 @@ export function Onboarding() {
         </motion.div>
       </div>
 
-      <div className="absolute top-8 left-0 right-0 flex justify-center z-50">
-        <img src="/logo.png" alt="Hatake" className="h-12 w-auto drop-shadow-2xl hover:scale-105 transition-transform cursor-pointer" onClick={() => navigate('/')} />
-      </div>
-
       <div className="relative z-10 w-full max-w-3xl px-6 pt-16">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-500/10 mb-6 border border-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.2)]">
-            <Sparkles className="w-8 h-8 text-cyan-400" />
+          <div className="relative inline-flex items-center justify-center mb-6">
+            <img src="/logo.png" alt="Hatake" className="h-24 w-auto drop-shadow-2xl hover:scale-105 transition-transform cursor-pointer" onClick={() => navigate('/')} />
+            <Sparkles className="absolute w-5 h-5 text-cyan-400 pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
             Tailor Your Hatake Experience
