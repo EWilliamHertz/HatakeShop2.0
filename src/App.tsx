@@ -146,13 +146,13 @@ const queryClient = new QueryClient();
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-    <CommandPalette />
     <Toaster position="top-center" richColors />
     <AuthProvider>
       <BrowserRouter>
       <CurrencyProvider>
       <CartProvider>
         <CookieConsent />
+        <CommandPalette />
                 <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Layout />}>
