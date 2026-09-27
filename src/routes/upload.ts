@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
-import { requireAuth } from './auth.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
