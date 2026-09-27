@@ -14,6 +14,8 @@ export function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
 }
 
+import { WorkspaceSwitcher } from './WorkspaceSwitcher.tsx';
+
 export function Layout() {
   const { user, signIn, logOut, dbUser } = useAuth();
   const { t, i18n } = useTranslation();
@@ -45,9 +47,10 @@ const mainNavItems = [
             
             {/* LEFT: Main Nav (Icons Only) */}
             <div className="flex items-center space-x-2">
-              <Link to="/" className="md:hidden text-white font-bold text-xl tracking-tight pr-2">
+              <Link to="/" className="text-white font-bold text-xl tracking-tight pr-4">
                 Hatake<span className="text-cyan-400">.Shop</span>
               </Link>
+              <WorkspaceSwitcher />
               <nav className="hidden md:flex space-x-1">
                 {mainNavItems.map((item) => {
                   if (item.protected && !user) return null;

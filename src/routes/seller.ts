@@ -13,9 +13,14 @@ const router = Router();
 router.get(["/seller/analytics", "/api/seller/analytics", "/api-v2/seller/analytics"], requireAuth, requireSeller, async (req: AuthRequest, res) => {
   try {
     const userProfile = await getUserProfile(req.user.uid);
-    const teamOwnerId = userProfile.teamOwnerId || userProfile.id;
+    const targetCompanyId = userProfile.activeCompanyId;
     
-    const myProducts = await db.select({ id: products.id }).from(products).where(eq(products.sellerId, teamOwnerId));
+    let myProducts = [];
+    if (targetCompanyId) {
+       myProducts = await db.select({ id: products.id }).from(products).where(eq(products.companyId, targetCompanyId));
+    } else {
+       myProducts = await db.select({ id: products.id }).from(products).where(eq(products.sellerId, userProfile.id));
+    }
     const productIds = myProducts.map(p => p.id);
     
     if (productIds.length === 0) {
@@ -84,7 +89,11 @@ router.get(["/seller/analytics", "/api/seller/analytics", "/api-v2/seller/analyt
        categoryId: products.categoryId,
        unitCost: products.unitCost,
        stockQuantity: products.stockQuantity
-    }).from(products).where(eq(products.sellerId, teamOwnerId));
+    }).from(products).where(
+      targetCompanyId 
+        ? eq(products.companyId, targetCompanyId) 
+        : eq(products.sellerId, userProfile.id)
+    );
 
     const categoriesData = await db.select().from(categories);
     const categoryMap = new Map();
@@ -117,8 +126,9 @@ router.get(["/seller/products", "/api/seller/products", "/api-v2/seller/products
   try {
     await ensureSealedTaxonomySchema();
     const userProfile = await getUserProfile(req.user!.uid);
-    const teamOwnerId = userProfile.teamOwnerId || userProfile.id;
-    const myProducts = await db.select({
+    const targetCompanyId = userProfile.activeCompanyId;
+    
+    let baseQuery = db.select({
         id: products.id,
         sellerId: products.sellerId,
         categoryId: products.categoryId,
@@ -138,7 +148,13 @@ router.get(["/seller/products", "/api/seller/products", "/api-v2/seller/products
         language: products.language,
         sealedType: products.sealedType,
         createdAt: products.createdAt
-    }).from(products).where(eq(products.sellerId, teamOwnerId)).orderBy(desc(products.createdAt));
+    }).from(products).where(
+      targetCompanyId 
+        ? eq(products.companyId, targetCompanyId) 
+        : eq(products.sellerId, userProfile.id)
+    ).orderBy(desc(products.createdAt));
+    
+    const myProducts = await baseQuery;
     res.json(myProducts);
   } catch (err: any) {
     console.error(err);
@@ -150,7 +166,7 @@ router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/product
   try {
     await ensureSealedTaxonomySchema();
     const userProfile = await getUserProfile(req.user!.uid);
-    const teamOwnerId = userProfile.teamOwnerId || userProfile.id;
+    const targetCompanyId = userProfile.activeCompanyId;
     
     const { title, description, originType, moq, offersOem, oemMoq, tieredPricing, leadTimeDays, shippingOptions, certifications, images, stockQuantity, unitCost, categoryId, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant, language, sealedType } = req.body;
     const embedding = await generateEmbedding(`${title} ${description} ${originType || 'Direct Factory'}`);
@@ -162,7 +178,8 @@ router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/product
     const parsedYear = parseInt(cardYear, 10);
 
     const [newProduct] = await db.insert(products).values({
-      sellerId: teamOwnerId,
+      sellerId: userProfile.id,
+      companyId: targetCompanyId || null,
       title,
       description,
       moq: isNaN(parsedMoq) ? 1 : parsedMoq,
@@ -200,7 +217,7 @@ router.post(["/seller/products", "/api/seller/products", "/api-v2/seller/product
 router.post(["/seller/products/bulk", "/api/seller/products/bulk", "/api-v2/seller/products/bulk"], requireAuth, requireSeller, async (req: AuthRequest, res) => {
   try {
     const userProfile = await getUserProfile(req.user!.uid);
-    const teamOwnerId = userProfile.teamOwnerId || userProfile.id;
+    const targetCompanyId = userProfile.activeCompanyId;
     const { products: newProducts } = req.body;
 
     if (!Array.isArray(newProducts)) return res.status(400).json({ error: "Expected an array of products" });
@@ -216,7 +233,8 @@ router.post(["/seller/products/bulk", "/api/seller/products/bulk", "/api-v2/sell
       const parsedYear = parseInt(cardYear, 10);
 
       return {
-          sellerId: teamOwnerId,
+        sellerId: userProfile.id,
+        companyId: targetCompanyId || null,
         title,
         description,
         moq: isNaN(parsedMoq) ? 1 : parsedMoq,
@@ -257,7 +275,14 @@ router.patch(["/seller/products/:id", "/api/seller/products/:id", "/api-v2/selle
     const userProfile = await getUserProfile(req.user!.uid);
     const productId = parseInt(req.params.id, 10);
     
-    const existing = await db.select().from(products).where(and(eq(products.id, productId), eq(products.sellerId, userProfile.teamOwnerId || userProfile.id)));
+    const existing = await db.select().from(products).where(
+      and(
+        eq(products.id, productId),
+        userProfile.activeCompanyId 
+          ? eq(products.companyId, userProfile.activeCompanyId)
+          : eq(products.sellerId, userProfile.id)
+      )
+    );
     if (!existing.length) return res.status(403).json({ error: "Not authorized" });
 
     const { title, description, moq, offersOem, oemMoq, originType, leadTimeDays, shippingOptions, images, tieredPricing, stockQuantity, unitCost, categoryId, certifications, productType, gradingCompany, grade, certNumber, cardYear, cardSet, cardNumber, cardVariant, language, sealedType } = req.body;
@@ -279,7 +304,14 @@ router.delete(["/seller/products/:id", "/api/seller/products/:id", "/api-v2/sell
     const userProfile = await getUserProfile(req.user!.uid);
     const productId = parseInt(req.params.id, 10);
     
-    const existing = await db.select().from(products).where(and(eq(products.id, productId), eq(products.sellerId, userProfile.teamOwnerId || userProfile.id)));
+    const existing = await db.select().from(products).where(
+      and(
+        eq(products.id, productId),
+        userProfile.activeCompanyId 
+          ? eq(products.companyId, userProfile.activeCompanyId)
+          : eq(products.sellerId, userProfile.id)
+      )
+    );
     if (!existing.length) return res.status(403).json({ error: "Not authorized" });
 
     await db.delete(inquiries).where(eq(inquiries.targetProductId, productId));

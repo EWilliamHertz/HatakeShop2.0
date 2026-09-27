@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { CategorySEOPage } from "./pages/CategorySEOPage.tsx";
 import { AuthProvider, useAuth } from './components/AuthContext.tsx';
+import { WorkspaceProvider } from './components/WorkspaceContext.tsx';
 import { CommandPalette } from "./components/CommandPalette.tsx";
 import { CartProvider } from './components/SampleCart.tsx';
 import { CurrencyProvider } from './components/CurrencyProvider.tsx';
@@ -148,6 +149,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
     <Toaster position="top-center" richColors />
     <AuthProvider>
+      <WorkspaceProvider>
       <BrowserRouter>
       <CurrencyProvider>
       <CartProvider>
@@ -208,6 +210,7 @@ export default function App() {
       </CartProvider>
       </CurrencyProvider>
       </BrowserRouter>
+      </WorkspaceProvider>
     </AuthProvider>
     </QueryClientProvider>
   );

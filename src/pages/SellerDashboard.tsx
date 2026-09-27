@@ -14,11 +14,13 @@ import { ProductForm, ProductFormValues } from '../components/ProductForm.tsx';
 
 import { TeamSettings } from "../components/TeamSettings.tsx";
 import { cn } from "../components/Layout.tsx";
+import { useWorkspace } from '../components/WorkspaceContext.tsx';
 
 export function SellerDashboard() {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
   const { user, dbUser } = useAuth();
+  const { activeCompanyId } = useWorkspace();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<any[]>([]);
   
@@ -106,7 +108,7 @@ export function SellerDashboard() {
 
 
   const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['sellerAnalytics'],
+    queryKey: ['sellerAnalytics', activeCompanyId],
     queryFn: async () => {
       const res = await fetch('/api-v2/seller/analytics');
       if (!res.ok) throw new Error('Failed to fetch analytics');
@@ -177,7 +179,7 @@ export function SellerDashboard() {
 
   useEffect(() => {
     if (user) fetchMyProducts();
-  }, [user]);
+  }, [user, activeCompanyId]);
 
   const fetchMyProducts = async () => {
     try {

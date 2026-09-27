@@ -291,7 +291,8 @@ import feedRouter from "./src/routes/feed.js";
 import notificationsRouter from "./src/routes/notifications.js";
 import seoRouter from "./src/routes/seo.js";
 import uploadRouter from "./src/routes/upload.js";
-const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter, notificationsRouter, cartRouter, seoRouter, uploadRouter];
+import workspacesRouter from "./src/routes/workspaces.js";
+const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter, notificationsRouter, cartRouter, seoRouter, uploadRouter, workspacesRouter];
 
 // Attach the Socket.IO instance to every request BEFORE the routers mount, so
 // route handlers can emit real-time events via `(req as any).io?.emit(...)`.

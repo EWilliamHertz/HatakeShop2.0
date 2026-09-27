@@ -54,6 +54,29 @@ export const users = pgTable('users', {
   profilePictureUrl: text('profile_picture_url'),
   notificationEmails: jsonb('notification_emails').default(sql`'[]'::jsonb`),
   bannerUrl: text('banner_url'),
+  activeCompanyId: integer('active_company_id'), // Added for multi-tenant context
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const companies = pgTable('companies', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  logoUrl: text('logo_url'),
+  bannerUrl: text('banner_url'),
+  vatNumber: text('vat_number'),
+  region: text('region'),
+  country: text('country'),
+  website: text('website'),
+  aboutUs: text('about_us'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const companyMembers = pgTable('company_members', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().references(() => companies.id),
+  userId: integer('user_id').notNull().references(() => users.id),
+  role: text('role', { enum: ['owner', 'admin', 'member'] }).default('member'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -69,6 +92,7 @@ export const categories = pgTable('categories', {
 export const products = pgTable('products', {
   id: serial('id').primaryKey(),
   sellerId: integer('seller_id').notNull(),
+  companyId: integer('company_id').references(() => companies.id), // Added for multi-tenant context
   categoryId: integer('category_id'),
   categoryIds: integer('category_ids').array().default(sql`'{}'::int[]`),
   title: text('title').notNull(),
@@ -176,6 +200,7 @@ export const affiliates = pgTable('affiliates', {
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
+  companyMembers: many(companyMembers),
   products: many(products),
   inquiriesSent: many(inquiries),
   messages: many(inquiryMessages),
@@ -188,12 +213,32 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     fields: [products.sellerId],
     references: [users.id],
   }),
+  company: one(companies, {
+    fields: [products.companyId],
+    references: [companies.id],
+  }),
   category: one(categories, {
     fields: [products.categoryId],
     references: [categories.id],
   }),
   inquiries: many(inquiries),
   reviews: many(reviews),
+}));
+
+export const companiesRelations = relations(companies, ({ many }) => ({
+  members: many(companyMembers),
+  products: many(products),
+}));
+
+export const companyMembersRelations = relations(companyMembers, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyMembers.companyId],
+    references: [companies.id],
+  }),
+  user: one(users, {
+    fields: [companyMembers.userId],
+    references: [users.id],
+  }),
 }));
 
 export const inquiriesRelations = relations(inquiries, ({ one, many }) => ({
