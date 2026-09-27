@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
-import { MapPin, ShieldCheck, Box, Info, Search, Tag, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { MapPin, ShieldCheck, Box, Info, Search, Tag, ArrowUpDown, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { VendorReviews } from '../components/VendorReviews.tsx';
 import './scrollbar.css';
 
@@ -20,6 +20,7 @@ export function Storefront() {
   const [storeData, setStoreData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const search = searchParams.get('search') || '';
   const selectedCategories = searchParams.get('categories') ? searchParams.get('categories')!.split(',') : [];
@@ -52,6 +53,16 @@ export function Storefront() {
       return prev;
     });
   };
+
+  const clearAllFilters = () => setSearchParams(new URLSearchParams());
+
+  const activeFilterCount =
+    selectedCategories.length +
+    selectedLanguages.length +
+    selectedBrands.length +
+    selectedTypes.length +
+    (search ? 1 : 0);
+
   useEffect(() => {
     async function fetchStore() {
       try {
@@ -68,13 +79,27 @@ export function Storefront() {
     fetchStore();
   }, [slug]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400"></div>
+      </div>
+    );
+  }
 
+  if (!storeData) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex justify-center items-center text-slate-400">
+        Store not found.
+      </div>
+    );
+  }
 
   const { store, products } = storeData;
 
   const safeProducts = Array.isArray(products) ? products : [];
 
-  const { categories, languages, types, brands } = useMemo(() => {
+  const { categories, languages, types, brands } = (() => {
     const cats: Record<string, number> = {};
     const langs: Record<string, number> = {};
     const typs: Record<string, number> = {};
@@ -99,9 +124,9 @@ export function Storefront() {
       types: Object.entries(typs).sort((a, b) => b[1] - a[1]),
       brands: Object.entries(brnds).sort((a, b) => b[1] - a[1]),
     };
-  }, [safeProducts]);
+  })();
 
-  const filteredProducts = useMemo(() => {
+  const filteredProducts = (() => {
     const results = safeProducts.filter((p: any) => {
       if (!p) return false;
       const pTitle = String(p.title || '');
@@ -148,7 +173,9 @@ export function Storefront() {
     });
 
     return results;
-  }, [safeProducts, search, selectedCategories, selectedLanguages, selectedTypes, sortOption]);
+  })();
+
+  const hasFilters = brands.length > 0 || categories.length > 0 || languages.length > 0 || types.length > 0;
 
   return (
     <div className="bg-slate-900 min-h-screen -mt-4 pb-12">
@@ -156,6 +183,7 @@ export function Storefront() {
         <title>{store.companyName || 'Store'} | Hatake</title>
         <meta name="description" content={`Shop products from ${store.companyName} on Hatake Marketplace.`} />
       </Helmet>
+
       {/* Banner */}
       <div className="w-full h-48 md:h-64 bg-slate-800 relative overflow-hidden shadow-sm">
         {store.storeBannerUrl ? (
@@ -178,7 +206,7 @@ export function Storefront() {
               {store.country && (
                 <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4"/> {store.country}</span>
               )}
-              <span className="flex items-center gap-1.5"><Box className="w-4 h-4"/> {products.length} Products</span>
+              <span className="flex items-center gap-1.5"><Box className="w-4 h-4"/> {safeProducts.length} Products</span>
             </div>
           </div>
           <button className="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20 px-4 py-2.5">
@@ -188,93 +216,201 @@ export function Storefront() {
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Products Grid */}
-          <div className="flex-1">
-            <h2 className="text-3xl font-extrabold text-slate-100 mb-6">Store Catalog</h2>
-            
-            {/* Filters bar */}
-            <div className="flex flex-col gap-4 mb-8">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                {/* Search */}
-                <div className="flex-1 max-w-md relative w-full">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search catalog..."
-                    value={search}
-                    onChange={e => updateSearchParam('search', e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all text-sm"
-                  />
-                </div>
-
-                {/* Sort Dropdown */}
-                <div className="flex items-center gap-2 md:ml-auto w-full md:w-auto">
-                  <ArrowUpDown className="w-4 h-4 text-slate-500 shrink-0" />
-                  <div className="relative w-full md:w-auto">
-                    <select
-                      value={sortOption}
-                      onChange={(e) => updateSearchParam('sort', e.target.value)}
-                      className="w-full md:w-auto bg-slate-800 border border-slate-700 rounded-xl text-slate-300 py-2.5 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:border-cyan-500/50 appearance-none cursor-pointer"
-                    >
-                      <option value="newest">Newest First</option>
-                      <option value="oldest">Oldest First</option>
-                      <option value="price-low">Price: Low to High</option>
-                      <option value="price-high">Price: High to Low</option>
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Filters Area */}
-              <div className="flex flex-col gap-5">
-                {/* Category pills */}
-                {categories.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Tag className="w-4 h-4 text-slate-500 shrink-0" />
-                    {categories.map(([cat, count]) => (
-                      <button
-                        key={cat}
-                        onClick={() => toggleMultiParam('categories', cat)}
-                        className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
-                      >
-                        {cat} ({count})
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {/* Language pills */}
-                {languages.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider w-4 text-center">L</span>
-                    {languages.map(([lang, count]) => (
-                      <button
-                        key={lang}
-                        onClick={() => toggleMultiParam('languages', lang)}
-                        className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all ${selectedLanguages.includes(lang) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'}`}
-                      >
-                        {formatLang(lang)} ({count})
-                      </button>
-                    ))}
-                  </div>
-                )}
-                
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-2xl font-extrabold text-slate-100">Store Catalog</h2>
+              <span className="text-sm text-slate-500 tabular-nums">{filteredProducts.length} of {safeProducts.length}</span>
             </div>
+            
+            {/* Controls bar */}
+            <div className="flex items-center gap-3 mb-4 flex-wrap sm:flex-nowrap">
+              {/* Search */}
+              <div className="flex-1 min-w-0 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search catalog..."
+                  value={search}
+                  onChange={e => updateSearchParam('search', e.target.value)}
+                  className="w-full pl-9 pr-8 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all text-sm"
+                />
+                {search && (
+                  <button
+                    onClick={() => updateSearchParam('search', '')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Sort */}
+              <div className="relative shrink-0">
+                <select
+                  value={sortOption}
+                  onChange={(e) => updateSearchParam('sort', e.target.value)}
+                  className="bg-slate-800 border border-slate-700 rounded-xl text-slate-300 py-2.5 pl-3 pr-8 text-sm font-medium focus:outline-none focus:border-cyan-500/50 appearance-none cursor-pointer"
+                >
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="price-low">Price ↑</option>
+                  <option value="price-high">Price ↓</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+
+              {/* Filter toggle */}
+              {hasFilters && (
+                <button
+                  onClick={() => setFiltersOpen(v => !v)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all shrink-0 ${
+                    filtersOpen || activeFilterCount > 0
+                      ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                  }`}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="bg-cyan-500 text-slate-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Expandable Filters Panel */}
+            {filtersOpen && hasFilters && (
+              <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-4 mb-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Filter by</span>
+                  {activeFilterCount > 0 && (
+                    <button onClick={clearAllFilters} className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
+                      Clear all
+                    </button>
+                  )}
+                </div>
+
+                {/* IP / Brand */}
+                {brands.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">IP / Brand</p>
+                    <div className="flex flex-wrap gap-2">
+                      {brands.map(([brand, count]) => (
+                        <button
+                          key={brand}
+                          onClick={() => toggleMultiParam('brands', brand)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            selectedBrands.includes(brand)
+                              ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 ring-1 ring-indigo-500/20'
+                              : 'bg-slate-700 text-slate-400 border border-slate-600 hover:border-slate-500 hover:text-white'
+                          }`}
+                        >
+                          {brand} <span className="opacity-60">({count})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category */}
+                {categories.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Category</p>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map(([cat, count]) => (
+                        <button
+                          key={cat}
+                          onClick={() => toggleMultiParam('categories', cat)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            selectedCategories.includes(cat)
+                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 ring-1 ring-cyan-500/20'
+                              : 'bg-slate-700 text-slate-400 border border-slate-600 hover:border-slate-500 hover:text-white'
+                          }`}
+                        >
+                          {cat} <span className="opacity-60">({count})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Language */}
+                {languages.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Language</p>
+                    <div className="flex flex-wrap gap-2">
+                      {languages.map(([lang, count]) => (
+                        <button
+                          key={lang}
+                          onClick={() => toggleMultiParam('languages', lang)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            selectedLanguages.includes(lang)
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 ring-1 ring-emerald-500/20'
+                              : 'bg-slate-700 text-slate-400 border border-slate-600 hover:border-slate-500 hover:text-white'
+                          }`}
+                        >
+                          {formatLang(lang)} <span className="opacity-60">({count})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Active filter chips (collapsed state) */}
+            {!filtersOpen && activeFilterCount > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4 items-center">
+                <span className="text-xs text-slate-500 shrink-0">Active:</span>
+                {selectedBrands.map(b => (
+                  <button
+                    key={b}
+                    onClick={() => toggleMultiParam('brands', b)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/25 transition-all"
+                  >
+                    {b} <X className="w-3 h-3 opacity-60" />
+                  </button>
+                ))}
+                {selectedCategories.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => toggleMultiParam('categories', c)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 transition-all"
+                  >
+                    {c} <X className="w-3 h-3 opacity-60" />
+                  </button>
+                ))}
+                {selectedLanguages.map(l => (
+                  <button
+                    key={l}
+                    onClick={() => toggleMultiParam('languages', l)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all"
+                  >
+                    {formatLang(l)} <X className="w-3 h-3 opacity-60" />
+                  </button>
+                ))}
+                <button onClick={clearAllFilters} className="text-xs text-slate-500 hover:text-slate-300 transition-colors ml-1">
+                  Clear all
+                </button>
+              </div>
+            )}
 
             {filteredProducts.length === 0 ? (
               <div className="bg-slate-800 border border-slate-700 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
-                <Box className="w-12 h-12 text-slate-400 mb-4" />
-                <p className="text-slate-400 font-medium">No products match your filters.</p>
-                {(search || selectedCategories.length > 0 || selectedLanguages.length > 0 || selectedTypes.length > 0) && (
-                  <button onClick={() => { setSearchParams(new URLSearchParams()); }} className="mt-4 text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
+                <Box className="w-12 h-12 text-slate-500 mb-4 opacity-50" />
+                <p className="text-slate-400 font-medium mb-1">No products match your filters.</p>
+                {activeFilterCount > 0 && (
+                  <button onClick={clearAllFilters} className="mt-3 text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
                     Clear filters
                   </button>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {filteredProducts.map((p: any) => (
-                  <Link key={p.id} to={`/products/${p.id}`} className="btn-secondary">
+                  <Link key={p.id} to={`/products/${p.id}`} className="btn-secondary group">
                     <div className="h-52 bg-slate-900 flex items-center justify-center p-6 border-b border-slate-700">
                       {p.images && p.images[0] ? (
                         <img src={p.images[0]} alt={p.title} className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />
@@ -299,9 +435,9 @@ export function Storefront() {
           </div>
 
           {/* Store Policies Sidebar */}
-          <div className="w-full lg:w-80 flex flex-col gap-6">
+          <div className="w-full lg:w-80 flex flex-col gap-6 shrink-0">
             <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 sticky top-6">
-              <h3 className="text-2xl font-bold text-white text-slate-100 mb-4 flex items-center gap-2 border-b border-slate-700 pb-3">
+              <h3 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2 border-b border-slate-700 pb-3">
                 <Info className="w-5 h-5 text-[#ffcc00]" />
                 Store Policies
               </h3>
