@@ -11,6 +11,7 @@ import { VendorReviews } from '../components/VendorReviews.tsx';
 import { toast } from 'sonner';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
+import { VerificationBadge } from '../components/VerificationBadge.tsx';
 
 export function CompanyProfile() {
   const { t } = useTranslation();
@@ -132,11 +133,7 @@ export function CompanyProfile() {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">{company.companyName}</h1>
-              {company.verificationStatus === 'verified' && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-bold">
-                  <BadgeCheck className="w-3.5 h-3.5" /> Verified
-                </span>
-              )}
+              <VerificationBadge status={company.verificationStatus} />
               {company.verificationTier === 'gold' && <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs font-bold">⭐ Gold</span>}
               {company.verificationTier === 'audited' && <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold">🔍 Audited</span>}
             </div>

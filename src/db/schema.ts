@@ -22,7 +22,7 @@ export const users = pgTable('users', {
   region: text('region'),
   companyFocus: text('company_focus'),
   country: text('country'),
-  verificationStatus: text('verification_status', { enum: ['pending', 'verified', 'rejected'] }).default('pending'),
+  verificationStatus: text('verification_status', { enum: ['pending', 'listed', 'verified', 'certified', 'elite', 'rejected'] }).default('pending'),
   profileViews: integer('profile_views').default(0),
   connectionsCount: integer('connections_count').default(0),
   followersCount: integer('followers_count').default(0),
@@ -108,6 +108,10 @@ export const products = pgTable('products', {
   embedding: vector('embedding'),
   approvalStatus: text('approval_status', { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
   isSponsored: boolean('is_sponsored').default(false),
+  // Preorder fields
+  isPreorder: boolean('is_preorder').default(false),
+  preorderEstimatedDate: timestamp('preorder_estimated_date'), // estimated availability date
+  preorderLabel: text('preorder_label'), // e.g. "Early October", "End September"
   createdAt: timestamp('created_at').defaultNow(),
 });
 

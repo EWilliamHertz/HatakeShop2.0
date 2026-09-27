@@ -725,6 +725,7 @@ app.get(["/store/:slug", "/api/store/:slug", "/api-v2/store/:slug"], async (req,
         id: store.id,
         companyName: store.companyName,
         country: store.country,
+        verificationStatus: store.verificationStatus,
         storeBannerUrl: store.storeBannerUrl,
         storePolicies: store.storePolicies
       },

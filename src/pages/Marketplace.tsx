@@ -8,6 +8,7 @@ import { Helmet } from 'react-helmet-async';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { WishlistButton } from '../components/WishlistButton.tsx';
+import { VerificationBadge } from '../components/VerificationBadge.tsx';
 import { BrowseSections } from '../components/BrowseSections.tsx';
 const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) => {
   if (!p) return null;
@@ -42,11 +43,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
         <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-3 min-w-0">
           <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-500" />
           <Link to={`/company/${p.seller?.id || p.sellerId || ''}`} onClick={(e) => e.stopPropagation()} className="truncate hover:text-cyan-400 transition-colors font-medium">{p.seller?.companyName || 'Supplier'}</Link>
-          {p.seller?.verificationStatus === 'verified' && (
-            <div className="flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase border border-emerald-500/20">
-              <BadgeCheck className="w-3 h-3" /> Verified
-            </div>
-          )}
+          <VerificationBadge status={p.seller?.verificationStatus} />
         </div>
 
         <div className="flex flex-wrap gap-1.5 mb-4">

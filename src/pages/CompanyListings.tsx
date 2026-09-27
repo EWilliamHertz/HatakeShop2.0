@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async';
 import { Package, BadgeCheck, Search, ArrowLeft, Tag, ChevronDown, ArrowUpDown, Box, SlidersHorizontal, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ProductModal } from '../components/ProductModal.tsx';
+import { PreorderCard } from '../components/PreorderCard.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import './scrollbar.css';
 
@@ -386,55 +387,91 @@ export function CompanyListings() {
 
         {/* Grid */}
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-            {filtered.map((p: any) => {
-              let images: string[] = [];
-              try { images = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch {}
-              let tiers: any[] = [];
-              try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch {}
-              const tierPrices = (Array.isArray(tiers) ? tiers : []).map((t: any) => Number(t.price ?? t.unitPrice)).filter((n: number) => Number.isFinite(n) && n > 0);
-              const basePrice = Number(p.unitCost ?? p.unitPrice);
-              const lowestPrice = tierPrices.length > 0 ? Math.min(...tierPrices) : (Number.isFinite(basePrice) && basePrice > 0 ? basePrice : null);
+          <>
+            {/* Preorder section header — only shown when preorders exist */}
+            {filtered.some((p: any) => p.isPreorder) && (
+              <div className="flex items-center gap-3 mb-4">
+                <span className="flex items-center gap-1.5 text-amber-400 font-semibold text-sm">
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                  Pre-Order Available
+                </span>
+                <span className="text-xs text-slate-500">{filtered.filter((p: any) => p.isPreorder).length} items</span>
+                <div className="flex-1 h-px bg-amber-500/20" />
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+              {filtered.map((p: any) => {
+                if (p.isPreorder) {
+                  return (
+                    <PreorderCard
+                      key={p.id}
+                      product={p}
+                      formatPrice={formatPrice}
+                      onClick={() => setSelectedProduct(p)}
+                    />
+                  );
+                }
 
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => setSelectedProduct(p)}
-                  className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer flex flex-col"
-                >
-                  <div className="aspect-[4/3] bg-slate-800 overflow-hidden relative">
-                    {images[0]
-                      ? <img src={images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      : <div className="w-full h-full flex items-center justify-center text-slate-600"><Package className="w-8 h-8" /></div>}
-                    <div className="absolute top-2 left-2">
-                      <span className="bg-slate-900/90 backdrop-blur text-slate-300 text-[10px] font-semibold px-2 py-1 rounded-full border border-slate-700">
-                        MOQ: {p.moq || '—'}
-                      </span>
-                    </div>
-                    {(p.isSponsored || p.featured) && (
-                      <div className="absolute top-2 right-2">
-                        <span className="bg-yellow-500 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Featured</span>
+                let images: string[] = [];
+                try { images = Array.isArray(p.images) ? p.images : JSON.parse(p.images || '[]'); } catch {}
+                let tiers: any[] = [];
+                try { tiers = Array.isArray(p.tieredPricing) ? p.tieredPricing : JSON.parse(p.tieredPricing || '[]'); } catch {}
+                const tierPrices = (Array.isArray(tiers) ? tiers : []).map((t: any) => Number(t.price ?? t.unitPrice)).filter((n: number) => Number.isFinite(n) && n > 0);
+                const basePrice = Number(p.unitCost ?? p.unitPrice);
+                const lowestPrice = tierPrices.length > 0 ? Math.min(...tierPrices) : (Number.isFinite(basePrice) && basePrice > 0 ? basePrice : null);
+
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelectedProduct(p)}
+                    className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer flex flex-col"
+                  >
+                    <div className="aspect-[4/3] bg-slate-800 overflow-hidden relative">
+                      {images[0]
+                        ? <img src={images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        : <div className="w-full h-full flex items-center justify-center text-slate-600"><Package className="w-8 h-8" /></div>}
+                      <div className="absolute top-2 left-2">
+                        <span className="bg-slate-900/90 backdrop-blur text-slate-300 text-[10px] font-semibold px-2 py-1 rounded-full border border-slate-700">
+                          MOQ: {p.moq || '—'}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                  <div className="p-4 flex flex-col flex-1">
-                    <h3 className="font-semibold text-slate-200 line-clamp-2 mb-1 group-hover:text-cyan-400 transition-colors text-sm">{p.title}</h3>
-                    {p.description && <p className="text-xs text-slate-500 line-clamp-2 mb-3 flex-1">{p.description}</p>}
-                    {(p.category || p.originType) && (
-                      <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full w-fit mb-2">
-                        {p.category || p.originType}
-                      </span>
-                    )}
-                    <div className="mt-auto pt-2 border-t border-slate-800/50">
-                      {lowestPrice
-                        ? <div><div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">From</div><div className="text-base font-bold text-white">{formatPrice(lowestPrice)}<span className="text-slate-500 text-xs font-normal">/unit</span></div></div>
-                        : <div className="text-sm font-medium text-slate-400">Price on request</div>}
+                      {(p.isSponsored || p.featured) && (
+                        <div className="absolute top-2 right-2">
+                          <span className="bg-yellow-500 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Featured</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 flex flex-col flex-1">
+                      <h3 className="font-semibold text-slate-200 line-clamp-2 mb-1 group-hover:text-cyan-400 transition-colors text-sm">{p.title}</h3>
+                      {p.description && <p className="text-xs text-slate-500 line-clamp-2 mb-3 flex-1">{p.description}</p>}
+                      <div className="flex flex-wrap gap-1.5 mb-2 mt-1">
+                        {p.brand && (
+                          <span className="text-[10px] bg-[#ffcc00]/10 border border-[#ffcc00]/20 text-[#ffcc00] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
+                            {p.brand}
+                          </span>
+                        )}
+                        {p.sealedType && p.sealedType !== 'other' && (
+                          <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full capitalize">
+                            {p.sealedType.replace('_', ' ')}
+                          </span>
+                        )}
+                        {(p.categoryName || p.category) && (
+                          <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full">
+                            {p.categoryName || p.category}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-auto pt-2 border-t border-slate-800/50">
+                        {lowestPrice
+                          ? <div><div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">From</div><div className="text-base font-bold text-white">{formatPrice(lowestPrice)}<span className="text-slate-500 text-xs font-normal">/unit</span></div></div>
+                          : <div className="text-sm font-medium text-slate-400">Price on request</div>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         ) : (
           <div className="text-center py-24 text-slate-500">
             <Package className="w-12 h-12 mx-auto mb-4 opacity-30" />

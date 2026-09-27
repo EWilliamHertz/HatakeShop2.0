@@ -3,7 +3,10 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
 import { MapPin, ShieldCheck, Box, Info, Search, Tag, ArrowUpDown, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
+import { VerificationBadge } from '../components/VerificationBadge.tsx';
 import { VendorReviews } from '../components/VendorReviews.tsx';
+import { PreorderCard } from '../components/PreorderCard.tsx';
+import { useCurrency } from '../components/CurrencyProvider.tsx';
 import './scrollbar.css';
 
 const formatLang = (l: string) => {
@@ -17,6 +20,7 @@ const formatLang = (l: string) => {
 export function Storefront() {
   const { slug } = useParams();
   const { t } = useTranslation();
+  const { formatPrice } = useCurrency();
   const [storeData, setStoreData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -200,7 +204,7 @@ export function Storefront() {
           <div>
             <h1 className="heading-xl text-slate-100 mb-2 flex items-center gap-3">
               {store.companyName}
-              <ShieldCheck className="w-7 h-7 text-[#ffcc00]" />
+              <VerificationBadge status={store.verificationStatus} />
             </h1>
             <div className="flex items-center gap-6 text-slate-400 text-sm font-medium">
               {store.country && (
@@ -408,29 +412,68 @@ export function Storefront() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                {filteredProducts.map((p: any) => (
-                  <Link key={p.id} to={`/products/${p.id}`} className="btn-secondary group">
-                    <div className="h-52 bg-slate-900 flex items-center justify-center p-6 border-b border-slate-700">
-                      {p.images && p.images[0] ? (
-                        <img src={p.images[0]} alt={p.title} className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />
-                      ) : (
-                        <Box className="w-12 h-12 text-slate-400" />
-                      )}
-                    </div>
-                    <div className="p-5 flex flex-col flex-1">
-                      <p className="text-xs font-semibold text-[#ffcc00] mb-1.5 uppercase tracking-wider">{p.brand}</p>
-                      <h3 className="font-semibold text-slate-100 mb-3 line-clamp-2 leading-tight group-hover:text-[#ffcc00] transition-colors">{p.title}</h3>
-                      <div className="mt-auto pt-4 border-t border-slate-700 flex justify-between items-end">
-                        <div>
-                          <p className="text-xl font-bold tracking-tight text-slate-100">${Number(p.unitCost).toFixed(2)}</p>
-                          <p className="text-xs text-slate-400 font-medium mt-0.5">MOQ: {p.moq}</p>
+              <>
+                {filteredProducts.some((p: any) => p.isPreorder) && (
+                  <div className="flex items-center gap-3 mb-4 mt-2">
+                    <span className="flex items-center gap-1.5 text-amber-400 font-semibold text-sm">
+                      <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                      Pre-Order Available
+                    </span>
+                    <span className="text-xs text-slate-500">{filteredProducts.filter((p: any) => p.isPreorder).length} items</span>
+                    <div className="flex-1 h-px bg-amber-500/20" />
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {filteredProducts.map((p: any) => {
+                    if (p.isPreorder) {
+                      return (
+                        <PreorderCard
+                          key={p.id}
+                          product={p}
+                          formatPrice={formatPrice}
+                        />
+                      );
+                    }
+                    return (
+                      <Link key={p.id} to={`/products/${p.id}`} className="btn-secondary group">
+                        <div className="h-52 bg-slate-900 flex items-center justify-center p-6 border-b border-slate-700">
+                          {p.images && p.images[0] ? (
+                            <img src={p.images[0]} alt={p.title} className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />
+                          ) : (
+                            <Box className="w-12 h-12 text-slate-400" />
+                          )}
                         </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                        <div className="p-5 flex flex-col flex-1">
+                          <div className="flex flex-wrap gap-1.5 mb-1.5">
+                            {p.brand && (
+                              <span className="text-[10px] bg-[#ffcc00]/10 border border-[#ffcc00]/20 text-[#ffcc00] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
+                                {p.brand}
+                              </span>
+                            )}
+                            {p.sealedType && p.sealedType !== 'other' && (
+                              <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full capitalize">
+                                {p.sealedType.replace('_', ' ')}
+                              </span>
+                            )}
+                            {(p.categoryName || p.category) && (
+                              <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full">
+                                {p.categoryName || p.category}
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-semibold text-slate-100 mb-3 line-clamp-2 leading-tight group-hover:text-[#ffcc00] transition-colors">{p.title}</h3>
+                          <div className="mt-auto pt-4 border-t border-slate-700 flex justify-between items-end">
+                            <div>
+                              <p className="text-xl font-bold tracking-tight text-slate-100">{formatPrice(Number(p.unitCost))}</p>
+                              <p className="text-xs text-slate-400 font-medium mt-0.5">MOQ: {p.moq}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
 

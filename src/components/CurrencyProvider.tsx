@@ -10,33 +10,32 @@ interface CurrencyContextType {
 }
 
 const CurrencyContext = createContext<CurrencyContextType>({
-  currency: 'USD',
+  currency: 'EUR',
   setCurrency: () => {},
   formatPrice: () => '',
-  rates: { USD: 1, EUR: 0.92, GBP: 0.79, JPY: 150.5 }
+  rates: { EUR: 1, USD: 1.09, GBP: 0.85, JPY: 163.5 }
 });
 
 export const useCurrency = () => useContext(CurrencyContext);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currency, setCurrency] = useState<Currency>('USD');
+  const [currency, setCurrency] = useState<Currency>('EUR');
   const [rates, setRates] = useState<Record<string, number>>({
-    USD: 1, EUR: 0.92, GBP: 0.79, JPY: 150.5
+    EUR: 1, USD: 1.09, GBP: 0.85, JPY: 163.5
   });
 
   useEffect(() => {
     // In a real production app, we would fetch from an API like Frankfurter here.
-    // For this implementation, we simulate fetching live rates.
     const fetchRates = async () => {
       try {
         const res = await fetch('/api/rates')
         if (res.ok) {
           const data = await res.json();
           setRates({
-            USD: 1,
-            EUR: data.rates.EUR || 0.92,
-            GBP: data.rates.GBP || 0.79,
-            JPY: data.rates.JPY || 150.5,
+            EUR: 1,
+            USD: data.rates.USD || 1.09,
+            GBP: data.rates.GBP || 0.85,
+            JPY: data.rates.JPY || 163.5,
           });
         }
       } catch (err) {
@@ -46,12 +45,12 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchRates();
   }, []);
 
-  const formatPrice = (priceInUSD: number) => {
-    if (isNaN(priceInUSD) || priceInUSD == null) return "N/A";
+  const formatPrice = (priceInBase: number) => {
+    if (isNaN(priceInBase) || priceInBase == null) return "N/A";
     
-    const safeCurrency = ['USD', 'EUR', 'GBP', 'JPY'].includes(currency) ? currency : 'USD';
+    const safeCurrency = ['USD', 'EUR', 'GBP', 'JPY'].includes(currency) ? currency : 'EUR';
     const rate = rates[safeCurrency] || 1;
-    const converted = priceInUSD * rate;
+    const converted = priceInBase * rate;
     
     try {
       return new Intl.NumberFormat(undefined, {

@@ -53,7 +53,7 @@ DONE
 ### 10. Multi-Language Product Descriptions
 - **Current:** `autoTranslate` flag exists on users but isn't wired to any translation service.
 - **Add:** Use Google Translate API or DeepL to auto-translate product titles/descriptions when a buyer's `preferredLanguage` differs from the seller's. Cache translations in a `product_translations` table.
-google cloud service api : AIzaSyDfcIm3XHVUibuIFnHBW1sERgvJwnRlq7k
+google cloud service api : [REDACTED_API_KEY]
 DONE
 ---
 

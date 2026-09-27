@@ -747,9 +747,11 @@ router.get("/api-v2/admin/approvals", requireAuth, requireAdmin, async (req: Aut
 router.post("/api-v2/admin/approvals/sellers/:id", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const sellerId = parseInt(req.params.id, 10);
-    const { action } = req.body;
+    const { action, tier } = req.body; // action can be 'approve', 'reject', 'set_tier'
     
-    if (action === 'approve') {
+    if (action === 'set_tier' && tier) {
+       await db.update(users).set({ verificationStatus: tier }).where(eq(users.id, sellerId));
+    } else if (action === 'approve') {
       await db.update(users).set({ verificationStatus: 'verified' }).where(eq(users.id, sellerId));
     } else if (action === 'reject') {
       await db.update(users).set({ verificationStatus: 'rejected', role: 'buyer' }).where(eq(users.id, sellerId));

@@ -625,6 +625,62 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
         <div className="space-y-8">
            <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
              <div className="p-5 border-b border-slate-700 bg-slate-900 flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-white">Pending Seller Verification (KYB)</h3>
+             </div>
+             <div className="divide-y divide-slate-100">
+                {!approvals.pendingSellers || approvals.pendingSellers.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400">No pending sellers.</div>
+                ) : approvals.pendingSellers.map((u: any) => (
+                  <div key={u.id} className="p-6 flex items-center justify-between">
+                     <div>
+                        <div className="font-semibold tracking-tight text-slate-100">{u.companyName} <span className="text-sm font-normal text-slate-400">({u.email})</span></div>
+                        {u.kybDocuments && u.kybDocuments.length > 0 && (
+                          <div className="mt-2 text-sm text-cyan-400">
+                            Documents submitted: {u.kybDocuments.length}
+                          </div>
+                        )}
+                        <div className="text-sm mt-1 text-slate-500">
+                          Role: {u.role} &bull; Current Status: {u.verificationStatus}
+                        </div>
+                     </div>
+                     <div className="flex gap-2 items-center">
+                        <select
+                          className="bg-slate-900 text-sm border-slate-700 text-slate-100 rounded focus:border-cyan-500 px-3 py-1.5"
+                          onChange={async (e) => {
+                             if (!e.target.value) return;
+                             const tier = e.target.value;
+                             let token; try { token = await user?.getIdToken(); } catch(err:any) { toast.error(err.message); return; }
+                             await fetch(`/api-v2/admin/approvals/sellers/${u.id}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                body: JSON.stringify({ action: 'set_tier', tier })
+                             });
+                             window.location.reload();
+                          }}
+                        >
+                          <option value="">Set Tier...</option>
+                          <option value="listed">🥉 Listed (Email)</option>
+                          <option value="verified">🥈 Verified (ID/Biz)</option>
+                          <option value="certified">🥇 Certified (Tax/Video)</option>
+                          <option value="elite">💎 Elite ($50k+ GMV)</option>
+                        </select>
+                        <button onClick={async () => {
+                           let token; try { token = await user?.getIdToken(); } catch(err:any) { throw new Error(err.message); }
+                           await fetch(`/api-v2/admin/approvals/sellers/${u.id}`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                              body: JSON.stringify({ action: 'reject' })
+                           });
+                           window.location.reload();
+                        }} className="px-3 py-1.5 bg-rose-600 text-white rounded font-semibold tracking-tight text-sm">Reject</button>
+                     </div>
+                  </div>
+                ))}
+             </div>
+           </div>
+
+           <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden mt-8">
+             <div className="p-5 border-b border-slate-700 bg-slate-900 flex items-center justify-between">
                 <h3 className="text-2xl font-bold text-white">Pending Name Changes</h3>
              </div>
              <div className="divide-y divide-slate-100">
@@ -643,7 +699,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                      </div>
                      <div className="flex gap-2">
                         <button onClick={async () => {
-                           let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error("Firebase Auth Error: " + e.message); }
+                           let token; try { token = await user?.getIdToken(); } catch(err:any) { throw new Error(err.message); }
                            await fetch(`/api-v2/admin/approvals/users/${u.id}`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -652,7 +708,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                            window.location.reload();
                         }} className="px-3 py-1.5 bg-emerald-600 text-white rounded font-semibold tracking-tight text-sm">Approve</button>
                         <button onClick={async () => {
-                           let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error("Firebase Auth Error: " + e.message); }
+                           let token; try { token = await user?.getIdToken(); } catch(err:any) { throw new Error(err.message); }
                            await fetch(`/api-v2/admin/approvals/users/${u.id}`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
