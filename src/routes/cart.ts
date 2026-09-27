@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { requireAuth, AuthRequest } from './auth';
-import { db } from '../db/db';
-import { inquiries, products, users } from '../db/schema';
+import { requireAuth, AuthRequest } from './auth.js';
+import { db } from '../db/index.js';
+import { inquiries, products, users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { adminDb } from '../firebaseAdmin';
-import { getUserProfile } from './auth';
+import { adminDb } from '../lib/firebase-admin.js';
+import { getUserProfile } from './auth.js';
 
 const router = Router();
 

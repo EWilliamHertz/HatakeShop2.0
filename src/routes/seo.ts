@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { db } from '../db/db';
-import { products, users, categories } from '../db/schema';
+import { db } from '../db/index.js';
+import { products, users, categories } from '../db/schema.js';
 import { eq, like } from 'drizzle-orm';
 
 const router = Router();
