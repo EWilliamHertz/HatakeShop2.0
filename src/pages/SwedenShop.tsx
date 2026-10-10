@@ -50,13 +50,13 @@ export function SwedenShop() {
                   className="bg-slate-800 rounded-2xl p-4 border border-slate-700 hover:border-cyan-500/50 transition-colors cursor-pointer flex flex-col"
                 >
                    <div className="aspect-square bg-slate-900 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
-                      <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                      <img src={(p.sverigeImages && p.sverigeImages.length > 0) ? p.sverigeImages[0] : p.images[0]} alt={(p.sverigeTitle || p.title)} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
                    </div>
-                   <h3 className="text-lg font-bold text-white mb-2">{p.title}</h3>
+                   <h3 className="text-lg font-bold text-white mb-2">{(p.sverigeTitle || p.title)}</h3>
                    <p className="text-slate-400 text-sm mb-4 line-clamp-2">{p.description}</p>
                    <div className="mt-auto">
                       <div className="flex justify-between items-center mb-3">
-                         <span className="text-xl font-bold text-cyan-400">{p.unitCost} kr</span>
+                         <span className="text-xl font-bold text-cyan-400">{(p.sverigePrice || p.unitCost)} kr</span>
                          <button className="text-slate-300 hover:text-white underline text-sm transition-colors" onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); }}>
                            Visa info
                          </button>
@@ -67,11 +67,11 @@ export function SwedenShop() {
                           e.stopPropagation(); 
                           addSverigeItem({
                             productId: p.id,
-                            title: p.title,
-                            image: p.images[0],
+                            title: (p.sverigeTitle || p.title),
+                            image: (p.sverigeImages && p.sverigeImages.length > 0) ? p.sverigeImages[0] : p.images[0],
                             sellerName: p.seller.companyName,
                             sellerId: 1, // Hatake Sverige
-                            unitCost: p.unitCost,
+                            unitCost: (p.sverigePrice || p.unitCost),
                             quantity: 1
                           });
                         }}

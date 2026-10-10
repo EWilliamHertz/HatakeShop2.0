@@ -120,6 +120,9 @@ export const products = pgTable('products', {
   sealedType: text('sealed_type'),
   
   isSverigeB2c: boolean('is_sverige_b2c').default(false),
+  sverigePrice: numeric('sverige_price'),
+  sverigeImages: jsonb('sverige_images'),
+  sverigeTitle: text('sverige_title'),
 
   // Graded Card Fields
   productType: text('product_type').default('sealed'), // 'sealed' | 'graded'

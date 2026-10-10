@@ -804,9 +804,16 @@ router.patch("/api-v2/admin/products/:id/sverige", requireAuth, async (req: Auth
     if (!userProfile || userProfile.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
     
     const productId = parseInt(req.params.id);
-    const { isSverigeB2c } = req.body;
+    const { isSverigeB2c, sverigeTitle, sverigePrice, sverigeImages } = req.body;
+    const updates: any = {};
+    if (isSverigeB2c !== undefined) updates.isSverigeB2c = isSverigeB2c;
+    if (sverigeTitle !== undefined) updates.sverigeTitle = sverigeTitle;
+    if (sverigePrice !== undefined) updates.sverigePrice = sverigePrice;
+    if (sverigeImages !== undefined) updates.sverigeImages = sverigeImages;
     
-    await db.update(products).set({ isSverigeB2c }).where(eq(products.id, productId));
+    if (Object.keys(updates).length > 0) {
+      await db.update(products).set(updates).where(eq(products.id, productId));
+    }
     res.json({ success: true });
   } catch (err: any) {
     console.error(err);

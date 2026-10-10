@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdminListings } from '../components/AdminListings.tsx';
+import { AdminSverigeTab } from '../components/AdminSverigeTab.tsx';
 import { AdminLeadsTab } from '../components/AdminLeadsTab.tsx';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.tsx';
@@ -964,17 +965,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
         />
       )}
 
-      {activeTab === 'sverige' && (
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl overflow-hidden">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-slate-100">Hatake Sverige B2C Toggle</h2>
-          </div>
-          <p className="text-sm text-slate-400 mb-6">
-            You can now toggle any product to appear on the Swedish B2C shop directly from the <strong>Listings</strong> tab! 
-            Simply go to the Listings tab, find the product, and click the "Sverige B2C" checkbox.
-          </p>
-        </div>
-      )}
+      {activeTab === 'sverige' && <AdminSverigeTab />}
 
       {previewingHtml && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-2 sm:p-4">
