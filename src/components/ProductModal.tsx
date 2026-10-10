@@ -8,7 +8,7 @@ import { useCurrency } from './CurrencyProvider.tsx';
 import { WishlistButton } from './WishlistButton.tsx';
 import { ImageMagnifier } from './ImageMagnifier.tsx';
 
-export function ProductModal({ product, onClose }: { product: any, onClose: () => void }) {
+export function ProductModal({ product, onClose, hideMOQ = false }: { product: any, onClose: () => void, hideMOQ?: boolean }) {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();

@@ -91,7 +91,7 @@ export function SwedenShop() {
            </Link>
         </div>
       </div>
-      {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
+      {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} hideMOQ={true} />}
     </div>
   );
 }
