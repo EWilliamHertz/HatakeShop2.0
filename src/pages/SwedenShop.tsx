@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ProductModal } from '../components/ProductModal.tsx';
+import { useCart } from '../components/SampleCart.tsx';
 
 const sverigeProducts = [
   {
@@ -82,17 +83,36 @@ export function SwedenShop() {
                 <div 
                   key={p.id} 
                   onClick={() => setSelectedProduct(p)}
-                  className="bg-slate-800 rounded-2xl p-4 border border-slate-700 hover:border-cyan-500/50 transition-colors cursor-pointer"
+                  className="bg-slate-800 rounded-2xl p-4 border border-slate-700 hover:border-cyan-500/50 transition-colors cursor-pointer flex flex-col"
                 >
                    <div className="aspect-square bg-slate-900 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
                       <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
                    </div>
                    <h3 className="text-lg font-bold text-white mb-2">{p.title}</h3>
                    <p className="text-slate-400 text-sm mb-4 line-clamp-2">{p.description}</p>
-                   <div className="flex justify-between items-center mt-auto">
-                      <span className="text-xl font-bold text-cyan-400">{p.unitCost} kr</span>
-                      <button className="bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold px-4 py-2 rounded-xl text-sm transition-colors" onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); }}>
-                        Visa info
+                   <div className="mt-auto">
+                      <div className="flex justify-between items-center mb-3">
+                         <span className="text-xl font-bold text-cyan-400">{p.unitCost} kr</span>
+                         <button className="text-slate-300 hover:text-white underline text-sm transition-colors" onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); }}>
+                           Visa info
+                         </button>
+                      </div>
+                      <button 
+                        className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold px-4 py-2.5 rounded-xl text-sm transition-colors"
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          addSverigeItem({
+                            productId: p.id,
+                            title: p.title,
+                            image: p.images[0],
+                            sellerName: p.seller.companyName,
+                            sellerId: 1, // Hatake Sverige
+                            unitCost: p.unitCost,
+                            quantity: 1
+                          });
+                        }}
+                      >
+                        Lägg i varukorg
                       </button>
                    </div>
                 </div>

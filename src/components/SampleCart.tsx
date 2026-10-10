@@ -17,6 +17,10 @@ interface CartContextType {
   addItem: (item: CartItem) => void;
   removeItem: (productId: number) => void;
   clearCart: () => void;
+  sverigeItems: CartItem[];
+  addSverigeItem: (item: CartItem) => void;
+  removeSverigeItem: (productId: number) => void;
+  clearSverigeCart: () => void;
   isCartOpen: boolean;
   setCartOpen: (open: boolean) => void;
 }
@@ -26,6 +30,10 @@ const CartContext = createContext<CartContextType>({
   addItem: () => {},
   removeItem: () => {},
   clearCart: () => {},
+  sverigeItems: [],
+  addSverigeItem: () => {},
+  removeSverigeItem: () => {},
+  clearSverigeCart: () => {},
   isCartOpen: false,
   setCartOpen: () => {},
 });
@@ -45,9 +53,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [isCartOpen, setCartOpen] = useState(false);
 
+  const [sverigeItems, setSverigeItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('hatake_sverige_cart');
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   useEffect(() => {
     localStorage.setItem('sample_cart', JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem('hatake_sverige_cart', JSON.stringify(sverigeItems));
+  }, [sverigeItems]);
 
   useEffect(() => {
     const handleStorage = () => {
@@ -57,6 +80,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) setItems(parsed.filter(Boolean));
         }
+        const savedSv = localStorage.getItem('hatake_sverige_cart');
+        if (savedSv) {
+          const parsedSv = JSON.parse(savedSv);
+          if (Array.isArray(parsedSv)) setSverigeItems(parsedSv.filter(Boolean));
+        }
       } catch(e) {}
     };
     window.addEventListener('storage', handleStorage);
@@ -64,10 +92,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const addItem = (item: CartItem) => {
-    playSound('pop');
     setItems(prev => {
-      if (prev.find(i => i.productId === item.productId)) return prev;
-      return [...prev, item];
+      const exists = prev.find(i => String(i.productId) === String(item.productId));
+      if (exists) {
+        return prev.map(i => String(i.productId) === String(item.productId) ? { ...i, quantity: (i.quantity || 1) + (item.quantity || 1) } : i);
+      }
+      return [...prev, { ...item, quantity: item.quantity || 1 }];
     });
     setCartOpen(true);
   };
@@ -78,8 +108,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => setItems([]);
 
+  const addSverigeItem = (item: CartItem) => {
+    setSverigeItems(prev => {
+      const exists = prev.find(i => String(i.productId) === String(item.productId));
+      if (exists) {
+        return prev.map(i => String(i.productId) === String(item.productId) ? { ...i, quantity: (i.quantity || 1) + (item.quantity || 1) } : i);
+      }
+      return [...prev, { ...item, quantity: item.quantity || 1 }];
+    });
+    setCartOpen(true);
+  };
+
+  const removeSverigeItem = (productId: number) => {
+    setSverigeItems(prev => prev.filter(i => String(i.productId) !== String(productId)));
+  };
+
+  const clearSverigeCart = () => setSverigeItems([]);
+
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, clearCart, isCartOpen, setCartOpen }}>
+    <CartContext.Provider value={{ 
+      items, addItem, removeItem, clearCart, 
+      sverigeItems, addSverigeItem, removeSverigeItem, clearSverigeCart,
+      isCartOpen, setCartOpen 
+    }}>
       {children}
       <CartDrawer />
     </CartContext.Provider>
@@ -87,9 +138,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 const CartDrawer = () => {
-  const { items, isCartOpen, setCartOpen, removeItem, clearCart } = useCart();
+  const { items, sverigeItems, isCartOpen, setCartOpen, removeItem, removeSverigeItem, clearCart, clearSverigeCart } = useCart();
   const [useNetTerms, setUseNetTerms] = useState(false);
   const navigate = useNavigate();
+
+  const isSverige = window.location.pathname.toLowerCase().includes('sweden') || window.location.pathname.toLowerCase().includes('sverige');
+  const activeItems = isSverige ? sverigeItems : items;
+  const handleRemove = isSverige ? removeSverigeItem : removeItem;
+  const handleClear = isSverige ? clearSverigeCart : clearCart;
 
   if (!isCartOpen) return null;
 
@@ -101,7 +157,7 @@ const CartDrawer = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}` // assuming token is used
         },
-        body: JSON.stringify({ items: items.map(i => ({ productId: i.productId, quantity: i.quantity || 1 })) }),
+        body: JSON.stringify({ items: activeItems.map(i => ({ productId: i.productId, quantity: i.quantity || 1 })) }),
       });
       const data = await response.json();
       if (data.url) {
@@ -126,7 +182,7 @@ const CartDrawer = () => {
         body: JSON.stringify({ items }),
       });
       if (response.ok) {
-        clearCart();
+        handleClear();
         navigate('/rfq');
         setCartOpen(false);
       } else {
@@ -139,7 +195,7 @@ const CartDrawer = () => {
   };
 
   // Group by seller
-  const sellers = Array.from(new Set(items.map(i => i.sellerName)));
+  const sellers = Array.from(new Set(activeItems.map(i => i.sellerName)));
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
@@ -148,11 +204,11 @@ const CartDrawer = () => {
         <div className="p-6 border-b border-slate-700 flex items-center justify-between bg-slate-900">
           <h2 className="text-xl font-semibold tracking-tight font-display text-slate-100 flex items-center">
             <Package className="w-5 h-5 mr-2 text-[#ffcc00]" />
-            Cart ({items.length})
+            {isSverige ? 'Svenska Butik Cart' : 'B2B Wholesale Cart'} ({activeItems.length})
           </h2>
           <div className="flex items-center gap-2">
-            {items.length > 0 && (
-               <button onClick={clearCart} className="text-xs text-slate-400 hover:text-rose-400 font-medium transition-colors uppercase tracking-wider px-2 py-1">Clear</button>
+            {activeItems.length > 0 && (
+               <button onClick={handleClear} className="text-xs text-slate-400 hover:text-rose-400 font-medium transition-colors uppercase tracking-wider px-2 py-1">Clear</button>
             )}
             <button onClick={() => setCartOpen(false)} className="p-2 text-slate-400 hover:text-slate-400 hover:bg-slate-600 rounded-full transition-colors">
               <X className="w-5 h-5" />
@@ -222,7 +278,7 @@ const CartDrawer = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {items.length === 0 ? (
+          {activeItems.length === 0 ? (
             <div className="text-center text-slate-400 mt-20 flex flex-col items-center">
               <ShoppingCart className="w-12 h-12 text-slate-400 mb-4" />
               <p>Your cart is empty.</p>
@@ -230,7 +286,7 @@ const CartDrawer = () => {
             </div>
           ) : (
             sellers.map(seller => {
-              const sellerItems = items.filter(i => i.sellerName === seller);
+              const sellerItems = activeItems.filter(i => i.sellerName === seller);
               return (
                 <div key={seller} className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-none">
                   <div className="bg-slate-900 px-4 py-3 border-b border-slate-700 font-semibold tracking-tight text-slate-400 text-sm">
@@ -255,7 +311,7 @@ const CartDrawer = () => {
                             </p>
                           </div>
                         </div>
-                        <button onClick={() => removeItem(item.productId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-800 rounded-xl transition-colors shrink-0">
+                        <button onClick={() => handleRemove(item.productId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-800 rounded-xl transition-colors shrink-0">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -267,36 +323,38 @@ const CartDrawer = () => {
           )}
         </div>
 
-        {items.length > 0 && (
+        {activeItems.length > 0 && (
           <div className="p-6 border-t border-slate-700 bg-slate-800 space-y-3">
-            
-            <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-700 mb-2 cursor-pointer" onClick={() => setUseNetTerms(!useNetTerms)}>
-              <div>
-                <p className="text-sm font-bold text-slate-200">Pay on Net-30 Terms</p>
-                <p className="text-xs text-slate-400">Zero interest for 30 days</p>
-              </div>
-              <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${useNetTerms ? 'bg-cyan-500' : 'bg-slate-700'}`}>
-                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${useNetTerms ? 'translate-x-4' : 'translate-x-0'}`} />
-              </div>
-            </div>
-
-            
-            {items.reduce((acc, i) => acc + (i.quantity || 1), 0) > 50 && (
-               <div className="bg-amber-950/30 border border-amber-900/50 rounded-xl p-3 flex items-start gap-3 mb-2">
-                  <Package className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            {!isSverige && (
+              <>
+                <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-700 mb-2 cursor-pointer" onClick={() => setUseNetTerms(!useNetTerms)}>
                   <div>
-                     <p className="text-sm font-bold text-amber-500">LTL Freight Required</p>
-                     <p className="text-xs text-amber-200/70 mt-0.5">This order exceeds standard parcel limits. Checkout will push this to a Deal Room to manually secure a pallet freight quote.</p>
+                    <p className="text-sm font-bold text-slate-200">Pay on Net-30 Terms</p>
+                    <p className="text-xs text-slate-400">Zero interest for 30 days</p>
                   </div>
-               </div>
-            )}
+                  <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${useNetTerms ? 'bg-cyan-500' : 'bg-slate-700'}`}>
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${useNetTerms ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </div>
+                </div>
 
-            <button onClick={handleRFQ} className="btn-secondary w-full">
-              Request Bulk Quote (RFQ)
-            </button>
+                {activeItems.reduce((acc, i) => acc + (i.quantity || 1), 0) > 50 && (
+                   <div className="bg-amber-950/30 border border-amber-900/50 rounded-xl p-3 flex items-start gap-3 mb-2">
+                      <Package className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                         <p className="text-sm font-bold text-amber-500">LTL Freight Required</p>
+                         <p className="text-xs text-amber-200/70 mt-0.5">This order exceeds standard parcel limits. Checkout will push this to a Deal Room to manually secure a pallet freight quote.</p>
+                      </div>
+                   </div>
+                )}
+
+                <button onClick={handleRFQ} className="btn-secondary w-full">
+                  Request Bulk Quote (RFQ)
+                </button>
+              </>
+            )}
             <button onClick={handleCheckout} className="btn-primary w-full">
               <Send className="w-4 h-4 mr-2" />
-              Checkout ({items.length} {items.length === 1 ? 'Item' : 'Items'})
+              Checkout ({activeItems.length} {activeItems.length === 1 ? 'Item' : 'Items'})
             </button>
             <p className="text-center text-xs text-slate-400 mt-4">
               Proceed to secure checkout.
