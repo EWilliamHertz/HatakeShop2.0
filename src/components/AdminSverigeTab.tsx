@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext.tsx';
 import { Save, Image as ImageIcon, CheckCircle, Search, Edit2, X } from 'lucide-react';
-import { cloudinaryUpload } from '../lib/cloudinary.js';
 
 export function AdminSverigeTab() {
   const { user } = useAuth();
@@ -49,9 +48,21 @@ export function AdminSverigeTab() {
     setUploading(true);
     try {
       const urls: string[] = [];
+      const token = await user?.getIdToken();
       for (let i = 0; i < files.length; i++) {
-        const url = await cloudinaryUpload(files[i]);
-        urls.push(url);
+        const file = files[i];
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+        });
+        const res = await fetch('/api-v2/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ image: base64 })
+        });
+        const data = await res.json();
+        if (data.url) urls.push(data.url);
       }
       setEditImages([...editImages, ...urls]);
     } catch (err) {
