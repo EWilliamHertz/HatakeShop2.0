@@ -73,7 +73,11 @@ export function AdminListings() {
   });
 
   const filteredProducts = (Array.isArray(products) ? products : []).filter((p: any) => {
-    const matchesSearch = p.title?.toLowerCase().includes(search.toLowerCase()) || p.seller?.companyName?.toLowerCase().includes(search.toLowerCase());
+    const searchLower = search.toLowerCase();
+    const matchesSearch = p.title?.toLowerCase().includes(searchLower) || 
+                          p.seller?.companyName?.toLowerCase().includes(searchLower) ||
+                          p.seller?.displayName?.toLowerCase().includes(searchLower) ||
+                          p.seller?.email?.toLowerCase().includes(searchLower);
     const matchesCategory = filterCategory === '' || p.categoryId?.toString() === filterCategory || (Array.isArray(p.categoryIds) && p.categoryIds.includes(parseInt(filterCategory)));
     const matchesStatus = filterStatus === '' || p.approvalStatus === filterStatus;
     const matchesLanguage = filterLanguage === '' || (filterLanguage === '__unset' ? !p.language : p.language === filterLanguage);
@@ -367,7 +371,7 @@ export function AdminListings() {
                   </div>
                 </td>
                 <td className="p-4">
-                  <div className="font-medium text-slate-300 text-sm">{p.seller?.companyName || 'Unknown'}</div>
+                  <div className="font-medium text-slate-300 text-sm">{p.seller?.companyName || p.seller?.displayName || 'Unknown'}</div>
                   <div className="text-xs text-slate-500">{p.seller?.email}</div>
                 </td>
                 
