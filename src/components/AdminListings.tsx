@@ -24,6 +24,7 @@ export function AdminListings() {
   const [filterProductType, setFilterProductType] = useState<string>('');
   const [filterOrigin, setFilterOrigin] = useState<string>('');
   const [filterSponsored, setFilterSponsored] = useState<string>('');
+  const [filterCompany, setFilterCompany] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('newest');
   
@@ -170,7 +171,17 @@ export function AdminListings() {
               <option value="true">Sponsored Only</option>
               <option value="false">Regular Only</option>
             </select>
-            <select 
+            <select
+            value={filterCompany}
+            onChange={e => setFilterCompany(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
+          >
+            <option value="">All Sellers/Companies</option>
+            {uniqueCompanies.map((s: any) => (
+              <option key={s.id} value={s.id}>{s.companyName || s.displayName || s.email}</option>
+            ))}
+          </select>
+          <select 
             value={filterCategory} 
             onChange={e => setFilterCategory(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
