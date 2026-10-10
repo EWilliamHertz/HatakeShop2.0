@@ -975,11 +975,6 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
           </p>
         </div>
       )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {previewingHtml && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-2 sm:p-4">
