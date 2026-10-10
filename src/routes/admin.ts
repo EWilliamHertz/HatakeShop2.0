@@ -797,4 +797,21 @@ router.post(['/admin/impersonate/:id', '/api/admin/impersonate/:id', '/api-v2/ad
   }
 });
 
+
+router.patch("/api-v2/admin/products/:id/sverige", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile || userProfile.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
+    
+    const productId = parseInt(req.params.id);
+    const { isSverigeB2c } = req.body;
+    
+    await db.update(products).set({ isSverigeB2c }).where(eq(products.id, productId));
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

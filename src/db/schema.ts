@@ -118,6 +118,8 @@ export const products = pgTable('products', {
   // sealedType: 'booster_box' | 'etb' | 'booster_bundle' | 'booster_pack' | 'collection_box' | 'premium_collection'
   //             | 'tin' | 'blister' | 'deck' | 'case' | 'accessory' | 'other'
   sealedType: text('sealed_type'),
+  
+  isSverigeB2c: boolean('is_sverige_b2c').default(false),
 
   // Graded Card Fields
   productType: text('product_type').default('sealed'), // 'sealed' | 'graded'

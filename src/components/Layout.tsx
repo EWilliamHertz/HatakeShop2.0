@@ -243,6 +243,9 @@ const mainNavItems = [
             <Link to="/leads" className="mt-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest flex items-center gap-1">
               📋 Launch Ledger
             </Link>
+            <Link to="/sweden" className="mt-2 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors uppercase tracking-widest flex items-center gap-1 border border-cyan-500/30 px-2 py-1 rounded">
+              🇸🇪 B2C Sweden Shop
+            </Link>
             {dbUser?.role === 'admin' && (
               <Link to="/admin" className="mt-1 text-xs font-bold text-cyan-500 hover:text-cyan-400 transition-colors uppercase tracking-widest">
                 {t('Admin Panel')}

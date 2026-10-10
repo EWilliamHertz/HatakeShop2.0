@@ -217,9 +217,15 @@ const CartDrawer = () => {
         </div>
         
         
-        <div className="bg-slate-900 border-b border-slate-700 p-6 flex flex-col gap-2">
-          {(() => {
-             const totalSpend = 0; // TODO: Fetch from user profile orders
+        {isSverige ? (
+          <div className="bg-slate-900 border-b border-slate-700 p-6 flex flex-col gap-2">
+            <h3 className="text-slate-100 font-bold">Din Varukorg</h3>
+            <p className="text-sm text-slate-400">Tack för att du handlar hos Hatake Sverige.</p>
+          </div>
+        ) : (
+          <div className="bg-slate-900 border-b border-slate-700 p-6 flex flex-col gap-2">
+            {(() => {
+               const totalSpend = 0; // TODO: Fetch from user profile orders
              let currentTier = "Standard Tier";
              let nextTier = "Bronze Tier (0.5% Reduced Commission)";
              let amountAway = 1500 - totalSpend;
@@ -274,8 +280,9 @@ const CartDrawer = () => {
                  </div>
                </>
              );
-          })()}
-        </div>
+            })()}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {activeItems.length === 0 ? (
@@ -307,7 +314,7 @@ const CartDrawer = () => {
                             <p className="text-sm font-semibold tracking-tight text-slate-100 truncate hover:text-cyan-400 transition-colors">{item.title}</p>
                             <p className="text-[11px] text-slate-400 tracking-wider font-semibold mt-1 flex gap-2">
                                <span>QTY: {item.quantity || 1}</span>
-                               {item.unitCost && <span className="text-cyan-400">| €{Number(item.unitCost).toFixed(2)} ea</span>}
+                               {item.unitCost && <span className="text-cyan-400">| {isSverige ? `${Number(item.unitCost).toFixed(2)} kr` : `€${Number(item.unitCost).toFixed(2)}`} ea</span>}
                             </p>
                           </div>
                         </div>

@@ -4,54 +4,18 @@ import { Link } from 'react-router-dom';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { useCart } from '../components/SampleCart.tsx';
 
-const sverigeProducts = [
-  {
-    id: 9001,
-    title: 'Top-loaders 130pt',
-    description: 'Högsta kvalitet från grossist. Finns i lager i Sverige.',
-    images: ["https://i.ibb.co/S7J5csMG/dff6c5b626a1.jpg"],
-    unitCost: 30,
-    moq: 1,
-    category: 'Accessories',
-    stockQuantity: 100,
-    seller: { companyName: 'Hatake Sverige' }
-  },
-  {
-    id: 9002,
-    title: 'Deckboxes',
-    description: 'Högkvalitativa deckboxes. Finns i lager i Sverige.',
-    images: ["https://i.ibb.co/PVCzv5B/0cb4c7c129c3.jpg"],
-    unitCost: 300,
-    moq: 1,
-    category: 'Storage',
-    stockQuantity: 50,
-    seller: { companyName: 'Hatake Sverige' }
-  },
-  {
-    id: 9003,
-    title: '480-slots Binders',
-    description: 'Pärmar med 480 fack. Finns i lager i Sverige.',
-    images: ["https://i.ibb.co/4w059RzG/binder2.jpg"],
-    unitCost: 360,
-    moq: 1,
-    category: 'Storage',
-    stockQuantity: 40,
-    seller: { companyName: 'Hatake Sverige' }
-  },
-  {
-    id: 9004,
-    title: 'Playmats',
-    description: 'Spelmatta av hög kvalitet. Finns i lager i Sverige.',
-    images: ["https://i.ibb.co/jkLfRjzy/IMG-2233.jpg"],
-    unitCost: 129,
-    moq: 1,
-    category: 'Accessories',
-    stockQuantity: 60,
-    seller: { companyName: 'Hatake Sverige' }
-  }
-];
+
 
 export function SwedenShop() {
+  const { addSverigeItem } = useCart();
+  const [sverigeProducts, setSverigeProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api-v2/sverige-products')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setSverigeProducts(data))
+      .catch(console.error);
+  }, []);
   const { t, i18n } = useTranslation();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 

@@ -44,6 +44,7 @@ const RFQDetailsLazy = RFQDetails;
 const Wishlist = lazy(() => import('./pages/Wishlist.tsx').then(m => ({ default: m.Wishlist })));
 const SellerOnboarding = lazy(() => import('./pages/SellerOnboarding.tsx').then(m => ({ default: m.SellerOnboarding })));
 const ProductPage = lazy(() => import('./pages/ProductPage.tsx').then(m => ({ default: m.ProductPage })));
+const SwedenShop = lazy(() => import('./pages/SwedenShop.tsx').then(m => ({ default: m.SwedenShop })));
 
 function RouteFallback() {
   return <div className="p-8 text-center text-slate-400">Loading…</div>;
@@ -159,6 +160,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
+            <Route path="/sweden" element={<SwedenShop />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/products/:id" element={<ProductPage />} />

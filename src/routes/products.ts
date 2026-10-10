@@ -496,4 +496,21 @@ router.get('/api-v2/orders', requireAuth, async (req: any, res) => {
   }
 });
 
+
+router.get("/api-v2/sverige-products", async (req, res) => {
+  try {
+    const p = await db.select().from(products).where(eq(products.isSverigeB2c, true));
+    // Also fetch seller info for these products
+    const s = await db.select().from(users);
+    const sellerMap = Object.fromEntries(s.map(x => [x.id, x]));
+    
+    res.json(p.map(prod => ({
+       ...prod,
+       seller: sellerMap[prod.sellerId] || {}
+    })));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

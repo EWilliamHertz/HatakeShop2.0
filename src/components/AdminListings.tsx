@@ -340,6 +340,7 @@ export function AdminListings() {
               <th className="p-4">Type</th>
               <th className="p-4">Origin</th>
               <th className="p-4">Status</th>
+              <th className="p-4">Sverige B2C</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700/50">
@@ -395,6 +396,26 @@ export function AdminListings() {
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.approvalStatus === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : p.approvalStatus === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}`}>
                     {p.approvalStatus}
                   </span>
+                </td>
+                <td className="p-4">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={p.isSverigeB2c || false} 
+                      onChange={async (e) => {
+                        try {
+                          const token = await user?.getIdToken();
+                          await fetch(`/api-v2/admin/products/${p.id}/sverige`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ isSverigeB2c: e.target.checked })
+                          });
+                          queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+                        } catch(err) { console.error(err); }
+                      }}
+                      className="form-checkbox h-5 w-5 text-cyan-500 rounded border-slate-700 bg-slate-900 focus:ring-cyan-500 transition-colors"
+                    />
+                  </label>
                 </td>
               </tr>
             ))}

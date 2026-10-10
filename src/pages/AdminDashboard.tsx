@@ -967,44 +967,14 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
       {activeTab === 'sverige' && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl overflow-hidden">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-slate-100">Hatake Sverige Inventory</h2>
-            <button className="bg-cyan-500 hover:bg-cyan-400 text-slate-900 px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-lg">
-              Add New Product
-            </button>
+            <h2 className="text-xl font-bold text-slate-100">Hatake Sverige B2C Toggle</h2>
           </div>
-          <p className="text-sm text-slate-400 mb-6">Manage local inventory for the Swedish B2C shop.</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-900/50 text-slate-300">
-                <tr>
-                  <th className="px-4 py-3 rounded-tl-xl">Product Name</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Price (SEK)</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 rounded-tr-xl">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/50">
-                {[
-                  { name: 'Top-loaders 130pt', category: 'Accessories', price: 30, status: 'In Stock' },
-                  { name: 'Deckboxes', category: 'Storage', price: 300, status: 'In Stock' },
-                  { name: '480-slots Binders', category: 'Storage', price: 360, status: 'In Stock' },
-                  { name: 'Playmats', category: 'Accessories', price: 129, status: 'In Stock' },
-                ].map((item, i) => (
-                  <tr key={i} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-200">{item.name}</td>
-                    <td className="px-4 py-3 text-slate-400">{item.category}</td>
-                    <td className="px-4 py-3 font-bold text-cyan-400">{item.price} kr</td>
-                    <td className="px-4 py-3">
-                      <span className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full text-xs font-medium">
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button className="text-cyan-400 hover:text-cyan-300 underline text-xs">Edit</button>
-                    </td>
-                  </tr>
-                ))}
+          <p className="text-sm text-slate-400 mb-6">
+            You can now toggle any product to appear on the Swedish B2C shop directly from the <strong>Listings</strong> tab! 
+            Simply go to the Listings tab, find the product, and click the "Sverige B2C" checkbox.
+          </p>
+        </div>
+      )}
               </tbody>
             </table>
           </div>
