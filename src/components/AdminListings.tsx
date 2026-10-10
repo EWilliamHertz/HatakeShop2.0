@@ -72,6 +72,8 @@ export function AdminListings() {
     }
   });
 
+  const uniqueCompanies = Array.from(new Map((Array.isArray(products) ? products : []).filter((p:any) => p.seller).map((p:any) => [p.seller.id, p.seller])).values());
+
   const filteredProducts = (Array.isArray(products) ? products : []).filter((p: any) => {
     const searchLower = search.toLowerCase();
     const matchesSearch = p.title?.toLowerCase().includes(searchLower) || 
@@ -85,7 +87,8 @@ export function AdminListings() {
     const matchesProductType = filterProductType === '' || p.productType === filterProductType;
     const matchesOrigin = filterOrigin === '' || p.originType === filterOrigin;
     const matchesSponsored = filterSponsored === '' || (filterSponsored === 'true' ? p.isSponsored : !p.isSponsored);
-    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType && matchesProductType && matchesOrigin && matchesSponsored;
+    const matchesCompany = filterCompany === '' || p.sellerId?.toString() === filterCompany;
+    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType && matchesProductType && matchesOrigin && matchesSponsored && matchesCompany;
   }).sort((a: any, b: any) => {
     if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -403,22 +406,7 @@ export function AdminListings() {
                 </td>
                 <td className="p-4">
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={p.isSverigeB2c || false} 
-                      onChange={async (e) => {
-                        try {
-                          const token = await user?.getIdToken();
-                          await fetch(`/api-v2/admin/products/${p.id}/sverige`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                            body: JSON.stringify({ isSverigeB2c: e.target.checked })
-                          });
-                          queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-                        } catch(err) { console.error(err); }
-                      }}
-                      className="form-checkbox h-5 w-5 text-cyan-500 rounded border-slate-700 bg-slate-900 focus:ring-cyan-500 transition-colors"
-                    />
+                    <SverigeToggle product={p} user={user} queryClient={queryClient} />
                   </label>
                 </td>
               </tr>
