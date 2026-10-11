@@ -1,14 +1,34 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext.tsx';
-import { X, PackageSearch, Star, Building2, MapPin, Package, Clock, ShieldCheck, Mail } from 'lucide-react';
+import { X, PackageSearch, Star, Building2, MapPin, Package, Clock, ShieldCheck, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from './CurrencyProvider.tsx';
 import { WishlistButton } from './WishlistButton.tsx';
 import { ImageMagnifier } from './ImageMagnifier.tsx';
 
-export function ProductModal({ product, onClose, hideMOQ = false, onAddToCart }: { product: any, onClose: () => void, hideMOQ?: boolean, onAddToCart?: () => void }) {
+export interface ProductModalProps {
+  product: any;
+  onClose: () => void;
+  hideMOQ?: boolean;
+  onAddToCart?: () => void;
+  onPrevProduct?: () => void;
+  onNextProduct?: () => void;
+  productIndex?: number;
+  totalProducts?: number;
+}
+
+export function ProductModal({
+  product,
+  onClose,
+  hideMOQ = false,
+  onAddToCart,
+  onPrevProduct,
+  onNextProduct,
+  productIndex,
+  totalProducts
+}: ProductModalProps) {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
@@ -68,62 +88,210 @@ export function ProductModal({ product, onClose, hideMOQ = false, onAddToCart }:
     }
   });
 
-  const [activeImage, setActiveImage] = useState(product?.images?.[0] || null);
+  const images: string[] = (product?.sverigeImages && product.sverigeImages.length > 0)
+    ? product.sverigeImages
+    : (product?.images && product.images.length > 0 ? product.images : []);
+
+  const [activeImage, setActiveImage] = useState<string | null>(images[0] || null);
 
   React.useEffect(() => {
-    setActiveImage(product?.images?.[0] || null);
+    const currentImgs: string[] = (product?.sverigeImages && product.sverigeImages.length > 0)
+      ? product.sverigeImages
+      : (product?.images && product.images.length > 0 ? product.images : []);
+    setActiveImage(currentImgs[0] || null);
   }, [product]);
+
+  // Touch swipe support for navigating product to product
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.thumbnails-container') || target.closest('input') || target.closest('textarea')) {
+      return;
+    }
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      if (deltaX < 0 && onNextProduct) {
+        onNextProduct();
+      } else if (deltaX > 0 && onPrevProduct) {
+        onPrevProduct();
+      }
+    }
+  };
+
+  // Keyboard navigation for product to product
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowLeft' && onPrevProduct) {
+        e.preventDefault();
+        onPrevProduct();
+      } else if (e.key === 'ArrowRight' && onNextProduct) {
+        e.preventDefault();
+        onNextProduct();
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onPrevProduct, onNextProduct, onClose]);
 
   if (!product) return null;
 
  return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm"
       onClick={onClose}
     >
+      {/* Floating Left Arrow (Product to Product) */}
+      {onPrevProduct && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrevProduct(); }}
+          aria-label="Föregående produkt"
+          title="Föregående produkt (←)"
+          className="hidden md:flex absolute left-2 lg:left-6 top-1/2 -translate-y-1/2 w-11 h-11 lg:w-13 lg:h-13 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-white shadow-2xl items-center justify-center transition-all hover:scale-110 active:scale-95 z-30 group"
+        >
+          <ChevronLeft className="w-6 h-6 text-slate-300 group-hover:text-white transition-colors" />
+        </button>
+      )}
+
+      {/* Floating Right Arrow (Product to Product) */}
+      {onNextProduct && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNextProduct(); }}
+          aria-label="Nästa produkt"
+          title="Nästa produkt (→)"
+          className="hidden md:flex absolute right-2 lg:right-6 top-1/2 -translate-y-1/2 w-11 h-11 lg:w-13 lg:h-13 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-white shadow-2xl items-center justify-center transition-all hover:scale-110 active:scale-95 z-30 group"
+        >
+          <ChevronRight className="w-6 h-6 text-slate-300 group-hover:text-white transition-colors" />
+        </button>
+      )}
+
       <div 
-        className="relative w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/90 backdrop-blur z-10 sticky top-0">
-          <h2 className="text-xl font-bold text-white line-clamp-1 pr-8">{product.title}</h2>
-          <button 
-            onClick={onClose}
-            className="btn-ghost"
-          >
-            <X className="w-6 h-6 text-slate-400" />
-          </button>
+        <div className="flex items-center justify-between p-3.5 sm:p-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur z-20 sticky top-0 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
+            <h2 className="text-base sm:text-xl font-bold text-white truncate">{product.sverigeTitle || product.title}</h2>
+            {totalProducts && totalProducts > 1 && (
+              <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-medium whitespace-nowrap">
+                {productIndex} / {totalProducts}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Quick Prev / Next Arrows */}
+            {onPrevProduct && onNextProduct && (
+              <div className="flex items-center gap-1 bg-slate-800/80 border border-slate-700 rounded-lg p-0.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onPrevProduct(); }}
+                  className="p-1 hover:text-white text-slate-400 hover:bg-slate-700/80 rounded transition-colors"
+                  title="Föregående produkt (←)"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onNextProduct(); }}
+                  className="p-1 hover:text-white text-slate-400 hover:bg-slate-700/80 rounded transition-colors"
+                  title="Nästa produkt (→)"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            
+            <button 
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              aria-label="Stäng"
+            >
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 p-6 custom-scrollbar">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="overflow-y-auto flex-1 p-4 sm:p-6 pb-8 custom-scrollbar">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             
             {/* Left: Images */}
-            <div className="space-y-4">
-              <div className="aspect-square bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center relative">
+            <div className="flex flex-col space-y-3">
+              {/* Main Image */}
+              <div className="w-full max-h-[280px] sm:max-h-[340px] md:max-h-[380px] aspect-square bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center relative mx-auto shrink-0 shadow-inner">
                 <WishlistButton productId={product.id} />
+
+                {/* Photo cycle arrows if product has multiple images */}
+                {images.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const currIdx = images.indexOf(activeImage || '');
+                        const prevIdx = (currIdx - 1 + images.length) % images.length;
+                        setActiveImage(images[prevIdx]);
+                      }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white backdrop-blur border border-slate-700 flex items-center justify-center opacity-80 hover:opacity-100 transition-all z-10"
+                      title="Föregående bild"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const currIdx = images.indexOf(activeImage || '');
+                        const nextIdx = (currIdx + 1) % images.length;
+                        setActiveImage(images[nextIdx]);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white backdrop-blur border border-slate-700 flex items-center justify-center opacity-80 hover:opacity-100 transition-all z-10"
+                      title="Nästa bild"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+
                 {activeImage ? (
-                  <ImageMagnifier src={activeImage} alt={product.title} />
+                  <ImageMagnifier src={activeImage} alt={product.sverigeTitle || product.title} />
                 ) : (
                   <PackageSearch className="w-20 h-20 text-slate-600" />
                 )}
                 {product.isSponsored && (
-                  <div className="absolute top-4 left-4 bg-[#ffcc00] text-black text-xs uppercase font-black px-3 py-1 rounded shadow-sm tracking-wider">
+                  <div className="absolute top-4 left-4 bg-[#ffcc00] text-black text-xs uppercase font-black px-3 py-1 rounded shadow-sm tracking-wider z-10">
                     Sponsored
                   </div>
                 )}
               </div>
               
-              {product.images && product.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                  {product.images.map((img: string, idx: number) => (
+              {/* Thumbnails Row */}
+              {images.length > 1 && (
+                <div className="thumbnails-container flex gap-2.5 overflow-x-auto py-1 px-0.5 custom-scrollbar shrink-0">
+                  {images.map((img: string, idx: number) => (
                     <button 
                       key={idx}
                       onClick={() => setActiveImage(img)}
-                      className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${activeImage === img ? 'border-[#ffcc00]' : 'border-transparent hover:border-slate-500'}`}
+                      className={`relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden border-2 transition-all shadow-sm ${
+                        activeImage === img 
+                          ? 'border-cyan-400 ring-2 ring-cyan-400/30 scale-102' 
+                          : 'border-slate-700/80 hover:border-slate-500 opacity-75 hover:opacity-100'
+                      }`}
                     >
                       <img src={img} alt={`${product.title} - ${idx}`} className="w-full h-full object-cover" />
                     </button>
@@ -252,46 +420,71 @@ export function ProductModal({ product, onClose, hideMOQ = false, onAddToCart }:
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 flex justify-end gap-3 shrink-0 border-t border-slate-800 bg-slate-900 z-10 relative">
-          <button 
-            onClick={onClose}
-            className="btn-ghost"
-          >
-            {t('Close')}
-          </button>
-          {hideMOQ ? (
-            onAddToCart && (
-              <button 
-                onClick={() => {
-                  onAddToCart();
-                  onClose();
-                }}
-                className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors"
-              >
-                <Package className="w-4 h-4" />
-                {t('Add to Cart', 'Lägg i varukorg')}
-              </button>
-            )
-          ) : (
-            <>
-              <button 
-                onClick={() => createInquiry(true)}
-                disabled={isCreatingInquiry}
-                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors border border-slate-600 disabled:opacity-50"
-              >
-                <Package className="w-4 h-4" />
-                {t('Request Sample')}
-              </button>
-              <button 
-                onClick={() => createInquiry(false)}
-                disabled={isCreatingInquiry}
-                className="px-6 py-2.5 bg-[#ffcc00] hover:bg-[#ffcc00]/90 text-black font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                <Mail className="w-4 h-4" />
-                {t('Contact Supplier')}
-              </button>
-            </>
-          )}
+        <div className="p-3.5 sm:p-4 flex items-center justify-between shrink-0 border-t border-slate-800 bg-slate-900 z-10 relative">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {onPrevProduct && onNextProduct && (
+              <div className="flex sm:hidden items-center gap-1">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onPrevProduct(); }}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 border border-slate-700"
+                  title="Föregående produkt"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  {t('Prev', 'Föregående')}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onNextProduct(); }}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 border border-slate-700"
+                  title="Nästa produkt"
+                >
+                  {t('Next', 'Nästa')}
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button 
+              onClick={onClose}
+              className="btn-ghost"
+            >
+              {t('Close')}
+            </button>
+            {hideMOQ ? (
+              onAddToCart && (
+                <button 
+                  onClick={() => {
+                    onAddToCart();
+                    onClose();
+                  }}
+                  className="px-5 sm:px-6 py-2 sm:py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors text-sm sm:text-base"
+                >
+                  <Package className="w-4 h-4" />
+                  {t('Add to Cart', 'Lägg i varukorg')}
+                </button>
+              )
+            ) : (
+              <>
+                <button 
+                  onClick={() => createInquiry(true)}
+                  disabled={isCreatingInquiry}
+                  className="px-4 sm:px-6 py-2 sm:py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors border border-slate-600 disabled:opacity-50 text-sm"
+                >
+                  <Package className="w-4 h-4" />
+                  {t('Request Sample')}
+                </button>
+                <button 
+                  onClick={() => createInquiry(false)}
+                  disabled={isCreatingInquiry}
+                  className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[#ffcc00] hover:bg-[#ffcc00]/90 text-black font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50 text-sm"
+                >
+                  <Mail className="w-4 h-4" />
+                  {t('Contact Supplier')}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
       </div>

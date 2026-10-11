@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import * as schema from './schema.js';
@@ -12,17 +13,20 @@ export const createPool = () => {
   if (!global._postgresPool) {
     // SSL is required for hosted DBs (Neon, Cloud SQL). Allow opting out for
     // local development databases via `?sslmode=disable` or PGSSL=disable.
-    const url = process.env.DATABASE_URL || '';
+    let url = process.env.DATABASE_URL || '';
+    // Strip channel_binding=require which is meant for psql but unsupported in Node pg driver
+    url = url.replace(/[?&]channel_binding=[^&]*/g, '').replace(/\?&/, '?').replace(/\?$/, '');
+
     const sslDisabled = /sslmode=disable/.test(url) || process.env.PGSSL === 'disable';
     const config: pg.PoolConfig = {
       max: 5,
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 30000,
-      ssl: sslDisabled ? false : true,
+      ssl: sslDisabled ? false : { rejectUnauthorized: false },
     };
     
-    if (process.env.DATABASE_URL) {
-      config.connectionString = process.env.DATABASE_URL;
+    if (url) {
+      config.connectionString = url;
     } else {
       config.host = process.env.SQL_HOST;
       config.user = process.env.SQL_USER;

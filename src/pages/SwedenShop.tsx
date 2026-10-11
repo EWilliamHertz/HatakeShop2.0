@@ -26,6 +26,18 @@ export function SwedenShop() {
     }
   }, [i18n]);
 
+  const currentIndex = selectedProduct ? sverigeProducts.findIndex(p => p.id === selectedProduct.id) : -1;
+  const handlePrevProduct = () => {
+    if (sverigeProducts.length <= 1) return;
+    const prevIdx = (currentIndex - 1 + sverigeProducts.length) % sverigeProducts.length;
+    setSelectedProduct(sverigeProducts[prevIdx]);
+  };
+  const handleNextProduct = () => {
+    if (sverigeProducts.length <= 1) return;
+    const nextIdx = (currentIndex + 1) % sverigeProducts.length;
+    setSelectedProduct(sverigeProducts[nextIdx]);
+  };
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -107,6 +119,10 @@ export function SwedenShop() {
               quantity: 1
             });
           }}
+          onPrevProduct={sverigeProducts.length > 1 ? handlePrevProduct : undefined}
+          onNextProduct={sverigeProducts.length > 1 ? handleNextProduct : undefined}
+          productIndex={currentIndex >= 0 ? currentIndex + 1 : undefined}
+          totalProducts={sverigeProducts.length > 1 ? sverigeProducts.length : undefined}
         />
       )}
     </div>
