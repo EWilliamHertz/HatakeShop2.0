@@ -423,7 +423,7 @@ export function Home() {
                 <span className="text-lg">📋</span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-white font-semibold text-sm">Launching October 1st — See who's on the list</div>
+                <div className="text-white font-semibold text-sm">Launching November 1st — See who's on the list</div>
                 <div className="text-slate-400 text-xs mt-0.5 truncate">Our verified outreach ledger is growing. {leadsProgress.sentCount.toLocaleString()} companies reached so far. →</div>
               </div>
               <div className="shrink-0 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>

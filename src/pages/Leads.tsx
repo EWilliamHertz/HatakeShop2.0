@@ -32,7 +32,7 @@ export function Leads() {
     <div className="min-h-screen bg-[#020617] text-white pb-24">
       <Helmet>
         <title>Launch Ledger — Hatake</title>
-        <meta name="description" content="Watch Hatake's verified B2B outreach ledger grow in real-time as we onboard TCG companies ahead of our October 1st launch." />
+        <meta name="description" content="Watch Hatake's verified B2B outreach ledger grow in real-time as we onboard TCG companies ahead of our November 1st launch." />
       </Helmet>
 
       {/* Ambient glow */}
@@ -53,7 +53,7 @@ export function Leads() {
 
           <p className="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
             Every day, we reach out to <strong className="text-white">50 verified TCG companies</strong> across the globe — wholesalers, distributors, and manufacturers — and invite them to join our enterprise network.
-            Invitations begin <strong className="text-white">October 1st, 2026</strong>.
+            Invitations begin <strong className="text-white">November 1st, 2026</strong>.
           </p>
 
           {/* Counter */}
@@ -67,7 +67,7 @@ export function Leads() {
               <div className="text-xs text-slate-500 uppercase tracking-widest mt-1">Daily Target</div>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
-              <div className="text-3xl font-black text-indigo-400">Oct 1</div>
+              <div className="text-3xl font-black text-indigo-400">Nov 1</div>
               <div className="text-xs text-slate-500 uppercase tracking-widest mt-1">Launch Date</div>
             </div>
           </div>
@@ -161,7 +161,7 @@ export function Leads() {
         ) : (
           <div className="text-center py-20 space-y-4">
             <Building2 className="w-14 h-14 mx-auto text-slate-700" />
-            <h3 className="text-xl font-bold text-white">Outreach launches October 1st</h3>
+            <h3 className="text-xl font-bold text-white">Outreach launches November 1st</h3>
             <p className="text-slate-500 max-w-sm mx-auto">
               The ledger will begin filling up when our outreach campaign kicks off. Check back soon.
             </p>

@@ -70,7 +70,7 @@ export function SplashModal() {
               </div>
               <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4 tracking-tight drop-shadow-md">Welcome to Hatake!</h2>
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/20 backdrop-blur-md text-white font-semibold border border-white/30 shadow-lg mt-2">
-                🚀 Official Launch: October 1st
+                🚀 Official Launch: November 1st
               </div>
             </div>
             
