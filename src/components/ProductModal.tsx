@@ -8,7 +8,7 @@ import { useCurrency } from './CurrencyProvider.tsx';
 import { WishlistButton } from './WishlistButton.tsx';
 import { ImageMagnifier } from './ImageMagnifier.tsx';
 
-export function ProductModal({ product, onClose, hideMOQ = false }: { product: any, onClose: () => void, hideMOQ?: boolean }) {
+export function ProductModal({ product, onClose, hideMOQ = false, onAddToCart }: { product: any, onClose: () => void, hideMOQ?: boolean, onAddToCart?: () => void }) {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
@@ -177,14 +177,21 @@ export function ProductModal({ product, onClose, hideMOQ = false }: { product: a
                     <span className="text-slate-200 font-medium flex items-center gap-1"><Package className="w-3 h-3" /> {product.stockQuantity}</span>
                   </div>
                 )}
-                <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
-                  <span className="block text-xs uppercase tracking-wider text-slate-500 mb-1">{t('MOQ')}</span>
-                  <span className="text-slate-200 font-medium">{product.moq} {t('units')}{product.offersOem ? ` (Generic) | ${product.oemMoq} units (OEM)` : ''}</span>
-                </div>
+                {!hideMOQ && (
+                  <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                    <span className="block text-xs uppercase tracking-wider text-slate-500 mb-1">{t('MOQ')}</span>
+                    <span className="text-slate-200 font-medium">{product.moq} {t('units')}{product.offersOem ? ` (Generic) | ${product.oemMoq} units (OEM)` : ''}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Tiered Pricing */}
-              {product.tieredPricing && product.tieredPricing.length > 0 ? (
+              {/* Pricing */}
+              {hideMOQ ? (
+                <div className="mt-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+                  <span className="text-slate-400 uppercase tracking-wider text-xs font-bold">{t('Price')}</span>
+                  <span className="text-2xl font-mono font-bold text-cyan-400">{(product.sverigePrice || product.unitCost)} kr</span>
+                </div>
+              ) : product.tieredPricing && product.tieredPricing.length > 0 ? (
                 <div className="mt-6">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-[#ffcc00]" />
@@ -252,22 +259,39 @@ export function ProductModal({ product, onClose, hideMOQ = false }: { product: a
           >
             {t('Close')}
           </button>
-          <button 
-            onClick={() => createInquiry(true)}
-            disabled={isCreatingInquiry}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors border border-slate-600 disabled:opacity-50"
-          >
-            <Package className="w-4 h-4" />
-            {t('Request Sample')}
-          </button>
-          <button 
-            onClick={() => createInquiry(false)}
-            disabled={isCreatingInquiry}
-            className="px-6 py-2.5 bg-[#ffcc00] hover:bg-[#ffcc00]/90 text-black font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
-          >
-            <Mail className="w-4 h-4" />
-            {t('Contact Supplier')}
-          </button>
+          {hideMOQ ? (
+            onAddToCart && (
+              <button 
+                onClick={() => {
+                  onAddToCart();
+                  onClose();
+                }}
+                className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors"
+              >
+                <Package className="w-4 h-4" />
+                {t('Add to Cart', 'Lägg i varukorg')}
+              </button>
+            )
+          ) : (
+            <>
+              <button 
+                onClick={() => createInquiry(true)}
+                disabled={isCreatingInquiry}
+                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors border border-slate-600 disabled:opacity-50"
+              >
+                <Package className="w-4 h-4" />
+                {t('Request Sample')}
+              </button>
+              <button 
+                onClick={() => createInquiry(false)}
+                disabled={isCreatingInquiry}
+                className="px-6 py-2.5 bg-[#ffcc00] hover:bg-[#ffcc00]/90 text-black font-bold rounded-lg shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <Mail className="w-4 h-4" />
+                {t('Contact Supplier')}
+              </button>
+            </>
+          )}
         </div>
 
       </div>

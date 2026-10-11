@@ -91,7 +91,24 @@ export function SwedenShop() {
            </Link>
         </div>
       </div>
-      {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} hideMOQ={true} />}
+      {selectedProduct && (
+        <ProductModal 
+          product={selectedProduct} 
+          onClose={() => setSelectedProduct(null)} 
+          hideMOQ={true} 
+          onAddToCart={() => {
+            addSverigeItem({
+              productId: selectedProduct.id,
+              title: (selectedProduct.sverigeTitle || selectedProduct.title),
+              image: (selectedProduct.sverigeImages && selectedProduct.sverigeImages.length > 0) ? selectedProduct.sverigeImages[0] : selectedProduct.images[0],
+              sellerName: selectedProduct.seller?.companyName || 'Hatake Sverige',
+              sellerId: 1,
+              unitCost: (selectedProduct.sverigePrice || selectedProduct.unitCost),
+              quantity: 1
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
