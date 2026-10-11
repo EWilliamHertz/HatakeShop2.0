@@ -5,11 +5,11 @@ import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, products, feedback, leads, affiliates, marketing_logs, categories, inquiries, inquiryMessages, reviews, orders, orderItems } from "../db/schema.js";
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
-import { requireAuth, AuthRequest } from "../middleware/auth.js";
+import { requireAuth, optionalAuth, AuthRequest } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
 import crypto from "crypto";
 import { generateB2BEmailHtml } from "../lib/emailTemplate.js";
-import { getUserProfile } from "../db/users.js";
+import { getUserProfile, getOrCreateUser } from "../db/users.js";
 import { getTranslatedProduct } from "../lib/translate.js";
 import { PRODUCT_LANGUAGES, SEALED_TYPES } from "../lib/productTaxonomy.js";
 import { ensureSealedTaxonomySchema } from "../db/index.js";
@@ -374,15 +374,20 @@ router.post('/api-v2/products/:id/reviews', requireAuth, async (req: any, res) =
   }
 });
 
-router.post('/api-v2/checkout/session', requireAuth, async (req: any, res) => {
+router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
   try {
     const { items } = req.body;
     if (!items || !items.length) {
       return res.status(400).json({ error: 'No items provided' });
     }
 
-    const userProfile = await getUserProfile(req.user.uid);
-    if (!userProfile) return res.status(404).json({ error: 'User not found' });
+    let userProfile = null;
+    if (req.user?.uid) {
+      userProfile = (await getUserProfile(req.user.uid)) || (await getOrCreateUser(req.user.uid, req.user.email || '', req.user.name));
+    }
+    if (!userProfile) {
+      userProfile = await getOrCreateUser('guest_customer', 'guest@hatake.shop', 'Guest Customer');
+    }
 
     // Calculate total amount and verify products
     let totalAmount = 0;
@@ -393,6 +398,7 @@ router.post('/api-v2/checkout/session', requireAuth, async (req: any, res) => {
     const productMap = new Map<number, (typeof dbProducts)[number]>(dbProducts.map(p => [p.id, p] as const));
 
     let sellerId: number | null = null;
+    let isSverigeOrder = false;
 
     for (const item of items) {
       const dbProduct = productMap.get(item.productId);
@@ -404,15 +410,19 @@ router.post('/api-v2/checkout/session', requireAuth, async (req: any, res) => {
         return res.status(400).json({ error: 'All items must be from the same seller' });
       }
 
-      // use a unit price
-      const unitPrice = parseFloat(dbProduct.unitCost?.toString() || '0');
-      const itemTotal = unitPrice * item.quantity;
+      if (dbProduct.isSverigeB2c) {
+        isSverigeOrder = true;
+      }
+
+      const rawPrice = dbProduct.isSverigeB2c && dbProduct.sverigePrice ? dbProduct.sverigePrice : dbProduct.unitCost;
+      const unitPrice = parseFloat(rawPrice?.toString() || '0');
+      const itemTotal = unitPrice * (item.quantity || 1);
       totalAmount += itemTotal;
 
       validatedItems.push({
         productId: item.productId,
-        title: dbProduct.title,
-        quantity: item.quantity,
+        title: (dbProduct.isSverigeB2c && dbProduct.sverigeTitle ? dbProduct.sverigeTitle : dbProduct.title),
+        quantity: item.quantity || 1,
         unitPrice: unitPrice
       });
     }
@@ -441,45 +451,132 @@ router.post('/api-v2/checkout/session', requireAuth, async (req: any, res) => {
       return res.status(500).json({ error: 'Stripe not configured' });
     }
 
-    // Fetch seller stripe account
-    const sellerInfo = await db.select({ stripeAccountId: users.stripeAccountId, stripeOnboardingComplete: users.stripeOnboardingComplete }).from(users).where(eq(users.id, sellerId as number)).limit(1);
-    if (!sellerInfo.length || !sellerInfo[0].stripeAccountId || !sellerInfo[0].stripeOnboardingComplete) {
-        return res.status(400).json({ error: "The seller is not fully onboarded with Stripe to receive payments yet." });
-    }
+    // Determine currency: SEK for Sweden shop, EUR for wholesale
+    const currency = isSverigeOrder ? 'sek' : 'eur';
 
-    const platformFeeCents = Math.round((totalAmount * 100) * 0.045) + 30; // 4.5% + 30c total fee
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'payment',
-      payment_intent_data: {
-        application_fee_amount: platformFeeCents,
-        transfer_data: {
-          destination: sellerInfo[0].stripeAccountId,
+    // Shipping options: Standard & Express with explicit shipping fees
+    const shippingOptions = isSverigeOrder ? [
+      {
+        shipping_rate_data: {
+          type: 'fixed_amount' as const,
+          fixed_amount: {
+            amount: 4900, // 49.00 SEK
+            currency: 'sek',
+          },
+          display_name: 'Standardfrakt PostNord / DHL (Sverige)',
+          delivery_estimate: {
+            minimum: { unit: 'business_day' as const, value: 2 },
+            maximum: { unit: 'business_day' as const, value: 4 },
+          },
         },
       },
+      {
+        shipping_rate_data: {
+          type: 'fixed_amount' as const,
+          fixed_amount: {
+            amount: 8900, // 89.00 SEK
+            currency: 'sek',
+          },
+          display_name: 'Expressfrakt (1-2 vardagar)',
+          delivery_estimate: {
+            minimum: { unit: 'business_day' as const, value: 1 },
+            maximum: { unit: 'business_day' as const, value: 2 },
+          },
+        },
+      }
+    ] : [
+      {
+        shipping_rate_data: {
+          type: 'fixed_amount' as const,
+          fixed_amount: {
+            amount: 1500, // €15.00
+            currency: 'eur',
+          },
+          display_name: 'Standard Freight Shipping (EU & International)',
+          delivery_estimate: {
+            minimum: { unit: 'business_day' as const, value: 3 },
+            maximum: { unit: 'business_day' as const, value: 7 },
+          },
+        },
+      },
+      {
+        shipping_rate_data: {
+          type: 'fixed_amount' as const,
+          fixed_amount: {
+            amount: 3500, // €35.00
+            currency: 'eur',
+          },
+          display_name: 'Express Priority Freight (1-3 days)',
+          delivery_estimate: {
+            minimum: { unit: 'business_day' as const, value: 1 },
+            maximum: { unit: 'business_day' as const, value: 3 },
+          },
+        },
+      }
+    ];
+
+    // Allowed shipping destination countries
+    const allowedShippingCountries = [
+      'SE', 'NO', 'DK', 'FI', 'DE', 'FR', 'NL', 'BE', 'AT', 'CH',
+      'PL', 'IT', 'ES', 'PT', 'IE', 'CZ', 'EE', 'LV', 'LT', 'GB',
+      'US', 'CA', 'JP', 'AU'
+    ];
+
+    const baseUrl = req.headers.origin || process.env.VITE_APP_URL || process.env.APP_URL || 'http://localhost:5173';
+
+    const sessionParams: any = {
+      payment_method_types: ['card'],
+      mode: 'payment',
       line_items: validatedItems.map(item => ({
         price_data: {
-          currency: 'usd',
+          currency: currency,
           product_data: {
             name: item.title,
           },
-          unit_amount: Math.round(item.unitPrice * 100), // Stripe expects cents
+          unit_amount: Math.round(item.unitPrice * 100), // Stripe expects cents / öre
         },
         quantity: item.quantity,
       })),
-      success_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/orders?success=true`,
-      cancel_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/cart?canceled=true`,
+      shipping_address_collection: {
+        allowed_countries: allowedShippingCountries,
+      },
+      shipping_options: shippingOptions,
+      phone_number_collection: { enabled: true },
+      success_url: `${baseUrl}/orders?success=true&order_id=${order.id}`,
+      cancel_url: `${baseUrl}/${isSverigeOrder ? 'sweden' : 'cart'}?canceled=true`,
       metadata: {
         orderId: order.id.toString(),
+        isSverige: isSverigeOrder ? 'true' : 'false',
+        buyerId: userProfile.id.toString(),
       },
-    });
+    };
+
+    // If customer email is known, prefill it in Stripe Checkout
+    if (userProfile.email && userProfile.email !== 'guest@hatake.shop') {
+      sessionParams.customer_email = userProfile.email;
+    }
+
+    // Connect transfer if seller has an active connected Stripe account; otherwise payments collect directly to platform
+    if (sellerId) {
+      const sellerInfo = await db.select({ stripeAccountId: users.stripeAccountId, stripeOnboardingComplete: users.stripeOnboardingComplete }).from(users).where(eq(users.id, sellerId as number)).limit(1);
+      if (sellerInfo.length && sellerInfo[0].stripeAccountId && sellerInfo[0].stripeOnboardingComplete) {
+        const platformFeeCents = Math.round((totalAmount * 100) * 0.045) + 30; // 4.5% + 30c
+        sessionParams.payment_intent_data = {
+          application_fee_amount: platformFeeCents,
+          transfer_data: {
+            destination: sellerInfo[0].stripeAccountId,
+          },
+        };
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     await db.update(orders).set({ stripeSessionId: session.id }).where(eq(orders.id, order.id));
 
     res.json({ url: session.url });
   } catch (err: any) {
-    console.error(err);
+    console.error('Checkout session error:', err);
     res.status(500).json({ error: err.message });
   }
 });

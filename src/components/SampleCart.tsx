@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ShoppingCart, X, Package, Trash2, Send } from 'lucide-react';
+import { ShoppingCart, X, Package, Trash2, Send, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext.tsx';
 
 export interface CartItem {
   productId: number;
@@ -139,7 +140,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 const CartDrawer = () => {
   const { items, sverigeItems, isCartOpen, setCartOpen, removeItem, removeSverigeItem, clearCart, clearSverigeCart } = useCart();
+  const { user } = useAuth();
   const [useNetTerms, setUseNetTerms] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const navigate = useNavigate();
 
   const isSverige = window.location.pathname.toLowerCase().includes('sweden') || window.location.pathname.toLowerCase().includes('sverige');
@@ -151,12 +154,28 @@ const CartDrawer = () => {
 
   const handleCheckout = async () => {
     try {
+      setIsCheckingOut(true);
+      let token = '';
+      if (user) {
+        try {
+          token = await user.getIdToken();
+        } catch (e) {
+          token = localStorage.getItem('cached_token') || '';
+        }
+      } else {
+        token = localStorage.getItem('cached_token') || '';
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token && token !== 'null' && token !== 'undefined') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api-v2/checkout/session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // assuming token is used
-        },
+        headers,
         body: JSON.stringify({ items: activeItems.map(i => ({ productId: i.productId, quantity: i.quantity || 1 })) }),
       });
       const data = await response.json();
@@ -168,17 +187,34 @@ const CartDrawer = () => {
     } catch (err) {
       console.error(err);
       alert('Checkout failed');
+    } finally {
+      setIsCheckingOut(false);
     }
   };
 
   const handleRFQ = async () => {
     try {
+      let token = '';
+      if (user) {
+        try {
+          token = await user.getIdToken();
+        } catch (e) {
+          token = localStorage.getItem('cached_token') || '';
+        }
+      } else {
+        token = localStorage.getItem('cached_token') || '';
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token && token !== 'null' && token !== 'undefined') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api-v2/cart/rfq', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers,
         body: JSON.stringify({ items }),
       });
       if (response.ok) {
@@ -359,12 +395,50 @@ const CartDrawer = () => {
                 </button>
               </>
             )}
-            <button onClick={handleCheckout} className="btn-primary w-full">
-              <Send className="w-4 h-4 mr-2" />
-              Checkout ({activeItems.length} {activeItems.length === 1 ? 'Item' : 'Items'})
+            {(() => {
+              const subtotal = activeItems.reduce((acc, i) => acc + (Number(i.unitCost || 0) * (i.quantity || 1)), 0);
+              const baseShipping = isSverige ? 49 : 15;
+              return (
+                <div className="bg-slate-900 rounded-xl p-3 border border-slate-700 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-slate-300">
+                    <span>{isSverige ? 'Delsumma' : 'Subtotal'}</span>
+                    <span className="font-semibold text-white">
+                      {isSverige ? `${subtotal.toFixed(2)} kr` : `€${subtotal.toFixed(2)}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-slate-300">
+                    <span>{isSverige ? 'Frakt (Standard)' : 'Shipping (Standard)'}</span>
+                    <span className="font-semibold text-cyan-400">
+                      {isSverige ? `${baseShipping.toFixed(2)} kr` : `€${baseShipping.toFixed(2)}`}
+                    </span>
+                  </div>
+                  <div className="border-t border-slate-700 pt-1.5 flex justify-between text-slate-200 font-bold text-sm">
+                    <span>{isSverige ? 'Totalt beräknat' : 'Estimated Total'}</span>
+                    <span className="text-[#ffcc00]">
+                      {isSverige ? `${(subtotal + baseShipping).toFixed(2)} kr` : `€${(subtotal + baseShipping).toFixed(2)}`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 pt-1">
+                    {isSverige 
+                      ? 'Leveransadress och fraktmetod anges och bekräftas i kassan.' 
+                      : 'Delivery address and shipping carrier options are entered at checkout.'}
+                  </p>
+                </div>
+              );
+            })()}
+
+            <button onClick={handleCheckout} disabled={isCheckingOut} className="btn-primary w-full disabled:opacity-50">
+              {isCheckingOut ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              {isCheckingOut 
+                ? (isSverige ? 'Öppnar säker kassa...' : 'Preparing checkout...') 
+                : `${isSverige ? 'Gå till kassan' : 'Checkout'} (${activeItems.length} ${activeItems.length === 1 ? (isSverige ? 'produkt' : 'Item') : (isSverige ? 'produkter' : 'Items')})`}
             </button>
-            <p className="text-center text-xs text-slate-400 mt-4">
-              Proceed to secure checkout.
+            <p className="text-center text-xs text-slate-400 mt-2">
+              {isSverige ? 'Säker betalning med Stripe.' : 'Proceed to secure checkout with Stripe.'}
             </p>
           </div>
         )}
