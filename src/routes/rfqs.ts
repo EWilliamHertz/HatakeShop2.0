@@ -209,27 +209,37 @@ router.post(["/inquiries/:id/escrow/release", "/api/inquiries/:id/escrow/release
         }
 
         const productInfo = await db.select({ sellerId: products.sellerId, unitCost: products.unitCost }).from(products).where(eq(products.id, inquiry.targetProductId!));
+        let transferSuccess = false;
+        let transferError: string | null = null;
+
         if (productInfo.length > 0) {
-            const sellerInfo = await db.select({ stripeAccountId: users.stripeAccountId }).from(users).where(eq(users.id, productInfo[0].sellerId));
+            const sellerInfo = await db.select({ stripeAccountId: users.stripeAccountId, uid: users.uid, email: users.email }).from(users).where(eq(users.id, productInfo[0].sellerId));
             
-            const unitCost = Number(productInfo[0].unitCost) || 0;
+            const lastQuote = await db.query.inquiryMessages.findFirst({
+              where: and(eq(inquiryMessages.inquiryId, inquiry.id), eq(inquiryMessages.isOfficialQuote, true)),
+              orderBy: [desc(inquiryMessages.createdAt)]
+            });
+
+            const unitCost = Number(lastQuote?.unitPriceProposed || productInfo[0].unitCost || 0);
             const totalAmount = Math.round(unitCost * inquiry.quantity * 100);
             const platformFee = Math.round(totalAmount * 0.045);
-            const amountToTransfer = totalAmount - platformFee;
+            const amountToTransfer = Math.max(0, totalAmount - platformFee);
             
-            if (sellerInfo[0]?.stripeAccountId) {
+            if (sellerInfo[0]?.stripeAccountId && amountToTransfer > 0) {
               const stripe = getStripe();
               if (stripe) {
-              try {
-                await stripe.transfers.create({
-                  amount: amountToTransfer,
-                  currency: inquiry.currency.toLowerCase(),
-                  destination: sellerInfo[0].stripeAccountId,
-                  description: `Escrow release for RFQ ${inquiry.id}`
-                });
-              } catch (stripeErr) {
-                console.error("Stripe Transfer Failed, assuming test mode:", stripeErr);
-              }
+                try {
+                  await stripe.transfers.create({
+                    amount: amountToTransfer,
+                    currency: (inquiry.currency || 'USD').toLowerCase(),
+                    destination: sellerInfo[0].stripeAccountId,
+                    description: `Escrow release for RFQ #${inquiry.id}`
+                  });
+                  transferSuccess = true;
+                } catch (stripeErr: any) {
+                  console.error("[Stripe Transfer Error]:", stripeErr.message);
+                  transferError = stripeErr.message;
+                }
               }
             }
         }
@@ -243,7 +253,7 @@ router.post(["/inquiries/:id/escrow/release", "/api/inquiries/:id/escrow/release
             io.to(`inquiry_${id}`).emit("inquiry_updated", { paymentStatus: 'Escrow Released', escrowReleaseStatus: 'approved' });
         }
             
-        res.json({ success: true });
+        res.json({ success: true, transferSuccess, transferError });
     } catch (e: any) {
         console.error(e);
         res.status(500).json({ error: e.message || "Failed to release escrow" });
@@ -553,6 +563,14 @@ router.post(["/inquiries/:id/decline", "/api/inquiries/:id/decline", "/api-v2/in
   }
 });
 
+function getAppBaseUrl(req: any): string {
+  const origin = req.get('origin') || req.headers?.origin;
+  const host = req.get('host');
+  const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+  const defaultHost = host ? `${protocol}://${host}` : 'https://www.hatake.shop';
+  return (process.env.APP_URL || origin || defaultHost).replace(/\/$/, '');
+}
+
 router.post(["/stripe/create-account", "/api/stripe/create-account", "/api-v2/stripe/create-account"], requireAuth, async (req: AuthRequest, res) => {
   try {
     const stripe = getStripe();
@@ -562,59 +580,159 @@ router.post(["/stripe/create-account", "/api/stripe/create-account", "/api-v2/st
     if (!userProfile) return res.status(404).send("User missing");
 
     let accountId = userProfile.stripeAccountId;
+    if (accountId) {
+      try {
+        await stripe.accounts.retrieve(accountId);
+      } catch (err: any) {
+        if (err?.code === 'resource_missing' || err?.statusCode === 404 || err?.message?.includes('No such account')) {
+          accountId = null;
+        } else {
+          throw err;
+        }
+      }
+    }
+
     if (!accountId) {
-      const account = await stripe.accounts.create({
+      const accountParams: any = {
         type: 'express',
-        email: userProfile.email,
-        capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
-        business_type: 'company',
-        company: { name: userProfile.companyName || '' }
-      });
+        email: userProfile.email || undefined,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        metadata: {
+          userId: userProfile.id.toString(),
+          uid: userProfile.uid,
+        },
+      };
+
+      if (userProfile.companyName && userProfile.companyName.trim()) {
+        accountParams.business_type = 'company';
+        accountParams.company = { name: userProfile.companyName.trim() };
+      }
+
+      if (userProfile.country && userProfile.country.trim().length === 2) {
+        accountParams.country = userProfile.country.trim().toUpperCase();
+      }
+
+      const account = await stripe.accounts.create(accountParams);
       accountId = account.id;
       await db.update(users).set({ stripeAccountId: accountId }).where(eq(users.id, userProfile.id));
     }
 
+    const baseUrl = getAppBaseUrl(req);
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${process.env.APP_URL || 'http://localhost:3000'}/api/stripe/onboard-refresh/${userProfile.id}`,
-      return_url: `${process.env.APP_URL || 'http://localhost:3000'}/api/stripe/onboard-return/${userProfile.id}`,
+      refresh_url: `${baseUrl}/api-v2/stripe/onboard-refresh/${userProfile.id}`,
+      return_url: `${baseUrl}/api-v2/stripe/onboard-return/${userProfile.id}`,
       type: 'account_onboarding',
     });
 
     res.json({ url: accountLink.url });
-  } catch (e) {
-    console.error(e);
+  } catch (e: any) {
+    console.error("[Stripe Create Account Error]:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get(["/stripe/status", "/api/stripe/status", "/api-v2/stripe/status"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const stripe = getStripe();
+    if (!stripe) return res.status(400).json({ error: "Stripe not configured" });
+
+    const userProfile = await getUserProfile(req.user.uid);
+    if (!userProfile) return res.status(404).json({ error: "User not found" });
+
+    if (!userProfile.stripeAccountId) {
+      return res.json({ connected: false, onboardingComplete: false });
+    }
+
+    try {
+      const account = await stripe.accounts.retrieve(userProfile.stripeAccountId);
+      const isComplete = Boolean(account.details_submitted || (account.charges_enabled && account.payouts_enabled));
+
+      if (isComplete !== userProfile.stripeOnboardingComplete) {
+        await db.update(users).set({ stripeOnboardingComplete: isComplete }).where(eq(users.id, userProfile.id));
+      }
+
+      res.json({
+        connected: true,
+        stripeAccountId: account.id,
+        onboardingComplete: isComplete,
+        detailsSubmitted: account.details_submitted,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+      });
+    } catch (err: any) {
+      if (err?.code === 'resource_missing' || err?.statusCode === 404) {
+        await db.update(users).set({ stripeAccountId: null, stripeOnboardingComplete: false }).where(eq(users.id, userProfile.id));
+        return res.json({ connected: false, onboardingComplete: false });
+      }
+      throw err;
+    }
+  } catch (e: any) {
+    console.error("[Stripe Status Error]:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post(["/stripe/dashboard-link", "/api/stripe/dashboard-link", "/api-v2/stripe/dashboard-link"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const stripe = getStripe();
+    if (!stripe) return res.status(400).json({ error: "Stripe not configured" });
+
+    const userProfile = await getUserProfile(req.user.uid);
+    if (!userProfile?.stripeAccountId) return res.status(400).json({ error: "No connected Stripe account" });
+
+    try {
+      const loginLink = await stripe.accounts.createLoginLink(userProfile.stripeAccountId);
+      res.json({ url: loginLink.url });
+    } catch (linkErr: any) {
+      const baseUrl = getAppBaseUrl(req);
+      const accountLink = await stripe.accountLinks.create({
+        account: userProfile.stripeAccountId,
+        refresh_url: `${baseUrl}/api-v2/stripe/onboard-refresh/${userProfile.id}`,
+        return_url: `${baseUrl}/api-v2/stripe/onboard-return/${userProfile.id}`,
+        type: 'account_onboarding',
+      });
+      res.json({ url: accountLink.url });
+    }
+  } catch (e: any) {
+    console.error("[Stripe Dashboard Link Error]:", e);
     res.status(500).json({ error: e.message });
   }
 });
 
 router.get(["/stripe/onboard-refresh/:id", "/api/stripe/onboard-refresh/:id", "/api-v2/stripe/onboard-refresh/:id"], async (req, res) => {
-   res.redirect('/seller?stripe_refresh=true');
+  const baseUrl = getAppBaseUrl(req);
+  res.redirect(`${baseUrl}/seller?stripe_refresh=true`);
 });
 
 router.get(["/stripe/onboard-return/:id", "/api/stripe/onboard-return/:id", "/api-v2/stripe/onboard-return/:id"], async (req, res) => {
+  const baseUrl = getAppBaseUrl(req);
   try {
     const stripe = getStripe();
     const userId = parseInt(req.params.id, 10);
     const userProfile = await db.select().from(users).where(eq(users.id, userId));
     if (userProfile.length === 0 || !userProfile[0].stripeAccountId || !stripe) {
-       return res.redirect('/seller?stripe_error=true');
+       return res.redirect(`${baseUrl}/seller?stripe_error=true`);
     }
 
     const account = await stripe.accounts.retrieve(userProfile[0].stripeAccountId);
-    if (account.details_submitted) {
+    const isComplete = Boolean(account.details_submitted || (account.charges_enabled && account.payouts_enabled));
+    if (isComplete) {
        await db.update(users).set({ stripeOnboardingComplete: true }).where(eq(users.id, userId));
-       res.redirect('/seller?stripe_success=true');
+       res.redirect(`${baseUrl}/seller?stripe_success=true`);
     } else {
-       res.redirect('/seller?stripe_incomplete=true');
+       res.redirect(`${baseUrl}/seller?stripe_incomplete=true`);
     }
   } catch (e) {
-    console.error(e);
-    res.redirect('/seller?stripe_error=true');
+    console.error("[Stripe Onboard Return Error]:", e);
+    res.redirect(`${baseUrl}/seller?stripe_error=true`);
   }
 });
 
-router.post(["/stripe/create-checkout-session", "/api/stripe/create-checkout-session", "/api-v2/stripe/create-checkout-session"], requireAuth, async (req, res) => {
+router.post(["/stripe/create-checkout-session", "/api/stripe/create-checkout-session", "/api-v2/stripe/create-checkout-session"], requireAuth, async (req: AuthRequest, res) => {
   try {
     const stripe = getStripe();
     if (!stripe) return res.status(400).json({ error: "Stripe not configured" });
@@ -630,40 +748,68 @@ router.post(["/stripe/create-checkout-session", "/api/stripe/create-checkout-ses
 
     const sellerData = await db.select().from(users).where(eq(users.id, prod.sellerId));
     if (sellerData.length === 0 || !sellerData[0].stripeAccountId || !sellerData[0].stripeOnboardingComplete) {
-       return res.status(400).json({ error: "Seller is not ready to receive payments" });
+       return res.status(400).json({ error: "Seller has not completed Stripe onboarding and cannot receive payments yet" });
     }
 
-    const unitCost = Number(prod.unitCost) || 0;
-    const totalAmount = Math.round(unitCost * inq.quantity * 100);
-    const platformFee = Math.round(totalAmount * 0.045);
+    const lastQuote = await db.query.inquiryMessages.findFirst({
+      where: and(eq(inquiryMessages.inquiryId, inq.id), eq(inquiryMessages.isOfficialQuote, true)),
+      orderBy: [desc(inquiryMessages.createdAt)]
+    });
 
-    const session = await stripe.checkout.sessions.create({
+    const unitCost = Number(lastQuote?.unitPriceProposed || prod.unitCost || prod.unitPrice || 0);
+    if (unitCost <= 0) {
+      return res.status(400).json({ error: "Invalid price for checkout" });
+    }
+
+    const totalAmountCents = Math.round(unitCost * inq.quantity * 100);
+    const platformFeeCents = Math.round(totalAmountCents * 0.045);
+    const currency = (inq.currency || 'USD').toLowerCase();
+    const baseUrl = getAppBaseUrl(req);
+
+    const buyerUser = await getUserProfile(req.user.uid);
+
+    const sessionParams: any = {
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
-          currency: inq.currency.toLowerCase(),
+          currency: currency,
           product_data: {
             name: prod.title,
-            description: `PO for ${inq.quantity} units`,
+            description: `B2B Order for ${inq.quantity} units (${prod.originType || 'Direct Wholesale'})`,
           },
           unit_amount: Math.round(unitCost * 100),
         },
         quantity: inq.quantity,
       }],
       mode: 'payment',
-      payment_intent_data: {},
-      metadata: {
-           inquiryId: inq.id.toString()
+      payment_intent_data: {
+        metadata: {
+          inquiryId: inq.id.toString(),
+          sellerId: sellerData[0].id.toString(),
+          sellerStripeAccountId: sellerData[0].stripeAccountId,
+          platformFeeCents: platformFeeCents.toString(),
+        }
       },
-      success_url: `${process.env.APP_URL || 'http://localhost:3000'}/rfq/${inq.id}?payment=success`,
-      cancel_url: `${process.env.APP_URL || 'http://localhost:3000'}/rfq/${inq.id}?payment=cancelled`,
-    });
+      metadata: {
+        inquiryId: inq.id.toString(),
+        sellerId: sellerData[0].id.toString(),
+        buyerId: inq.buyerId.toString(),
+      },
+      success_url: `${baseUrl}/rfq/${inq.id}?payment=success`,
+      cancel_url: `${baseUrl}/rfq/${inq.id}?payment=cancelled`,
+    };
+
+    if (buyerUser?.email && buyerUser.email !== 'guest@hatake.shop') {
+      sessionParams.customer_email = buyerUser.email;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
     
     await db.update(inquiries).set({ stripeCheckoutSessionId: session.id }).where(eq(inquiries.id, inq.id));
 
     res.json({ url: session.url });
-  } catch (e) {
-    console.error(e);
+  } catch (e: any) {
+    console.error("[Stripe RFQ Checkout Error]:", e);
     res.status(500).json({ error: e.message });
   }
 });

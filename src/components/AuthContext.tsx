@@ -196,8 +196,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateDbUser = (data: any) => {
-    setDbUser(data);
-  }
+    setDbUser((prev: any) => {
+      const merged = typeof data === 'function' ? data(prev) : (typeof data === 'object' ? { ...(prev || {}), ...data } : data);
+      try {
+        localStorage.setItem('cached_db_user_session', JSON.stringify(merged));
+      } catch (e) {}
+      return merged;
+    });
+  };
 
   return (
     <AuthContext.Provider value={{ user, dbUser, loading, signIn, signInWithEmail, registerWithEmail, signInWithCustom, logOut, updateDbUser }}>

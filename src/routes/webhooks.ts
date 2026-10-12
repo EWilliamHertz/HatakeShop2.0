@@ -13,45 +13,91 @@ import { getUserProfile } from "../db/users.js";
 
 const router = Router();
 
-router.post("/api-v2/stripe/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+router.post(["/stripe/webhook", "/api/stripe/webhook", "/api-v2/stripe/webhook"], express.raw({ type: 'application/json' }), async (req, res) => {
     const stripe = getStripe();
     if (!stripe) return res.status(400).send("Stripe not configured");
     
     const sig = req.headers['stripe-signature'];
-    let event;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+    const payload = (req as any).rawBody || req.body;
+    let event: any;
+
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET || '');
-    } catch (err) {
+      if (webhookSecret && sig) {
+        event = stripe.webhooks.constructEvent(payload, sig, webhookSecret);
+      } else {
+        // Fallback for development if no webhook secret is set
+        event = typeof payload === 'string' ? JSON.parse(payload) : (Buffer.isBuffer(payload) ? JSON.parse(payload.toString('utf8')) : payload);
+      }
+    } catch (err: any) {
+      console.error("[Stripe Webhook Error]:", err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const inquiryId = session.metadata?.inquiryId;
-      if (inquiryId) {
-         await db.update(inquiries).set({ 
-           paymentStatus: 'Escrow Funded',
-           stripePaymentIntentId: session.payment_intent as string
-         }).where(eq(inquiries.id, parseInt(inquiryId, 10)));
-         
-         const inq = await db.select().from(inquiries).where(eq(inquiries.id, parseInt(inquiryId, 10)));
-         if (inq.length > 0) {
+    try {
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const inquiryId = session.metadata?.inquiryId;
+        if (inquiryId) {
+          await db.update(inquiries).set({ 
+            paymentStatus: 'Escrow Funded',
+            stripePaymentIntentId: session.payment_intent as string
+          }).where(eq(inquiries.id, parseInt(inquiryId, 10)));
+          
+          const inqList = await db.select().from(inquiries).where(eq(inquiries.id, parseInt(inquiryId, 10)));
+          if (inqList.length > 0) {
+            const inq = inqList[0];
             const io = (req as any).io;
             if (io) {
-               io.to(`inquiry_${inquiryId}`).emit("inquiry_updated", { paymentStatus: 'Escrow Funded' });
+              io.to(`inquiry_${inquiryId}`).emit("inquiry_updated", { paymentStatus: 'Escrow Funded' });
+              io.to(`user_${inq.buyerId}`).emit("inquiry_updated", { paymentStatus: 'Escrow Funded' });
             }
-         }
+          }
+        }
+
+        const orderId = session.metadata?.orderId;
+        if (orderId) {
+          await db.update(orders).set({
+            status: 'paid',
+            stripePaymentIntentId: session.payment_intent as string
+          }).where(eq(orders.id, parseInt(orderId, 10)));
+        }
       }
 
-      const orderId = session.metadata?.orderId;
-      if (orderId) {
-         await db.update(orders).set({
-           status: 'paid',
-           stripePaymentIntentId: session.payment_intent as string
-         }).where(eq(orders.id, parseInt(orderId, 10)));
+      if (event.type === 'account.updated') {
+        const account = event.data.object as any;
+        if (account && account.id) {
+          const isComplete = Boolean(
+            account.details_submitted ||
+            (account.charges_enabled && account.payouts_enabled)
+          );
+          await db.update(users)
+            .set({ stripeOnboardingComplete: isComplete })
+            .where(eq(users.stripeAccountId, account.id));
+
+          const matchingUsers = await db.select({ id: users.id, uid: users.uid }).from(users).where(eq(users.stripeAccountId, account.id)).limit(1);
+          if (matchingUsers.length > 0) {
+            const io = (req as any).io;
+            if (io) {
+              io.to(`user_${matchingUsers[0].uid}`).emit("stripe_account_updated", { isComplete });
+            }
+          }
+        }
       }
+
+      if (event.type === 'account.application.deauthorized') {
+        const account = event.data.object as any;
+        if (account && account.id) {
+          await db.update(users)
+            .set({ stripeOnboardingComplete: false, stripeAccountId: null })
+            .where(eq(users.stripeAccountId, account.id));
+        }
+      }
+    } catch (handlerErr: any) {
+      console.error("[Stripe Webhook Handler Error]:", handlerErr);
     }
-    res.json({received: true});
+
+    res.json({ received: true });
   });
 
 router.post("/api-v2/webhooks/resend", async (req, res) => {

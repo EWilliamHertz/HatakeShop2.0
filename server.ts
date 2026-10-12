@@ -207,7 +207,14 @@ function __dummy_getEasyPost() {
   return easypostClient;
 }
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '1mb',
+  verify: (req: any, _res, buf) => {
+    if (req.originalUrl && req.originalUrl.includes('stripe/webhook')) {
+      req.rawBody = buf;
+    }
+  }
+}));
 
 // NOTE: Admin product update routes live in src/routes/admin.ts
 // (PATCH /admin/products/bulk and /admin/products/:id). Do not re-register

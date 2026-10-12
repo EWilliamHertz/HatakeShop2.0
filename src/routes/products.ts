@@ -560,7 +560,11 @@ router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
     if (sellerId) {
       const sellerInfo = await db.select({ stripeAccountId: users.stripeAccountId, stripeOnboardingComplete: users.stripeOnboardingComplete }).from(users).where(eq(users.id, sellerId as number)).limit(1);
       if (sellerInfo.length && sellerInfo[0].stripeAccountId && sellerInfo[0].stripeOnboardingComplete) {
-        const platformFeeCents = Math.round((totalAmount * 100) * 0.045) + 30; // 4.5% + 30c
+        const totalCents = Math.round(totalAmount * 100);
+        let platformFeeCents = Math.round(totalCents * 0.045) + 30; // 4.5% + 30c
+        if (platformFeeCents >= totalCents) {
+          platformFeeCents = Math.max(0, totalCents - 100);
+        }
         sessionParams.payment_intent_data = {
           application_fee_amount: platformFeeCents,
           transfer_data: {

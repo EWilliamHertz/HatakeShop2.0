@@ -18,11 +18,38 @@ import { useWorkspace } from '../components/WorkspaceContext.tsx';
 export function SellerDashboard() {
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
-  const { user, dbUser } = useAuth();
+  const { user, dbUser, updateDbUser } = useAuth();
   const { activeCompanyId, companies } = useWorkspace();
   const activeCompany = companies.find(c => c.id === activeCompanyId) ?? null;
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<any[]>([]);
+  const [checkingStripe, setCheckingStripe] = useState(false);
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+
+  const checkStripeStatus = async () => {
+    if (!user) return;
+    try {
+      setCheckingStripe(true);
+      const token = await user.getIdToken();
+      const res = await fetch('/api-v2/stripe/status', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.connected !== undefined) {
+          updateDbUser({
+            stripeAccountId: data.stripeAccountId,
+            stripeOnboardingComplete: Boolean(data.onboardingComplete)
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to check stripe status", e);
+    } finally {
+      setCheckingStripe(false);
+    }
+  };
   
   useEffect(() => {
     if (searchParams.get('stripe_success')) {
@@ -30,21 +57,35 @@ export function SellerDashboard() {
       searchParams.delete('stripe_success');
       setSearchParams(searchParams);
       setActiveTab('finance');
+      checkStripeStatus();
     } else if (searchParams.get('stripe_error')) {
       toast.error('Failed to connect Stripe account.');
       searchParams.delete('stripe_error');
       setSearchParams(searchParams);
       setActiveTab('finance');
+      checkStripeStatus();
     } else if (searchParams.get('stripe_incomplete')) {
-      toast.error('Stripe onboarding incomplete.');
+      toast.error('Stripe onboarding incomplete. Please finish onboarding to receive payouts.');
       searchParams.delete('stripe_incomplete');
       setSearchParams(searchParams);
       setActiveTab('finance');
+      checkStripeStatus();
+    } else if (searchParams.get('stripe_refresh')) {
+      searchParams.delete('stripe_refresh');
+      setSearchParams(searchParams);
+      setActiveTab('finance');
+      checkStripeStatus();
     }
   }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (activeTab === 'finance' && user) {
+      checkStripeStatus();
+    }
+  }, [activeTab, user]);
   
   const handleStripeOnboarding = async () => {
-    const popup = window.open('', '_blank');
+    setOnboardingLoading(true);
     try {
       let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error("Firebase Auth Error: " + e.message); }
       const res = await fetch('/api-v2/stripe/create-account', {
@@ -52,15 +93,36 @@ export function SellerDashboard() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      if (data.url && popup) {
-        popup.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
       } else {
-        if (popup) popup.close();
         toast.error(data.error || 'Failed to start onboarding. Did you set STRIPE_SECRET_KEY?');
+        setOnboardingLoading(false);
       }
-    } catch (e) {
-      if (popup) popup.close();
-      toast.error('An error occurred while starting onboarding');
+    } catch (e: any) {
+      toast.error(e.message || 'An error occurred while starting onboarding');
+      setOnboardingLoading(false);
+    }
+  };
+
+  const handleOpenStripeDashboard = async () => {
+    setDashboardLoading(true);
+    try {
+      let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error("Firebase Auth Error: " + e.message); }
+      const res = await fetch('/api-v2/stripe/dashboard-link', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.error || 'Failed to open Stripe dashboard');
+        setDashboardLoading(false);
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to open Stripe dashboard');
+      setDashboardLoading(false);
     }
   };
   const [loading, setLoading] = useState(true);
@@ -411,40 +473,63 @@ export function SellerDashboard() {
 
               <div className="mt-8 flex flex-col md:flex-row items-start md:items-center gap-6">
                 {dbUser?.stripeOnboardingComplete ? (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 flex-1 w-full flex flex-col md:flex-row items-center justify-between">
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 flex-1 w-full flex flex-col md:flex-row items-center justify-between">
                     <div className="flex items-center space-x-4 mb-4 md:mb-0">
-                      <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+                      <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center">
                         <CheckCircle2 className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold tracking-tight text-emerald-900">{t('Account Verified & Active')}</h3>
-                        <p className="text-emerald-700">{t('Your account is ready to receive payouts via Stripe.')}</p>
+                        <h3 className="text-lg font-semibold tracking-tight text-emerald-300">{t('Account Verified & Active')}</h3>
+                        <p className="text-emerald-400/80 text-sm">{t('Your account is ready to receive payouts via Stripe.')}</p>
                       </div>
                     </div>
-                    <button 
-                      onClick={handleStripeOnboarding}
-                      className="btn-secondary"
-                    >
-                      Update Details
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button 
+                        onClick={handleOpenStripeDashboard}
+                        disabled={dashboardLoading}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+                      >
+                        {dashboardLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                        <span>Stripe Express Dashboard</span>
+                      </button>
+                      <button 
+                        onClick={handleStripeOnboarding}
+                        disabled={onboardingLoading}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold text-sm rounded-xl transition-colors"
+                      >
+                        {onboardingLoading ? 'Loading...' : 'Update Details'}
+                      </button>
+                    </div>
                   </div>
                 ) : dbUser?.stripeAccountId ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 flex-1 w-full flex flex-col md:flex-row items-center justify-between">
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-6 flex-1 w-full flex flex-col md:flex-row items-center justify-between">
                     <div className="flex items-center space-x-4 mb-4 md:mb-0">
-                      <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
+                      <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center">
                         <AlertCircle className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold tracking-tight text-amber-900">{t('Verification Pending')}</h3>
-                        <p className="text-amber-700">{t('You started onboarding, but more details are needed.')}</p>
+                        <h3 className="text-lg font-semibold tracking-tight text-amber-300">{t('Verification Pending')}</h3>
+                        <p className="text-amber-400/80 text-sm">{t('You started onboarding, but more details are needed by Stripe.')}</p>
                       </div>
                     </div>
-                    <button 
-                      onClick={handleStripeOnboarding}
-                      className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold tracking-tight rounded-xl transition-colors shadow-none whitespace-nowrap"
-                    >
-                      Continue Onboarding
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={checkStripeStatus}
+                        disabled={checkingStripe}
+                        className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold text-sm rounded-xl transition-colors flex items-center gap-2"
+                      >
+                        {checkingStripe && <Loader2 className="w-4 h-4 animate-spin" />}
+                        <span>Check Status</span>
+                      </button>
+                      <button 
+                        onClick={handleStripeOnboarding}
+                        disabled={onboardingLoading}
+                        className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold tracking-tight rounded-xl transition-colors shadow-none whitespace-nowrap flex items-center gap-2"
+                      >
+                        {onboardingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        <span>{onboardingLoading ? 'Redirecting...' : 'Continue Onboarding'}</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                    <div className="bg-[var(--color-canvas)] border border-[var(--color-hairline)] rounded-xl p-6 flex-1 w-full flex flex-col md:flex-row items-center justify-between">
@@ -459,10 +544,13 @@ export function SellerDashboard() {
                     </div>
                     <button 
                       onClick={handleStripeOnboarding}
-                      className="btn-primary"
+                      disabled={onboardingLoading}
+                      className="btn-primary flex items-center gap-2"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                      <span>{t('Connect with Stripe')}</span>
+                      {onboardingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                      )}
+                      <span>{onboardingLoading ? 'Redirecting...' : t('Connect with Stripe')}</span>
                     </button>
                   </div>
                 )}
