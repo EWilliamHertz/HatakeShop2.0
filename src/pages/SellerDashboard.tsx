@@ -22,10 +22,14 @@ export function SellerDashboard() {
   const { activeCompanyId, companies } = useWorkspace();
   const activeCompany = companies.find(c => c.id === activeCompanyId) ?? null;
   const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState("listings");
   const [products, setProducts] = useState<any[]>([]);
   const [checkingStripe, setCheckingStripe] = useState(false);
   const [onboardingLoading, setOnboardingLoading] = useState(false);
   const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [verificationData, setVerificationData] = useState<any>(null);
+  const [verifying, setVerifying] = useState(false);
 
   const checkStripeStatus = async () => {
     if (!user) return;
@@ -125,11 +129,7 @@ export function SellerDashboard() {
       setDashboardLoading(false);
     }
   };
-  const [loading, setLoading] = useState(true);
-  
-  const [activeTab, setActiveTab] = useState("listings");
-  const [verificationData, setVerificationData] = useState<any>(null);
-  const [verifying, setVerifying] = useState(false);
+
 
   useEffect(() => {
     if (user && activeTab === 'verification') {
