@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdminListings } from '../components/AdminListings.tsx';
 import { AdminSverigeTab } from '../components/AdminSverigeTab.tsx';
+import { AdminKortButikerTab } from '../components/AdminKortButikerTab.tsx';
 import { AdminLeadsTab } from '../components/AdminLeadsTab.tsx';
+
 import { Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext.tsx';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
@@ -454,13 +456,13 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
       </div>
       
     <div className="flex space-x-6 border-b border-slate-700 mb-8 overflow-x-auto">
-         {['overview', 'approvals', 'listings', 'users', 'marketing', 'affiliates', 'leads', 'feedback', 'reviews', 'sverige'].map(tab => (
+         {['overview', 'approvals', 'listings', 'users', 'marketing', 'affiliates', 'leads', 'feedback', 'reviews', 'sverige', 'kort-butiker'].map(tab => (
            <button 
              key={tab}
              onClick={() => setActiveTab(tab)}
              className={`pb-3 font-semibold tracking-tight text-sm capitalize whitespace-nowrap transition-colors border-b-2 ${activeTab === tab ? 'border-ink text-slate-100' : 'border-transparent text-slate-400 hover:text-slate-100 hover:border-ink/30'}`}
            >
-             {tab === 'users' ? 'User Directory' : tab === 'sverige' ? 'Sverige Shop' : tab}
+             {tab === 'users' ? 'User Directory' : tab === 'sverige' ? 'Sverige Shop' : tab === 'kort-butiker' ? '🇸🇪 Kortbutiker Sverige' : tab}
            </button>
          ))}
       </div>
@@ -966,6 +968,7 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
       )}
 
       {activeTab === 'sverige' && <AdminSverigeTab />}
+      {activeTab === 'kort-butiker' && <AdminKortButikerTab />}
 
       {previewingHtml && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-2 sm:p-4">

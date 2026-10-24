@@ -1,11 +1,13 @@
-import bcrypt from "bcryptjs";
-import express from "express";
+import express, { Router } from "express";
 import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/services.js";
 
-import { Router } from "express";
-import { db, ensureSealedTaxonomySchema } from "../db/index.js";
+import { db, ensureSealedTaxonomySchema, ensureSwedishCardShopsSchema } from "../db/index.js";
 import { adminAuth } from "../lib/firebase-admin.js";
-import { users, products, feedback, leads, affiliates, marketing_logs, categories, inquiries, inquiryMessages, reviews } from "../db/schema.js";
+import { users, products, feedback, leads, affiliates, marketing_logs, categories, inquiries, inquiryMessages, reviews, swedishCardShops } from "../db/schema.js";
+import { findKortbutikerCsvFile, parseSwedishShopsCsv } from "../lib/swedishShops.js";
+import fs from "fs";
+import path from "path";
+
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
@@ -817,6 +819,155 @@ router.patch("/api-v2/admin/products/:id/sverige", requireAuth, async (req: Auth
     res.json({ success: true });
   } catch (err: any) {
     console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- KORT BUTIKER SVERIGE (Swedish Card Shops) ENDPOINTS ---
+router.get(["/admin/kort-butiker", "/api/admin/kort-butiker", "/api-v2/admin/kort-butiker"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    await ensureSwedishCardShopsSchema();
+    const shops = await db.select().from(swedishCardShops).orderBy(asc(swedishCardShops.name));
+    res.json(shops);
+  } catch (err: any) {
+    console.error("Error fetching swedish card shops:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post(["/admin/kort-butiker", "/api/admin/kort-butiker", "/api-v2/admin/kort-butiker"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    await ensureSwedishCardShopsSchema();
+    const { name, type, city, address, phone, email, website, cardTypes, notes } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Butiksnamn är obligatoriskt (Store name is required)" });
+    }
+
+    const inserted = await db.insert(swedishCardShops).values({
+      name: name.trim(),
+      type: type ? type.trim() : 'Fysisk butik',
+      city: city ? city.trim() : '',
+      address: address ? address.trim() : '',
+      phone: phone ? phone.trim() : '',
+      email: email ? email.trim() : '',
+      website: website ? website.trim() : '',
+      cardTypes: cardTypes ? cardTypes.trim() : '',
+      notes: notes ? notes.trim() : '',
+      updatedAt: new Date(),
+    }).returning();
+
+    res.status(201).json(inserted[0]);
+  } catch (err: any) {
+    console.error("Error adding swedish card shop:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch(["/admin/kort-butiker/:id", "/api/admin/kort-butiker/:id", "/api-v2/admin/kort-butiker/:id"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { name, type, city, address, phone, email, website, cardTypes, notes } = req.body;
+    const updates: any = { updatedAt: new Date() };
+
+    if (name !== undefined) updates.name = name.trim();
+    if (type !== undefined) updates.type = type.trim();
+    if (city !== undefined) updates.city = city.trim();
+    if (address !== undefined) updates.address = address.trim();
+    if (phone !== undefined) updates.phone = phone.trim();
+    if (email !== undefined) updates.email = email.trim();
+    if (website !== undefined) updates.website = website.trim();
+    if (cardTypes !== undefined) updates.cardTypes = cardTypes.trim();
+    if (notes !== undefined) updates.notes = notes.trim();
+
+    const updated = await db.update(swedishCardShops).set(updates).where(eq(swedishCardShops.id, id)).returning();
+    if (!updated.length) return res.status(404).json({ error: "Store not found" });
+
+    res.json(updated[0]);
+  } catch (err: any) {
+    console.error("Error updating swedish card shop:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete(["/admin/kort-butiker/:id", "/api/admin/kort-butiker/:id", "/api-v2/admin/kort-butiker/:id"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    await db.delete(swedishCardShops).where(eq(swedishCardShops.id, id));
+    res.json({ success: true, id });
+  } catch (err: any) {
+    console.error("Error deleting swedish card shop:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post(["/admin/kort-butiker/sync-file", "/api/admin/kort-butiker/sync-file", "/api-v2/admin/kort-butiker/sync-file"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    await ensureSwedishCardShopsSchema();
+    const filePath = findKortbutikerCsvFile();
+    if (!filePath || !fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "Ingen kort_butiker_sverige*.csv fil hittades i projektet." });
+    }
+
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const shops = parseSwedishShopsCsv(content);
+    let count = 0;
+    for (const s of shops) {
+      const existing = await db.select().from(swedishCardShops).where(eq(swedishCardShops.name, s.name)).limit(1);
+      if (existing.length === 0) {
+        await db.insert(swedishCardShops).values({
+          name: s.name,
+          type: s.type || 'Fysisk butik',
+          city: s.city || '',
+          address: s.address || '',
+          phone: s.phone || '',
+          email: s.email || '',
+          website: s.website || '',
+          cardTypes: s.cardTypes || '',
+          notes: s.notes || '',
+        });
+        count++;
+      }
+    }
+
+    res.json({ success: true, added: count, totalInFile: shops.length, file: path.basename(filePath) });
+  } catch (err: any) {
+    console.error("Error syncing swedish card shops from file:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post(["/admin/kort-butiker/import-csv", "/api/admin/kort-butiker/import-csv", "/api-v2/admin/kort-butiker/import-csv"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    await ensureSwedishCardShopsSchema();
+    const { csvData } = req.body;
+    if (!csvData || typeof csvData !== 'string') {
+      return res.status(400).json({ error: "No CSV data provided" });
+    }
+
+    const shops = parseSwedishShopsCsv(csvData);
+    let count = 0;
+    for (const s of shops) {
+      if (!s.name) continue;
+      const existing = await db.select().from(swedishCardShops).where(eq(swedishCardShops.name, s.name)).limit(1);
+      if (existing.length === 0) {
+        await db.insert(swedishCardShops).values({
+          name: s.name,
+          type: s.type || 'Fysisk butik',
+          city: s.city || '',
+          address: s.address || '',
+          phone: s.phone || '',
+          email: s.email || '',
+          website: s.website || '',
+          cardTypes: s.cardTypes || '',
+          notes: s.notes || '',
+        });
+        count++;
+      }
+    }
+
+    res.json({ success: true, added: count, parsed: shops.length });
+  } catch (err: any) {
+    console.error("Error importing CSV:", err);
     res.status(500).json({ error: err.message });
   }
 });

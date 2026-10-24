@@ -500,3 +500,19 @@ export const userFollowers = pgTable('user_followers', {
   followingId: integer('following_id').references(() => users.id).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const swedishCardShops = pgTable('swedish_card_shops', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  type: text('type'),
+  city: text('city'),
+  address: text('address'),
+  phone: text('phone'),
+  email: text('email'),
+  website: text('website'),
+  cardTypes: text('card_types'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+

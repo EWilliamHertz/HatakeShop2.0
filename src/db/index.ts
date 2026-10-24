@@ -79,3 +79,44 @@ export function ensureSealedTaxonomySchema(): Promise<void> {
 // Heal the schema on boot (fire-and-forget): every cold start self-repairs the database.
 ensureSealedTaxonomySchema().catch(() => { /* logged inside the guard */ });
 
+let swedishCardShopsSchemaPromise: Promise<void> | null = null;
+export function ensureSwedishCardShopsSchema(): Promise<void> {
+  if (!swedishCardShopsSchemaPromise) {
+    swedishCardShopsSchemaPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS "swedish_card_shops" (
+          "id" serial PRIMARY KEY,
+          "name" text NOT NULL,
+          "type" text,
+          "city" text,
+          "address" text,
+          "phone" text,
+          "email" text,
+          "website" text,
+          "card_types" text,
+          "notes" text,
+          "created_at" timestamp DEFAULT now(),
+          "updated_at" timestamp DEFAULT now()
+        );
+      `);
+      try {
+        const countRes = await pool.query('SELECT count(*) as count FROM "swedish_card_shops"');
+        if (parseInt(countRes.rows[0]?.count || '0', 10) === 0) {
+          const { seedSwedishShopsFromDisk } = await import('../lib/swedishShops.js');
+          await seedSwedishShopsFromDisk(pool);
+        }
+      } catch (e: any) {
+        console.warn('[db] Note on swedish_card_shops initial seeding:', e.message);
+      }
+    })().catch((err: any) => {
+      console.error('[db] Failed to ensure swedish_card_shops schema:', err?.message || err);
+      swedishCardShopsSchemaPromise = null;
+      throw err;
+    });
+  }
+  return swedishCardShopsSchemaPromise;
+}
+
+ensureSwedishCardShopsSchema().catch(() => {});
+
+
