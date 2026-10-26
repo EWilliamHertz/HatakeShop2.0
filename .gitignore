@@ -56,3 +56,8 @@ target/
 ORIGINAL_REQUEST.md
 .vercel
 .env*
+
+# Lead CSV files
+Pokemon_Card_Store*
+Pokemon_Card_Stores*
+

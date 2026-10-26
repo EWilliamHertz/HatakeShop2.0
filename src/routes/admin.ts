@@ -1,4 +1,5 @@
 import express, { Router } from "express";
+import bcrypt from "bcryptjs";
 import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/services.js";
 
 import { db, ensureSealedTaxonomySchema, ensureSwedishCardShopsSchema } from "../db/index.js";
@@ -65,80 +66,275 @@ router.get("/api-v2/admin/leads", requireAuth, requireAdmin, async (req, res) =>
     }
   });
 
-router.post("/api-v2/admin/leads/upload", requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const { leads: newLeads } = req.body;
-      if (!Array.isArray(newLeads)) return res.status(400).send("Invalid leads array");
-      
-      let added = 0;
-      for (const lead of newLeads) {
-        try {
-          // Fuzzy matching for keys
-          const keys = Object.keys(lead);
-          const findKey = (searchStrs: string[]) => keys.find(k => searchStrs.some(s => k.toLowerCase().includes(s)));
-          
-          const emailKey = findKey(['email']);
-          let email = emailKey ? lead[emailKey] : null;
-          if (!email || typeof email !== 'string') continue;
-          email = email.trim();
-          
-          const companyKey = findKey(['company', 'business', 'name']);
-          const companyName = companyKey ? lead[companyKey] : "Unknown";
-          
-          const websiteKey = findKey(['website', 'url', 'site']);
-          const website = websiteKey ? lead[websiteKey] : null;
-          
-          const cityKey = findKey(['city']);
-          const stateKey = findKey(['state', 'province']);
-          
-          let location = null;
-          if (cityKey && stateKey && lead[cityKey] && lead[stateKey]) {
-            location = `${lead[cityKey]}, ${lead[stateKey]}`;
-          } else if (cityKey && lead[cityKey]) {
-            location = lead[cityKey];
-          } else if (stateKey && lead[stateKey]) {
-            location = lead[stateKey];
-          }
-          
-          const socialLinks = [];
-          for (const plat of ["Facebook", "Instagram", "Twitter", "LinkedIn", "YouTube", "TikTok", "Other Socials"]) {
-            if (lead[plat]) socialLinks.push(lead[plat]);
-          }
+export function findPokemonCardStoresCsvFile(): string | null {
+  const rootDir = process.cwd();
+  try {
+    const files = fs.readdirSync(rootDir);
+    const match = files.find(f => /^pokemon[_-]card[_-]store.*\.csv$/i.test(f));
+    return match ? path.join(rootDir, match) : null;
+  } catch (e) {
+    return null;
+  }
+}
 
-          let segment = 'TCG';
-          const lowerName = (companyName || '').toString().toLowerCase();
-          const notesKey = findKey(['note']);
-          const notes = notesKey ? (lead[notesKey] || '').toString().toLowerCase() : '';
-          const combinedStr = lowerName + ' ' + notes;
-          if (combinedStr.includes('sport') || combinedStr.includes('baseball') || combinedStr.includes('basketball') || combinedStr.includes('football')) {
-            segment = 'Sports';
-          } else if (combinedStr.includes('tcg') || combinedStr.includes('magic') || combinedStr.includes('pokemon') || combinedStr.includes('yugioh')) {
-            segment = 'TCG';
-          } else {
-            segment = 'General';
-          }
+export interface LeadImportResult {
+  success: boolean;
+  added: number;
+  duplicates: number;
+  total: number;
+  duplicateSamples: { email: string; companyName?: string; reason: string }[];
+  message: string;
+}
 
-          const res = await db.insert(leads).values({
-            email,
-            companyName: companyName ? companyName.toString().substring(0, 255) : null,
-            website,
-            location,
-            segment,
-            socialLinks: socialLinks.length > 0 ? socialLinks : undefined,
-          }).onConflictDoNothing({ target: leads.email }).returning({ id: leads.id });
-          
-          if (res.length > 0) {
-            added++;
-          }
-        } catch (e) {
-          console.error("Error inserting lead:", e);
+export async function importLeadRows(rawLeads: any[]): Promise<LeadImportResult> {
+  if (!Array.isArray(rawLeads)) {
+    throw new Error("Invalid leads array");
+  }
+
+  let duplicatesCount = 0;
+  const duplicateSamples: { email: string; companyName?: string; reason: string }[] = [];
+  const seenEmailsInBatch = new Set<string>();
+  const candidates: Array<{
+    email: string;
+    companyName: string | null;
+    website: string | null;
+    location: string | null;
+    segment: string;
+    socialLinks: string[];
+  }> = [];
+
+  for (const rawLead of rawLeads) {
+    if (!rawLead || typeof rawLead !== 'object') continue;
+
+    // Clean keys by removing BOM, quotes, and outer whitespace
+    const cleanLead: Record<string, any> = {};
+    for (const [k, v] of Object.entries(rawLead)) {
+      const cleanKey = k.replace(/^[\ufeff\s"']+|["'\s]+$/g, '').trim();
+      cleanLead[cleanKey] = v;
+    }
+
+    const keys = Object.keys(cleanLead);
+    const findKey = (searchStrs: string[]) => keys.find(k => searchStrs.some(s => k.toLowerCase().includes(s)));
+
+    // Look for all keys containing 'email'
+    const emailKeys = keys.filter(k => k.toLowerCase().includes('email'));
+    let email: string | null = null;
+    for (const k of emailKeys) {
+      let val = cleanLead[k];
+      if (val && typeof val === 'string') {
+        val = val.replace(/^u003e/i, '').replace(/^[<>\s"']+|[<>\s"']+$/g, '').trim().toLowerCase();
+        if (val && val.includes('@') && val.includes('.')) {
+          email = val;
+          break;
         }
       }
-      res.json({ success: true, added });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
     }
-  });
+
+    // Company Name
+    const companyKey = findKey(['company', 'business', 'name', 'store']);
+    let companyName = companyKey && cleanLead[companyKey] ? String(cleanLead[companyKey]).trim().substring(0, 255) : null;
+    if (companyName) {
+      companyName = companyName.replace(/^["']+|["']+$/g, '').trim();
+    }
+
+    // If no valid email, skip this row
+    if (!email) {
+      continue;
+    }
+
+    // Check duplicate within the current file / batch
+    if (seenEmailsInBatch.has(email)) {
+      duplicatesCount++;
+      if (duplicateSamples.length < 50) {
+        duplicateSamples.push({
+          email,
+          companyName: companyName || undefined,
+          reason: 'Duplicate email within CSV file'
+        });
+      }
+      continue;
+    }
+    seenEmailsInBatch.add(email);
+
+    // Website
+    const websiteKey = findKey(['website', 'url', 'site']);
+    const website = websiteKey && cleanLead[websiteKey] ? String(cleanLead[websiteKey]).trim() : null;
+
+    // Location
+    const cityKey = findKey(['city']);
+    const stateKey = findKey(['state', 'province']);
+    const addressKey = findKey(['address']);
+    let location: string | null = null;
+    if (cityKey && stateKey && cleanLead[cityKey] && cleanLead[stateKey]) {
+      location = `${cleanLead[cityKey]}, ${cleanLead[stateKey]}`.trim();
+    } else if (addressKey && cleanLead[addressKey]) {
+      location = String(cleanLead[addressKey]).trim();
+    } else if (cityKey && cleanLead[cityKey]) {
+      location = String(cleanLead[cityKey]).trim();
+    } else if (stateKey && cleanLead[stateKey]) {
+      location = String(cleanLead[stateKey]).trim();
+    }
+
+    // Socials
+    const socialLinks: string[] = [];
+    for (const plat of ["Facebook", "Instagram", "Twitter", "LinkedIn", "YouTube", "TikTok", "Other Socials"]) {
+      const match = keys.find(k => k.toLowerCase() === plat.toLowerCase() || k.toLowerCase().includes(plat.toLowerCase()));
+      if (match && cleanLead[match] && typeof cleanLead[match] === 'string' && cleanLead[match].trim().startsWith('http')) {
+        socialLinks.push(cleanLead[match].trim());
+      }
+    }
+
+    // Segment
+    let segment = 'TCG';
+    const lowerName = (companyName || '').toLowerCase();
+    const notesKey = findKey(['note']);
+    const notes = notesKey && cleanLead[notesKey] ? String(cleanLead[notesKey]).toLowerCase() : '';
+    const combinedStr = lowerName + ' ' + notes;
+    if (combinedStr.includes('sport') || combinedStr.includes('baseball') || combinedStr.includes('basketball') || combinedStr.includes('football')) {
+      segment = 'Sports';
+    } else if (combinedStr.includes('tcg') || combinedStr.includes('magic') || combinedStr.includes('pokemon') || combinedStr.includes('yugioh') || combinedStr.includes('card') || combinedStr.includes('hobby')) {
+      segment = 'TCG';
+    } else {
+      segment = 'TCG';
+    }
+
+    candidates.push({
+      email,
+      companyName,
+      website,
+      location,
+      segment,
+      socialLinks
+    });
+  }
+
+  if (candidates.length === 0) {
+    return {
+      success: true,
+      added: 0,
+      duplicates: duplicatesCount,
+      total: rawLeads.length,
+      duplicateSamples,
+      message: duplicatesCount > 0
+        ? `Found 0 new leads. ${duplicatesCount} duplicate lead(s) detected and skipped (not added).`
+        : 'No valid leads found in import.'
+    };
+  }
+
+  // Database deduplication in batches
+  const existingDbEmails = new Set<string>();
+  const CHUNK_SIZE = 500;
+  const allCandidateEmails = candidates.map(c => c.email);
+
+  for (let i = 0; i < allCandidateEmails.length; i += CHUNK_SIZE) {
+    const chunk = allCandidateEmails.slice(i, i + CHUNK_SIZE);
+    const existing = await db
+      .select({ email: leads.email })
+      .from(leads)
+      .where(inArray(sql`LOWER(${leads.email})`, chunk));
+    for (const row of existing) {
+      existingDbEmails.add(row.email.toLowerCase().trim());
+    }
+  }
+
+  // Filter out any candidates that exist in DB
+  const leadsToInsert: any[] = [];
+  for (const c of candidates) {
+    if (existingDbEmails.has(c.email)) {
+      duplicatesCount++;
+      if (duplicateSamples.length < 50) {
+        duplicateSamples.push({
+          email: c.email,
+          companyName: c.companyName || undefined,
+          reason: 'Lead already exists in database'
+        });
+      }
+    } else {
+      leadsToInsert.push(c);
+    }
+  }
+
+  // Insert non-duplicates in batches
+  let addedCount = 0;
+  for (let i = 0; i < leadsToInsert.length; i += CHUNK_SIZE) {
+    const chunk = leadsToInsert.slice(i, i + CHUNK_SIZE);
+    const inserted = await db
+      .insert(leads)
+      .values(chunk)
+      .onConflictDoNothing({ target: leads.email })
+      .returning({ id: leads.id });
+    addedCount += inserted.length;
+    if (inserted.length < chunk.length) {
+      duplicatesCount += (chunk.length - inserted.length);
+    }
+  }
+
+  return {
+    success: true,
+    added: addedCount,
+    duplicates: duplicatesCount,
+    total: rawLeads.length,
+    duplicateSamples,
+    message: duplicatesCount > 0
+      ? `Imported ${addedCount} new lead${addedCount === 1 ? '' : 's'}. ${duplicatesCount} duplicate${duplicatesCount === 1 ? '' : 's'} detected and skipped (not added).`
+      : `Successfully imported ${addedCount} new lead${addedCount === 1 ? '' : 's'}.`
+  };
+}
+
+router.get(["/admin/leads/available-file", "/api/admin/leads/available-file", "/api-v2/admin/leads/available-file"], requireAuth, requireAdmin, async (_req: AuthRequest, res) => {
+  try {
+    const filePath = findPokemonCardStoresCsvFile();
+    if (!filePath || !fs.existsSync(filePath)) {
+      return res.json({ available: false });
+    }
+    const stat = fs.statSync(filePath);
+    res.json({
+      available: true,
+      filename: path.basename(filePath),
+      sizeBytes: stat.size
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post(["/admin/leads/sync-file", "/api/admin/leads/sync-file", "/api-v2/admin/leads/sync-file"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const filePath = findPokemonCardStoresCsvFile();
+    if (!filePath || !fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "Ingen Pokemon_Card_Store*.csv fil hittades i /HatakeShop2.0 (No Pokemon_Card_Store*.csv file found in project root)." });
+    }
+
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const Papa = (await import('papaparse')).default;
+    const parsed = Papa.parse(content, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h: string) => h.replace(/^[\ufeff\s"']+|["'\s]+$/g, '').trim()
+    });
+
+    const result = await importLeadRows(parsed.data);
+    res.json({
+      ...result,
+      filename: path.basename(filePath)
+    });
+  } catch (err: any) {
+    console.error("Error syncing leads from file:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/api-v2/admin/leads/upload", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { leads: newLeads } = req.body;
+    if (!Array.isArray(newLeads)) return res.status(400).json({ error: "Invalid leads array" });
+    const result = await importLeadRows(newLeads);
+    res.json(result);
+  } catch (err: any) {
+    console.error("Error inserting leads:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get("/api-v2/admin/leads/preview", requireAuth, requireAdmin, async (req, res) => {
     try {

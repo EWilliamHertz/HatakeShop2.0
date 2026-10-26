@@ -208,7 +208,7 @@ function __dummy_getEasyPost() {
 }
 
 app.use(express.json({
-  limit: '1mb',
+  limit: '15mb',
   verify: (req: any, _res, buf) => {
     if (req.originalUrl && req.originalUrl.includes('stripe/webhook')) {
       req.rawBody = buf;
@@ -222,7 +222,7 @@ app.use(express.json({
 // canonical ones and silently drift out of sync.
 
 // -------------------------------------------------------------------------
-app.use(express.urlencoded({ limit: '1mb', extended: true }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 // --- Static build output (serves assets, robots.txt, sitemap.xml, etc.) ---
 // On Vercel, static files are served by the CDN before functions run; this

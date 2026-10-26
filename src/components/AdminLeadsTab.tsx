@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { toast } from 'sonner';
-import { ExternalLink, Edit2, Check, X, CheckSquare, Square, UserCheck, Send, Eye, Mail } from 'lucide-react';
+import { ExternalLink, Edit2, Check, X, CheckSquare, Square, UserCheck, Send, Eye, Mail, AlertTriangle, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 
 type LeadView = 'to-send' | 'sent' | 'recruited' | 'all';
 
@@ -13,11 +13,48 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
   const [view, setView] = useState<LeadView>('to-send');
   const [emailStatusFilter, setEmailStatusFilter] = useState('all');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; show: boolean; duplicates: number; added: number }>({
+    current: 0,
+    total: 0,
+    show: false,
+    duplicates: 0,
+    added: 0
+  });
+  const [projectFile, setProjectFile] = useState<{ available: boolean; filename?: string; sizeBytes?: number } | null>(null);
+  const [syncingFile, setSyncingFile] = useState(false);
+  const [importSummary, setImportSummary] = useState<{
+    isOpen: boolean;
+    added: number;
+    duplicates: number;
+    total: number;
+    source: string;
+    duplicateSamples?: Array<{ email: string; companyName?: string; reason: string }>;
+  } | null>(null);
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, show: false });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
+
+  useEffect(() => {
+    const checkAvailableFile = async () => {
+      try {
+        let token;
+        try { token = await user?.getIdToken(); } catch (e) { return; }
+        if (!token) return;
+        const res = await fetch('/api-v2/admin/leads/available-file', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setProjectFile(data);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    checkAvailableFile();
+  }, [user]);
 
   const toSend   = leads.filter((l: any) => !l.status || l.status === 'pending');
   const sent     = leads.filter((l: any) => l.status === 'sent' || l.status === 'opened' || l.status === 'clicked' || l.status === 'failed');
@@ -119,16 +156,163 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
       });
       
       const data = await res.json();
-      toast.success(`Added new lead successfully.`);
+      if (!res.ok) throw new Error(data.error || 'Failed to add lead');
+
+      if (data.duplicates > 0) {
+        toast.warning(`This lead (${manualLead.email}) already exists and was not added as a duplicate.`);
+      } else {
+        toast.success(`Added new lead successfully.`);
+      }
       setIsManualAddModalOpen(false);
       setManualLead({ businessName: '', email: '', website: '', facebook: '', instagram: '', city: '', state: '' });
       if (fetchAdminData) fetchAdminData();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to add lead manually");
+      toast.error(error.message || "Failed to add lead manually");
     } finally {
       setIsSubmittingManual(false);
     }
+  };
+
+  const handleSyncProjectFile = async () => {
+    const filename = projectFile?.filename || 'Pokemon_Card_Stores.csv';
+    if (!confirm(`Import leads from project file "${filename}"? Any duplicates will be detected and skipped.`)) return;
+    setSyncingFile(true);
+    try {
+      let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error('Auth error'); }
+      const res = await fetch('/api-v2/admin/leads/sync-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to sync from file');
+
+      if (data.duplicates > 0) {
+        toast.warning(`${data.duplicates.toLocaleString()} duplicate lead(s) detected and skipped (not added).`, {
+          duration: 7000,
+          description: `Imported ${data.added.toLocaleString()} new lead(s) from ${data.filename || filename}.`
+        });
+      }
+      if (data.added > 0) {
+        toast.success(`Successfully imported ${data.added.toLocaleString()} new lead(s) from ${data.filename || filename}!`);
+      } else if (data.duplicates > 0) {
+        toast.info(`No new leads added. All ${data.duplicates.toLocaleString()} were duplicates.`);
+      }
+
+      setImportSummary({
+        isOpen: true,
+        added: data.added || 0,
+        duplicates: data.duplicates || 0,
+        total: data.total || 0,
+        source: data.filename || filename,
+        duplicateSamples: data.duplicateSamples || []
+      });
+
+      if (fetchAdminData) fetchAdminData();
+    } catch (err: any) {
+      toast.error(err.message || 'Error syncing project file');
+    } finally {
+      setSyncingFile(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => h.replace(/^[\ufeff\s"']+|["'\s]+$/g, '').trim(),
+      complete: async (results) => {
+        try {
+          let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error('Auth error'); }
+          const allRows: any[] = results.data || [];
+          if (allRows.length === 0) {
+            toast.error('The selected CSV file contains no data.');
+            setUploading(false);
+            return;
+          }
+
+          const CHUNK_SIZE = 500;
+          let totalAdded = 0;
+          let totalDuplicates = 0;
+          const allDuplicateSamples: any[] = [];
+
+          setUploadProgress({
+            current: 0,
+            total: allRows.length,
+            show: true,
+            duplicates: 0,
+            added: 0
+          });
+
+          for (let i = 0; i < allRows.length; i += CHUNK_SIZE) {
+            const chunk = allRows.slice(i, i + CHUNK_SIZE);
+            const res = await fetch('/api-v2/admin/leads/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ leads: chunk })
+            });
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.error || `Upload failed at row ${i + 1}`);
+            }
+
+            const data = await res.json();
+            totalAdded += (data.added || 0);
+            totalDuplicates += (data.duplicates || 0);
+            if (Array.isArray(data.duplicateSamples)) {
+              allDuplicateSamples.push(...data.duplicateSamples);
+            }
+
+            setUploadProgress({
+              current: Math.min(i + chunk.length, allRows.length),
+              total: allRows.length,
+              show: true,
+              duplicates: totalDuplicates,
+              added: totalAdded
+            });
+          }
+
+          if (totalDuplicates > 0) {
+            toast.warning(`${totalDuplicates.toLocaleString()} duplicate lead(s) detected and skipped (not added).`, {
+              duration: 7000,
+              description: `Imported ${totalAdded.toLocaleString()} new leads out of ${allRows.length.toLocaleString()} total rows.`
+            });
+          }
+          if (totalAdded > 0) {
+            toast.success(`Import complete! ${totalAdded.toLocaleString()} new leads added.`);
+          } else if (totalDuplicates > 0) {
+            toast.info(`No new leads added. All ${totalDuplicates.toLocaleString()} rows were duplicates.`);
+          }
+
+          setImportSummary({
+            isOpen: true,
+            added: totalAdded,
+            duplicates: totalDuplicates,
+            total: allRows.length,
+            source: file.name,
+            duplicateSamples: allDuplicateSamples.slice(0, 50)
+          });
+
+          if (fetchAdminData) fetchAdminData();
+        } catch (err: any) {
+          console.error(err);
+          toast.error(err.message || 'Error importing CSV');
+        } finally {
+          setUploading(false);
+          setTimeout(() => setUploadProgress(p => ({ ...p, show: false })), 3000);
+          e.target.value = '';
+        }
+      },
+      error: (err) => {
+        setUploading(false);
+        toast.error(`CSV parse error: ${err.message}`);
+      }
+    });
   };
 
   const sendNext50 = async () => {
@@ -268,34 +452,136 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                </div>
              )}
           </div>
-          <label className="cursor-pointer self-start text-slate-900 bg-cyan-400 hover:bg-cyan-300 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
-            {uploading ? 'Parsing…' : '↑ Upload CSV'}
-            <input type="file" accept=".csv" className="hidden" onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              Papa.parse(file, {
-                header: true, skipEmptyLines: true, transformHeader: (h) => h.trim(),
-                complete: async (results) => {
-                  try {
-                    setUploading(true);
-                    let token; try { token = await user?.getIdToken(); } catch(e:any) { throw new Error('Auth error'); }
-                    const res = await fetch('/api-v2/admin/leads/upload', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                      body: JSON.stringify({ leads: results.data })
-                    });
-                    if (res.ok) {
-                      const data = await res.json();
-                      toast.success(`Imported ${data.added || 0} new leads.`);
-                      fetchAdminData();
-                    } else toast.error('Failed to import');
-                  } catch (err) { toast.error('Error importing'); }
-                  finally { setUploading(false); }
-                }
-              });
-            }} />
-          </label>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="cursor-pointer text-slate-900 bg-cyan-400 hover:bg-cyan-300 px-4 py-2 rounded-lg text-sm font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm">
+                {uploading ? 'Processing…' : '↑ Upload CSV'}
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  className="hidden" 
+                  disabled={uploading || syncingFile}
+                  onChange={handleFileUpload} 
+                />
+              </label>
+
+              {projectFile?.available && (
+                <button
+                  type="button"
+                  onClick={handleSyncProjectFile}
+                  disabled={syncingFile || uploading}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-600/20 inline-flex items-center gap-1.5 disabled:opacity-50"
+                  title={`Import ${projectFile.filename} directly from project`}
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-indigo-200" />
+                  {syncingFile ? 'Syncing...' : `⚡ Import ${projectFile.filename}`}
+                </button>
+              )}
+            </div>
+
+            {uploadProgress.show && (
+              <div className="bg-slate-900 p-3 rounded-lg border border-slate-700 text-xs text-slate-300 space-y-1.5">
+                <div className="flex justify-between items-center text-[11px] font-semibold">
+                  <span className="text-cyan-400">Importing CSV ({uploadProgress.current.toLocaleString()} / {uploadProgress.total.toLocaleString()})</span>
+                  <span className="text-slate-400">
+                    <span className="text-emerald-400">+{uploadProgress.added} added</span> • <span className="text-amber-400">{uploadProgress.duplicates} duplicates skipped</span>
+                  </span>
+                </div>
+                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-cyan-500 to-indigo-500 h-full transition-all duration-200" 
+                    style={{ width: `${Math.min(100, (uploadProgress.current / (uploadProgress.total || 1)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Import Summary Modal */}
+        {importSummary?.isOpen && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+               onKeyDown={(e) => { if (e.key === 'Escape') setImportSummary(null); }}
+               tabIndex={-1}
+               ref={el => el?.focus()}>
+            <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+              <div className="flex justify-between items-start mb-4 pb-3 border-b border-slate-800">
+                <div>
+                  <h2 className="text-lg font-black text-white flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    CSV Import Report
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">File: <span className="text-slate-300 font-mono">{importSummary.source}</span></p>
+                </div>
+                <button 
+                  onClick={() => setImportSummary(null)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5"/>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-center">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total Rows</div>
+                  <div className="text-2xl font-black text-white mt-1 tabular-nums">{importSummary.total.toLocaleString()}</div>
+                </div>
+                <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/30 text-center">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Added (New)</div>
+                  <div className="text-2xl font-black text-emerald-300 mt-1 tabular-nums">+{importSummary.added.toLocaleString()}</div>
+                </div>
+                <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/30 text-center">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Dupes Skipped</div>
+                  <div className="text-2xl font-black text-amber-300 mt-1 tabular-nums">{importSummary.duplicates.toLocaleString()}</div>
+                </div>
+              </div>
+
+              {importSummary.duplicates > 0 ? (
+                <div className="bg-amber-950/40 border border-amber-500/40 p-3.5 rounded-xl mb-4 text-xs text-amber-200 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Duplicate Notification:</strong> {importSummary.duplicates.toLocaleString()} duplicate lead(s) were seen (either already present in the database or duplicated within the CSV) and <strong>were not added</strong>.
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-emerald-950/40 border border-emerald-500/40 p-3.5 rounded-xl mb-4 text-xs text-emerald-200 flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div>All leads in this import were unique and imported successfully with 0 duplicates.</div>
+                </div>
+              )}
+
+              {importSummary.duplicateSamples && importSummary.duplicateSamples.length > 0 && (
+                <div className="flex-1 min-h-0 flex flex-col mb-4">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Sample Duplicates (Not Added):
+                  </div>
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-y-auto max-h-48 divide-y divide-slate-800/80 text-xs">
+                    {importSummary.duplicateSamples.slice(0, 30).map((d, i) => (
+                      <div key={i} className="p-2.5 flex justify-between items-center text-slate-300 hover:bg-slate-900/50">
+                        <div className="truncate pr-2">
+                          <span className="font-mono text-slate-200">{d.email}</span>
+                          {d.companyName && <span className="text-slate-500 ml-1.5 font-sans">({d.companyName})</span>}
+                        </div>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                          {d.reason}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2 border-t border-slate-800">
+                <button 
+                  onClick={() => setImportSummary(null)} 
+                  className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Outreach Actions */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col justify-between gap-3">
