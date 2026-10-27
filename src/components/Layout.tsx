@@ -43,13 +43,13 @@ const mainNavItems: { name: string; label: string; path: string; icon: any; prot
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 font-sans w-full max-w-full overflow-x-hidden">
-      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 shadow-sm w-full overflow-x-clip">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 sm:h-20 items-center">
+      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 shadow-sm w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-14 sm:h-20 items-center w-full min-w-0">
             
             {/* LEFT: Main Nav (Icons Only) */}
-            <div className="flex items-center space-x-2">
-              <Link to="/" className="text-white font-bold text-xl tracking-tight pr-4 shrink-0">
+            <div className="flex items-center space-x-1 sm:space-x-2 min-w-0 shrink">
+              <Link to="/" className="text-white font-bold text-lg sm:text-xl tracking-tight pr-1.5 sm:pr-4 shrink-0">
                 Hatake<span className="text-cyan-400">.Shop</span>
               </Link>
               <WorkspaceSwitcher />
@@ -167,16 +167,16 @@ const mainNavItems: { name: string; label: string; path: string; icon: any; prot
             </div>
 
             {/* Mobile Menu Simplified */}
-            <div className="md:hidden flex items-center space-x-3">
+            <div className="md:hidden flex items-center space-x-1 sm:space-x-2 shrink-0">
                {user && <Notifications />}
-               <button onClick={() => setCartOpen(true)} aria-label={t('Open cart')} className="relative p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-700 rounded-lg transition-colors">
-                 <ShoppingBag className="w-6 h-6" />
+               <button onClick={() => setCartOpen(true)} aria-label={t('Open cart')} className="relative p-1.5 sm:p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-700 rounded-lg transition-colors">
+                 <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
                  {cartItems.length > 0 && (
-                   <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{cartItems.length}</span>
+                   <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">{cartItems.length}</span>
                  )}
                </button>
-               <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-400 hover:bg-slate-700 rounded-lg transition-colors">
-                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+               <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1.5 sm:p-2 text-slate-400 hover:bg-slate-700 rounded-lg transition-colors">
+                 {mobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
                </button>
             </div>
             

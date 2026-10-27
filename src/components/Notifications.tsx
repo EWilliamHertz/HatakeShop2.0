@@ -64,7 +64,7 @@ export function Notifications() {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-          <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-700 shadow-2xl shadow-black/50 rounded-xl overflow-hidden z-50">
+          <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1.5rem)] bg-slate-900 border border-slate-700 shadow-2xl shadow-black/50 rounded-xl overflow-hidden z-50">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
               <h3 className="font-semibold text-white">{t('Notifications')}</h3>
               {unreadCount > 0 && (

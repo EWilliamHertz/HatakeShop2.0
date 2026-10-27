@@ -22,26 +22,28 @@ export const WorkspaceSwitcher = () => {
   if (companies.length === 0) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative shrink-0" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl transition-all shadow-sm group"
+        className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl transition-all shadow-sm group shrink-0"
+        title={activeCompany?.name || 'Select Workspace'}
+        aria-label={activeCompany?.name || 'Select Workspace'}
       >
-        <div className="w-6 h-6 rounded bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shadow-inner">
+        <div className="w-6 h-6 rounded bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shadow-inner shrink-0 overflow-hidden">
           {activeCompany?.logoUrl ? (
             <img src={activeCompany.logoUrl} alt={activeCompany.name} className="w-full h-full object-cover rounded" />
           ) : (
             activeCompany?.name?.charAt(0) || <Building2 size={14} />
           )}
         </div>
-        <span className="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors max-w-[120px] truncate">
+        <span className="hidden sm:inline text-sm font-semibold text-slate-200 group-hover:text-white transition-colors max-w-[120px] truncate">
           {activeCompany?.name || 'Select Workspace'}
         </span>
         <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full left-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="px-3 py-2 border-b border-slate-800 bg-slate-900/50">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Your Workspaces</p>
           </div>
