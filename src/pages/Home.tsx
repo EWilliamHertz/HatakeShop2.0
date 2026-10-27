@@ -13,6 +13,7 @@ import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { BrowseSections } from '../components/BrowseSections.tsx';
 import { SkeletonGrid } from '../components/SkeletonGrid.tsx';
+import { SafeImage } from '../components/SafeImage.tsx';
 
 const CardImageCarousel = ({ images, title }: { images: string[], title: string }) => {
   const [idx, setIdx] = React.useState(0);
@@ -36,8 +37,13 @@ const CardImageCarousel = ({ images, title }: { images: string[], title: string 
   };
 
   return (
-    <div className="relative w-full h-full group overflow-hidden">
-      <img src={images[idx]} alt={title} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+    <div className="relative w-full h-full group overflow-hidden bg-slate-900 flex items-center justify-center">
+      <SafeImage
+        src={images[idx]}
+        alt={title}
+        fallbackIcon={<PackageSearch className="w-10 h-10 text-slate-600" />}
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+      />
       {images.length > 1 && (
         <>
           <button 
@@ -441,8 +447,13 @@ export function Home() {
                         try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
                         return (
                           <div key={idx} onClick={() => { setSelectedProduct({ product: sp, seller: sp.seller }); }} className="bg-slate-950/50 border border-white/5 rounded-2xl p-3 flex flex-col gap-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all cursor-pointer group/card h-full">
-                            <div className="relative overflow-hidden rounded-xl">
-                              <img src={images[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-28 object-cover group-hover/card:scale-110 transition-transform duration-700" />
+                            <div className="relative overflow-hidden rounded-xl h-28 bg-slate-900 border border-slate-800 flex items-center justify-center">
+                              <SafeImage
+                                src={images[0]}
+                                alt={sp.title}
+                                fallbackIcon={<Package className="w-8 h-8 text-slate-600" />}
+                                className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700"
+                              />
                             </div>
                             <div className="flex-1 flex flex-col">
                               <h4 className="font-semibold text-slate-200 text-sm truncate">{sp.title}</h4>

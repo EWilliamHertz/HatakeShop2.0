@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { PackageSearch } from 'lucide-react';
 
 export function ImageMagnifier({ src, alt }: { src: string, alt: string }) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [showMagnifier, setShowMagnifier] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [hasError, setHasError] = useState(false);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
@@ -13,14 +15,28 @@ export function ImageMagnifier({ src, alt }: { src: string, alt: string }) {
     setCursorPosition({ x: e.pageX - left, y: e.pageY - top });
   };
 
+  if (hasError || !src) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-950 p-6 select-none">
+        <PackageSearch className="w-16 h-16 text-slate-600 mb-2" />
+        <span className="text-xs uppercase font-bold tracking-wider text-slate-500">Preview Unavailable</span>
+      </div>
+    );
+  }
+
   return (
     <div 
-      className="relative w-full h-full overflow-hidden group cursor-crosshair"
+      className="relative w-full h-full overflow-hidden group cursor-crosshair flex items-center justify-center"
       onMouseEnter={() => setShowMagnifier(true)}
       onMouseLeave={() => setShowMagnifier(false)}
       onMouseMove={handleMouseMove}
     >
-      <img src={src} alt={alt} className="w-full h-full object-contain" />
+      <img
+        src={src}
+        alt={alt}
+        onError={() => setHasError(true)}
+        className="w-full h-full object-contain"
+      />
       
       {showMagnifier && (
         <div 

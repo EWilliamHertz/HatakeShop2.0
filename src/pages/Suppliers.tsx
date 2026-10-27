@@ -19,6 +19,7 @@ import { getAuth } from 'firebase/auth';
 import { useTranslation } from 'react-i18next';
 import { parseLeadGeo } from '../lib/leadGeo.ts';
 import { toast } from 'sonner';
+import { SafeImage } from '../components/SafeImage.tsx';
 
 function getCountryFlag(country?: string | null): string {
   const c = (country || '').trim().toLowerCase();
@@ -555,20 +556,14 @@ export function Suppliers() {
                 key={partner.id ? `partner-${partner.id}` : `lead-${idx}-${partner.name}`}
                 className="bg-slate-800/90 border border-slate-700/90 rounded-2xl p-5 hover:border-cyan-500/70 hover:shadow-lg hover:shadow-cyan-900/20 transition-all group flex flex-col items-center text-center"
               >
-                {partner.profilePictureUrl ? (
-                  <img
-                    src={partner.profilePictureUrl}
+                <div className="w-14 h-14 rounded-full overflow-hidden mb-3 group-hover:scale-105 transition-transform border border-slate-700 shadow-md shrink-0 flex items-center justify-center bg-slate-900 text-cyan-400">
+                  <SafeImage
+                    src={partner.profilePictureUrl || partner.logoUrl}
                     alt={partner.name}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = 'none';
-                    }}
-                    className="w-14 h-14 rounded-full object-cover mb-3 group-hover:scale-105 transition-transform border border-slate-700 shadow-md"
+                    fallbackIcon={<Building2 className="w-6 h-6" />}
+                    className="w-full h-full object-cover"
                   />
-                ) : (
-                  <div className="w-14 h-14 rounded-full bg-slate-900 flex items-center justify-center text-cyan-400 mb-3 group-hover:scale-105 transition-transform border border-slate-700 group-hover:bg-cyan-500 group-hover:text-slate-900">
-                    <Building2 className="w-6 h-6" />
-                  </div>
-                )}
+                </div>
 
                 <h3 className="text-base font-bold tracking-tight text-slate-100 flex items-center justify-center gap-1.5 mb-2 line-clamp-1">
                   <span className="truncate">{partner.name}</span>

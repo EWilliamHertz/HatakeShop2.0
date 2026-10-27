@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { PreorderCard } from '../components/PreorderCard.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
+import { SafeImage } from '../components/SafeImage.tsx';
 import './scrollbar.css';
 
 const formatLang = (l: string) => {
@@ -194,8 +195,10 @@ export function CompanyListings() {
           </Link>
           <span className="text-slate-700 shrink-0">|</span>
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            {company?.profilePictureUrl && (
-              <img src={company?.profilePictureUrl} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+            {(company?.profilePictureUrl || company?.logoUrl) && (
+              <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
+                <SafeImage src={company?.logoUrl || company?.profilePictureUrl} alt="" className="w-full h-full object-cover" />
+              </div>
             )}
             <span className="text-white font-semibold text-sm truncate">{company?.companyName}</span>
             {company?.verificationStatus === 'verified' && (
@@ -467,9 +470,12 @@ export function CompanyListings() {
                     className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer flex flex-col"
                   >
                     <div className="aspect-[4/3] bg-slate-800 overflow-hidden relative">
-                      {images[0]
-                        ? <img src={images[0]} alt={p.title} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        : <div className="w-full h-full flex items-center justify-center text-slate-600"><Package className="w-8 h-8" /></div>}
+                      <SafeImage
+                        src={images[0]}
+                        alt={p.title}
+                        fallbackIcon={<Package className="w-8 h-8 text-slate-600" />}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                       <div className="absolute top-2 left-2">
                         <span className="bg-slate-900/90 backdrop-blur text-slate-300 text-[10px] font-semibold px-2 py-1 rounded-full border border-slate-700">
                           MOQ: {p.moq || '—'}

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { ProductModal } from '../components/ProductModal.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { VerificationBadge } from '../components/VerificationBadge.tsx';
+import { SafeImage } from '../components/SafeImage.tsx';
 
 export function CompanyProfile() {
   const { t } = useTranslation();
@@ -125,10 +126,13 @@ export function CompanyProfile() {
 
         {/* Profile Header */}
         <div className="flex flex-col md:flex-row md:items-end gap-6 mb-10">
-          <div className="w-28 h-28 rounded-3xl overflow-hidden bg-slate-800 border-4 border-slate-950 shadow-2xl shrink-0 flex items-center justify-center">
-            {company?.profilePictureUrl
-              ? <img src={company?.profilePictureUrl} alt={company.companyName} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} className="w-full h-full object-cover" />
-              : <span className="text-4xl font-black text-white">{company.companyName?.charAt(0) || '?'}</span>}
+          <div className="w-28 h-28 rounded-3xl overflow-hidden bg-slate-800 border-4 border-slate-950 shadow-2xl shrink-0 flex items-center justify-center relative">
+            <SafeImage
+              src={company?.profilePictureUrl || company?.logoUrl}
+              alt={company.companyName}
+              fallbackIcon={<span className="text-4xl font-black text-white">{company.companyName?.charAt(0) || '?'}</span>}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -215,9 +219,12 @@ export function CompanyProfile() {
                       return (
                         <div key={p.id} onClick={() => setSelectedProduct(p)} className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer flex flex-col">
                           <div className="aspect-[4/3] bg-slate-800 overflow-hidden relative">
-                            {images[0]
-                              ? <img src={images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                              : <div className="w-full h-full flex items-center justify-center text-slate-600"><Package className="w-8 h-8" /></div>}
+                            <SafeImage
+                              src={images[0]}
+                              alt={p.title}
+                              fallbackIcon={<Package className="w-8 h-8 text-slate-600" />}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
                             <div className="absolute top-2 left-2">
                               <span className="bg-slate-900/90 backdrop-blur text-slate-300 text-[10px] font-semibold px-2 py-1 rounded-full border border-slate-700">MOQ: {p.moq || '—'}</span>
                             </div>
@@ -311,9 +318,14 @@ export function CompanyProfile() {
                   {teamMembers.map((member: any) => (
                     <li key={member.id}>
                       <Link to={`/user/${member.id}`} className="flex items-center gap-3 p-2 hover:bg-slate-800 rounded-xl transition-colors">
-                        {member.profilePictureUrl
-                          ? <img src={member.profilePictureUrl} alt={member.displayName} className="w-9 h-9 rounded-full object-cover border border-slate-700 shrink-0" />
-                          : <div className="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-sm border border-slate-700 shrink-0">{member.displayName?.charAt(0) || 'U'}</div>}
+                        <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                          <SafeImage
+                            src={member.profilePictureUrl}
+                            alt={member.displayName || 'Member'}
+                            fallbackIcon={<span className="text-white font-bold text-xs">{member.displayName?.charAt(0) || 'U'}</span>}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-slate-200 truncate">{member.displayName || 'Member'}</div>
                           <div className="text-xs text-slate-500">{member.teamRole === 'owner' ? 'Admin' : member.teamRole === 'sales_rep' ? 'Sales Rep' : 'Catalog Mgr'}</div>

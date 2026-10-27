@@ -12,6 +12,7 @@ import {
   TrendingUp, Boxes, ShieldCheck, Info, RefreshCw, Send, Check
 } from 'lucide-react';
 import { ProductModal } from '../components/ProductModal.tsx';
+import { SafeImage } from '../components/SafeImage.tsx';
 import { toast } from 'sonner';
 
 interface WishlistItem {
@@ -714,11 +715,12 @@ export function Wishlist() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
-                            {img ? (
-                              <img src={img} alt={title} className="w-full h-full object-cover" />
-                            ) : (
-                              <Boxes className="w-5 h-5 text-slate-500" />
-                            )}
+                            <SafeImage
+                              src={img}
+                              alt={title}
+                              fallbackIcon={<Boxes className="w-5 h-5 text-slate-500" />}
+                              className="w-full h-full object-cover"
+                            />
                           </div>
                           <div className="min-w-0 max-w-xs">
                             <div className="font-bold text-white truncate hover:text-indigo-400 cursor-pointer" onClick={() => item.product && setSelectedProduct(item.product)}>
@@ -970,11 +972,12 @@ export function Wishlist() {
                                 onClick={() => item.product && setSelectedProduct(item.product)}
                                 className={`w-16 h-16 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center ${item.product ? 'cursor-pointer' : ''}`}
                               >
-                                {img ? (
-                                  <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                ) : (
-                                  <Boxes className="w-6 h-6 text-slate-500" />
-                                )}
+                                <SafeImage
+                                  src={img}
+                                  alt={title}
+                                  fallbackIcon={<Boxes className="w-6 h-6 text-slate-500" />}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <h4
