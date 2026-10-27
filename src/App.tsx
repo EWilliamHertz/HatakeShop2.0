@@ -30,7 +30,6 @@ const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard.tsx').t
 const Feed = lazy(() => import('./pages/Feed.tsx').then(m => ({ default: m.Feed })));
 const Storefront = lazy(() => import('./pages/Storefront.tsx').then(m => ({ default: m.Storefront })));
 const Leads = lazy(() => import('./pages/Leads.tsx').then(m => ({ default: m.Leads })));
-const MarketInsights = lazy(() => import('./pages/MarketInsights.tsx').then(m => ({ default: m.MarketInsights })));
 const Orders = lazy(() => import('./pages/Orders.tsx').then(m => ({ default: m.Orders })));
 const Onboarding = lazy(() => import('./pages/Onboarding.tsx').then(m => ({ default: m.Onboarding })));
 const RFQHub = lazy(() => import('./pages/RFQHub.tsx').then(m => ({ default: m.RFQHub })));
@@ -220,7 +219,6 @@ export default function App() {
             <Route path="/join" element={<JoinCompany />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/feed" element={<Feed />} />
-            <Route path="/insights" element={<MarketInsights />} />
           </Route>
         </Routes>
         </Suspense>

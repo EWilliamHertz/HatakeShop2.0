@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { FeedbackModal } from './FeedbackModal';
 import { useCart } from './SampleCart.tsx';
-import { Package, Search, MessageSquare, Settings, LogIn, LogOut, Hexagon, Shield, Store, Menu, X, ChevronDown, ShoppingCart, TrendingUp, Building2, Newspaper, Globe, Heart, Home, Bot, ShoppingBag } from 'lucide-react';
+import { Package, Search, MessageSquare, Settings, LogIn, LogOut, Hexagon, Shield, Store, Menu, X, ChevronDown, ShoppingCart, Building2, Newspaper, Globe, Heart, Home, Bot, ShoppingBag } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Notifications } from './Notifications.tsx';
@@ -32,7 +32,6 @@ const mainNavItems: { name: string; label: string; path: string; icon: any; prot
     { name: 'Directory', label: 'Directory', path: '/suppliers', icon: Building2 },
     { name: 'Launch Ledger', label: 'Ledger', path: '/leads', icon: Globe },
     { name: 'Feed', label: 'Feed', path: '/feed', icon: Newspaper },
-    { name: 'Insights', label: 'Insights', path: '/insights', icon: TrendingUp },
     { name: 'AI Sourcing Agent', label: 'AI Agent', path: '/onboarding', icon: Bot },
     { name: 'Wishlist', label: 'Wishlist', path: '/wishlist', icon: Heart, protected: true },
     { name: 'Messages', label: 'Messages', path: '/rfq', icon: MessageSquare, protected: true },

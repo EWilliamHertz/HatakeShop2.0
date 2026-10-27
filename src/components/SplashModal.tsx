@@ -85,7 +85,7 @@ export function SplashModal() {
               The Next Generation B2B Marketplace
             </h3>
             <p className="text-slate-300 mb-10 text-lg md:text-xl leading-relaxed">
-              We are building the most advanced platform for global trade. Discover verified suppliers, manage RFQs seamlessly, and grow your business with our market insights.
+              We are building the most advanced platform for global trade. Discover verified suppliers, manage RFQs seamlessly, and grow your business.
             </p>
 
             <div className="space-y-6 mb-12">

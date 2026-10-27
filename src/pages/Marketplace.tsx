@@ -1460,7 +1460,7 @@ export function Marketplace() {
                 {(
                   [
                     { id: 'all', label: t('All') },
-                    { id: 'sealed', label: t('Sealed & OEM') },
+                    { id: 'sealed', label: t('Sealed & Supplies') },
                     { id: 'graded', label: t('Graded') },
                   ] as const
                 ).map(tab => {
