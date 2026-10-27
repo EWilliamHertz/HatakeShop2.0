@@ -72,11 +72,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           token = await currentUser.getIdToken(true);
           
           try {
-            // 1. Get profile FIRST so UI unblocks instantly
-            const profileRes = await fetch('/api-v2/profile', {
+            // 1. Get profile FIRST so UI unblocks instantly (retry once on transient 429/5xx)
+            let profileRes = await fetch('/api-v2/profile', {
               headers: { 'Authorization': `Bearer ${token}` },
               cache: 'no-store'
             });
+            if (!profileRes.ok && (profileRes.status === 429 || profileRes.status >= 500)) {
+              await new Promise(r => setTimeout(r, 1500));
+              profileRes = await fetch('/api-v2/profile', {
+                headers: { 'Authorization': `Bearer ${token}` },
+                cache: 'no-store'
+              });
+            }
             if (profileRes.ok) {
               profileData = await profileRes.json();
               setDbUser(profileData);
@@ -88,14 +95,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("Fetch profile threw an error, falling back to local defaults:", fetchErr);
           }
 
-          // 2. Sync user to DB in the background
+          // 2. Sync user to DB in the background (also use returned DB user if /profile failed)
           const urlParams = new URLSearchParams(window.location.search);
           const inviteToken = urlParams.get('invite');
           fetch('/api-v2/auth/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ inviteToken })
-          }).catch(e => console.error("Background sync failed", e));
+          })
+            .then(r => (r.ok ? r.json() : null))
+            .then(syncJson => {
+              if (!profileData && syncJson?.user) {
+                setDbUser(syncJson.user);
+                localStorage.setItem('cached_db_user_session', JSON.stringify(syncJson.user));
+              }
+            })
+            .catch(e => console.error("Background sync failed", e));
 
           localStorage.setItem('cached_user_session', JSON.stringify(currentUser));
           localStorage.setItem('cached_token', token);
@@ -103,17 +118,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error("Auth context outer error:", e);
         }
 
-        // 3. Fallback: Guarantee dbUser is set even if token fetch or profile fetch crashed
+        // 3. Fallback: Preserve valid cached DB session on transient errors instead of downgrading admins to buyer/pending
         if (!profileData) {
-          const fallbackUser = { 
-            id: currentUser.uid, 
-            email: currentUser.email, 
-            role: 'buyer', 
-            verificationStatus: 'pending',
-            displayName: currentUser.displayName || 'User'
-          };
-          setDbUser(fallbackUser);
-          localStorage.setItem('cached_db_user_session', JSON.stringify(fallbackUser));
+          let preserved: any = null;
+          try {
+            const rawPrev = localStorage.getItem('cached_db_user_session');
+            if (rawPrev) {
+              const parsedPrev = JSON.parse(rawPrev);
+              if (
+                parsedPrev &&
+                typeof parsedPrev.id === 'number' &&
+                parsedPrev.email?.toLowerCase() === currentUser.email?.toLowerCase()
+              ) {
+                preserved = parsedPrev;
+              }
+            }
+          } catch {}
+
+          if (preserved) {
+            setDbUser(preserved);
+          } else {
+            setDbUser({
+              id: currentUser.uid,
+              email: currentUser.email,
+              role: 'buyer',
+              verificationStatus: 'verified',
+              displayName: currentUser.displayName || 'User'
+            });
+          }
         }
       } else {
         setDbUser(null);

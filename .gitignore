@@ -57,7 +57,65 @@ ORIGINAL_REQUEST.md
 .vercel
 .env*
 
-# Lead CSV files
+# Lead CSV files & raw supplier/product archives
 Pokemon_Card_Store*
 Pokemon_Card_Stores*
+kort_butiker_sverige*
+downloaded_sheet.csv
+Unknown*
+TopBestPKG*
+FoxDrop*
+foxdrop*
+*.xlsx
+*.zip
+*.sqlite
+db.sqlite
+*.log
+
+# Local admin, database, migration & debug scripts (NEVER publish to GitHub)
+scripts/
+.archive-scripts/
+scratch/
+create_admin.js
+add_impersonate.cjs
+fix_impersonate.cjs
+fix_admin_listings.cjs
+update_admin_dashboard.cjs
+get-db-user.ts
+get-fb-user.js
+list-all.ts
+list-users.js
+patch-*
+patch_*
+update_foxdrop*
+upload_foxdrop*
+import_foxdrop*
+update_schema*
+update_pfp.js
+db-migrate-*
+init-sverige-*
+fix-sverige-*
+create_table.js
+enable_vector.js
+insert_post.js
+add_feed_social.js
+add_notif_emails.js
+add_social_stats.js
+run_migration.sh
+force_api.js
+query_unique.js
+test-*
+test_*
+test.js
+test.ts
+test.tsx
+test[0-9]*.js
+test[0-9]*.ts
+temp_test*
+temp_seller.txt
+prod_error.json
+website_improvements_plan.md
+
+
+
 

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useAuth } from '../components/AuthContext.tsx';
+import { uploadImageFile } from '../lib/uploadImage.ts';
 import { toast } from 'sonner';
 import { Loader2, Save, Languages, Users, Upload, User, Mail, Lock , Code} from 'lucide-react';
 import { AffiliateDashboard } from './AffiliateDashboard.tsx';
@@ -39,20 +40,9 @@ export function Settings() {
     if (file) {
       setLoading(true);
       try {
-        const formDataUpload = new FormData();
-        formDataUpload.append('image', file);
-        const apiKey = import.meta.env.VITE_IMGBB_API_KEY || '6f1a5bbe6a6a3a4fb49fd2f8b303d8f5';
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-          method: 'POST',
-          body: formDataUpload
-        });
-        const data = await res.json();
-        if (data.success) {
-          setFormData(prev => ({ ...prev, profilePictureUrl: data.data.url }));
-          toast.success("Image uploaded successfully");
-        } else {
-          toast.error("Failed to upload image to ImgBB");
-        }
+        const url = await uploadImageFile(file, () => user?.getIdToken(), 'profiles');
+        setFormData(prev => ({ ...prev, profilePictureUrl: url }));
+        toast.success("Image uploaded successfully");
       } catch (err) {
         toast.error("Error uploading image");
         console.error(err);

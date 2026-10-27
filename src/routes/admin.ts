@@ -2,9 +2,9 @@ import express, { Router } from "express";
 import bcrypt from "bcryptjs";
 import { getStripe, getEasyPost, resend, generateEmbedding, ai } from "../lib/services.js";
 
-import { db, ensureSealedTaxonomySchema, ensureSwedishCardShopsSchema } from "../db/index.js";
+import { db, ensureSealedTaxonomySchema, ensureSwedishCardShopsSchema, ensureLeadsCrmSchema } from "../db/index.js";
 import { adminAuth } from "../lib/firebase-admin.js";
-import { users, products, feedback, leads, affiliates, marketing_logs, categories, inquiries, inquiryMessages, reviews, swedishCardShops } from "../db/schema.js";
+import { users, products, feedback, leads, crmMailSettings, affiliates, marketing_logs, categories, inquiries, inquiryMessages, reviews, swedishCardShops } from "../db/schema.js";
 import { findKortbutikerCsvFile, parseSwedishShopsCsv } from "../lib/swedishShops.js";
 import fs from "fs";
 import path from "path";
@@ -13,7 +13,8 @@ import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from 
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
 import crypto from "crypto";
-import { generateB2BEmailHtml } from "../lib/emailTemplate.js";
+import { generateB2BEmailHtml, buildB2BEmailSubject, B2BMailOptions } from "../lib/emailTemplate.js";
+import { parseLeadGeo } from "../lib/leadGeo.js";
 import { normalizeOriginType } from "../lib/productTaxonomy.js";
 import { getUserProfile } from "../db/users.js";
 
@@ -55,10 +56,13 @@ router.patch("/api-v2/admin/feedback/:id", requireAuth, requireAdmin, async (req
 
 router.get("/api-v2/admin/leads", requireAuth, requireAdmin, async (req, res) => {
     try {
+      await ensureLeadsCrmSchema();
       const allLeads = await db.select().from(leads).orderBy(desc(leads.createdAt));
+      const mailRules = await db.select().from(crmMailSettings).orderBy(desc(crmMailSettings.isDefault), asc(crmMailSettings.name));
       const sentCount = await db.select({ count: sql`count(*)` }).from(leads).where(not(eq(leads.status, 'pending')));
       res.json({
         leads: allLeads,
+        mailSettings: mailRules,
         sentCount: Number(sentCount[0].count)
       });
     } catch (err: any) {
@@ -86,10 +90,11 @@ export interface LeadImportResult {
   message: string;
 }
 
-export async function importLeadRows(rawLeads: any[]): Promise<LeadImportResult> {
+export async function importLeadRows(rawLeads: any[], defaultGeo?: { country?: string; state?: string; city?: string }): Promise<LeadImportResult> {
   if (!Array.isArray(rawLeads)) {
     throw new Error("Invalid leads array");
   }
+  await ensureLeadsCrmSchema();
 
   let duplicatesCount = 0;
   const duplicateSamples: { email: string; companyName?: string; reason: string }[] = [];
@@ -99,6 +104,12 @@ export async function importLeadRows(rawLeads: any[]): Promise<LeadImportResult>
     companyName: string | null;
     website: string | null;
     location: string | null;
+    country: string | null;
+    state: string | null;
+    city: string | null;
+    phone: string | null;
+    notes: string | null;
+    tags: string[];
     segment: string;
     socialLinks: string[];
   }> = [];
@@ -116,8 +127,11 @@ export async function importLeadRows(rawLeads: any[]): Promise<LeadImportResult>
     const keys = Object.keys(cleanLead);
     const findKey = (searchStrs: string[]) => keys.find(k => searchStrs.some(s => k.toLowerCase().includes(s)));
 
-    // Look for all keys containing 'email'
-    const emailKeys = keys.filter(k => k.toLowerCase().includes('email'));
+    // Look for all keys containing 'email' or 'epost' / 'mail'
+    const emailKeys = keys.filter(k => {
+      const lk = k.toLowerCase();
+      return lk.includes('email') || lk.includes('e-post') || lk === 'mail';
+    });
     let email: string | null = null;
     for (const k of emailKeys) {
       let val = cleanLead[k];
@@ -131,7 +145,7 @@ export async function importLeadRows(rawLeads: any[]): Promise<LeadImportResult>
     }
 
     // Company Name
-    const companyKey = findKey(['company', 'business', 'name', 'store']);
+    const companyKey = findKey(['company', 'business', 'name', 'store', 'butik', 'företag']);
     let companyName = companyKey && cleanLead[companyKey] ? String(cleanLead[companyKey]).trim().substring(0, 255) : null;
     if (companyName) {
       companyName = companyName.replace(/^["']+|["']+$/g, '').trim();
@@ -157,23 +171,41 @@ export async function importLeadRows(rawLeads: any[]): Promise<LeadImportResult>
     seenEmailsInBatch.add(email);
 
     // Website
-    const websiteKey = findKey(['website', 'url', 'site']);
+    const websiteKey = findKey(['website', 'url', 'site', 'hemsida', 'webb']);
     const website = websiteKey && cleanLead[websiteKey] ? String(cleanLead[websiteKey]).trim() : null;
 
-    // Location
-    const cityKey = findKey(['city']);
-    const stateKey = findKey(['state', 'province']);
-    const addressKey = findKey(['address']);
-    let location: string | null = null;
-    if (cityKey && stateKey && cleanLead[cityKey] && cleanLead[stateKey]) {
-      location = `${cleanLead[cityKey]}, ${cleanLead[stateKey]}`.trim();
-    } else if (addressKey && cleanLead[addressKey]) {
-      location = String(cleanLead[addressKey]).trim();
-    } else if (cityKey && cleanLead[cityKey]) {
-      location = String(cleanLead[cityKey]).trim();
-    } else if (stateKey && cleanLead[stateKey]) {
-      location = String(cleanLead[stateKey]).trim();
+    // Phone
+    const phoneKey = findKey(['phone', 'tel', 'telefon', 'mobile']);
+    const phone = phoneKey && cleanLead[phoneKey] ? String(cleanLead[phoneKey]).trim() : null;
+
+    // Geo (Country, State, City, Location)
+    const countryKey = findKey(['country', 'land']);
+    const cityKey = findKey(['city', 'stad', 'ort']);
+    const stateKey = findKey(['state', 'province', 'region', 'län']);
+    const locationKey = findKey(['location']);
+    const addressKey = findKey(['address', 'adress']);
+
+    const rawCountry = (countryKey && cleanLead[countryKey] ? String(cleanLead[countryKey]).trim() : null) || defaultGeo?.country || null;
+    const rawCity = (cityKey && cleanLead[cityKey] ? String(cleanLead[cityKey]).trim() : null) || defaultGeo?.city || null;
+    const rawState = (stateKey && cleanLead[stateKey] ? String(cleanLead[stateKey]).trim() : null) || defaultGeo?.state || null;
+
+    let rawLocation: string | null = null;
+    if (locationKey && cleanLead[locationKey]) {
+      rawLocation = String(cleanLead[locationKey]).trim();
+    } else if (rawCity && rawState) {
+      rawLocation = `${rawCity}, ${rawState}`;
+    } else if (addressKey && cleanLead[addressKey] && !rawCity) {
+      rawLocation = String(cleanLead[addressKey]).trim();
     }
+
+    const geo = parseLeadGeo({
+      country: rawCountry,
+      state: rawState,
+      city: rawCity,
+      location: rawLocation,
+      email,
+      website,
+    });
 
     // Socials
     const socialLinks: string[] = [];
@@ -184,25 +216,41 @@ export async function importLeadRows(rawLeads: any[]): Promise<LeadImportResult>
       }
     }
 
+    // Notes & Tags
+    const notesKey = findKey(['note', 'anteckning', 'comment']);
+    const rawNotes = notesKey && cleanLead[notesKey] ? String(cleanLead[notesKey]).trim() : null;
+    const tagsKey = findKey(['tag', 'label']);
+    const tags: string[] = tagsKey && cleanLead[tagsKey]
+      ? String(cleanLead[tagsKey]).split(/[,;]/).map(s => s.trim()).filter(Boolean)
+      : [];
+
     // Segment
+    const segmentKey = findKey(['segment', 'category']);
+    const explicitSegment = segmentKey && cleanLead[segmentKey] ? String(cleanLead[segmentKey]).trim() : '';
     let segment = 'TCG';
-    const lowerName = (companyName || '').toLowerCase();
-    const notesKey = findKey(['note']);
-    const notes = notesKey && cleanLead[notesKey] ? String(cleanLead[notesKey]).toLowerCase() : '';
-    const combinedStr = lowerName + ' ' + notes;
-    if (combinedStr.includes('sport') || combinedStr.includes('baseball') || combinedStr.includes('basketball') || combinedStr.includes('football')) {
-      segment = 'Sports';
-    } else if (combinedStr.includes('tcg') || combinedStr.includes('magic') || combinedStr.includes('pokemon') || combinedStr.includes('yugioh') || combinedStr.includes('card') || combinedStr.includes('hobby')) {
-      segment = 'TCG';
+    if (['TCG', 'Sports', 'General'].includes(explicitSegment)) {
+      segment = explicitSegment;
     } else {
-      segment = 'TCG';
+      const lowerName = (companyName || '').toLowerCase();
+      const combinedStr = lowerName + ' ' + (rawNotes || '').toLowerCase();
+      if (combinedStr.includes('sport') || combinedStr.includes('baseball') || combinedStr.includes('basketball') || combinedStr.includes('football')) {
+        segment = 'Sports';
+      } else {
+        segment = 'TCG';
+      }
     }
 
     candidates.push({
       email,
       companyName,
       website,
-      location,
+      location: geo.location,
+      country: geo.country,
+      state: geo.state,
+      city: geo.city,
+      phone,
+      notes: rawNotes,
+      tags,
       segment,
       socialLinks
     });
@@ -326,9 +374,13 @@ router.post(["/admin/leads/sync-file", "/api/admin/leads/sync-file", "/api-v2/ad
 
 router.post("/api-v2/admin/leads/upload", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { leads: newLeads } = req.body;
+    const { leads: newLeads, defaultCountry, defaultState, defaultCity } = req.body;
     if (!Array.isArray(newLeads)) return res.status(400).json({ error: "Invalid leads array" });
-    const result = await importLeadRows(newLeads);
+    const result = await importLeadRows(newLeads, {
+      country: defaultCountry,
+      state: defaultState,
+      city: defaultCity,
+    });
     res.json(result);
   } catch (err: any) {
     console.error("Error inserting leads:", err);
@@ -336,7 +388,209 @@ router.post("/api-v2/admin/leads/upload", requireAuth, requireAdmin, async (req,
   }
 });
 
-router.get("/api-v2/admin/leads/preview", requireAuth, requireAdmin, async (req, res) => {
+router.post("/api-v2/admin/leads/sync-swedish-shops", requireAuth, requireAdmin, async (_req: AuthRequest, res) => {
+  try {
+    await ensureSwedishCardShopsSchema();
+    await ensureLeadsCrmSchema();
+    const shops = await db.select().from(swedishCardShops);
+    const mapped = shops
+      .filter(s => s.email && s.email.includes('@'))
+      .map(s => ({
+        "Company Name": s.name,
+        "Email": s.email,
+        "Website": s.website || '',
+        "City": s.city || '',
+        "Country": "Sweden",
+        "Phone": s.phone || '',
+        "Notes": [s.type, s.cardTypes, s.notes].filter(Boolean).join(' • '),
+        "Tags": "Sweden,Kortbutik",
+      }));
+    const result = await importLeadRows(mapped, { country: 'Sweden' });
+    res.json({ ...result, source: 'swedish_card_shops' });
+  } catch (err: any) {
+    console.error("Error syncing Swedish shops to CRM:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/api-v2/admin/leads/bulk", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    await ensureLeadsCrmSchema();
+    const { leadIds, action, status, country, state, city, segment, addTag, removeTag, notes } = req.body || {};
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      return res.status(400).json({ error: "leadIds array is required" });
+    }
+    const ids = leadIds.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id));
+    if (ids.length === 0) {
+      return res.status(400).json({ error: "No valid lead IDs provided" });
+    }
+
+    if (action === 'delete') {
+      const deleted = await db.delete(leads).where(inArray(leads.id, ids)).returning({ id: leads.id });
+      return res.json({ success: true, updated: deleted.length });
+    }
+
+    const updateSet: Record<string, any> = {};
+    if (status) updateSet.status = status;
+    if (country !== undefined) updateSet.country = country || null;
+    if (state !== undefined) updateSet.state = state || null;
+    if (city !== undefined) updateSet.city = city || null;
+    if (city || state || country) {
+      const locParts = [city, state || country].filter(Boolean);
+      if (locParts.length > 0) updateSet.location = locParts.join(', ');
+    }
+    if (segment) updateSet.segment = segment;
+    if (notes !== undefined) updateSet.notes = notes;
+
+    if (Object.keys(updateSet).length > 0) {
+      await db.update(leads).set(updateSet).where(inArray(leads.id, ids));
+    }
+
+    if (addTag || removeTag) {
+      const rows = await db.select({ id: leads.id, tags: leads.tags }).from(leads).where(inArray(leads.id, ids));
+      for (const row of rows) {
+        const currentTags = Array.isArray(row.tags) ? [...row.tags] : [];
+        let nextTags = currentTags;
+        if (addTag && !nextTags.includes(addTag)) {
+          nextTags.push(String(addTag).trim());
+        }
+        if (removeTag) {
+          nextTags = nextTags.filter(t => t !== removeTag);
+        }
+        await db.update(leads).set({ tags: nextTags }).where(eq(leads.id, row.id));
+      }
+    }
+
+    res.json({ success: true, updated: ids.length });
+  } catch (err: any) {
+    console.error("Bulk leads update error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Geo / Campaign Mail Settings CRUD
+router.get("/api-v2/admin/leads/mail-settings", requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    await ensureLeadsCrmSchema();
+    const rules = await db.select().from(crmMailSettings).orderBy(desc(crmMailSettings.isDefault), asc(crmMailSettings.name));
+    res.json(rules);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/api-v2/admin/leads/mail-settings", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    await ensureLeadsCrmSchema();
+    const body = req.body || {};
+    if (body.isDefault) {
+      await db.update(crmMailSettings).set({ isDefault: false });
+    }
+    const inserted = await db.insert(crmMailSettings).values({
+      name: body.name || 'Custom Geo Rule',
+      country: body.country || null,
+      state: body.state || null,
+      city: body.city || null,
+      segment: body.segment || null,
+      language: body.language || 'en',
+      senderName: body.senderName || 'Hatake B2B',
+      replyTo: body.replyTo || 'ernst@hatake.eu',
+      subjectTemplate: body.subjectTemplate || '{{companyName}}, join Hatake.Shop B2B',
+      headlineTemplate: body.headlineTemplate || null,
+      introTemplate: body.introTemplate || null,
+      regionalNote: body.regionalNote || null,
+      ctaText: body.ctaText || null,
+      batchSize: Number(body.batchSize) || 50,
+      isDefault: Boolean(body.isDefault),
+      updatedAt: new Date(),
+    }).returning();
+    res.json(inserted[0]);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put("/api-v2/admin/leads/mail-settings/:id", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    await ensureLeadsCrmSchema();
+    const id = parseInt(req.params.id, 10);
+    const body = req.body || {};
+    if (body.isDefault) {
+      await db.update(crmMailSettings).set({ isDefault: false });
+    }
+    const updated = await db.update(crmMailSettings).set({
+      name: body.name || 'Custom Geo Rule',
+      country: body.country || null,
+      state: body.state || null,
+      city: body.city || null,
+      segment: body.segment || null,
+      language: body.language || 'en',
+      senderName: body.senderName || 'Hatake B2B',
+      replyTo: body.replyTo || 'ernst@hatake.eu',
+      subjectTemplate: body.subjectTemplate || '{{companyName}}, join Hatake.Shop B2B',
+      headlineTemplate: body.headlineTemplate || null,
+      introTemplate: body.introTemplate || null,
+      regionalNote: body.regionalNote || null,
+      ctaText: body.ctaText || null,
+      batchSize: Number(body.batchSize) || 50,
+      isDefault: Boolean(body.isDefault),
+      updatedAt: new Date(),
+    }).where(eq(crmMailSettings.id, id)).returning();
+    res.json(updated[0]);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/api-v2/admin/leads/mail-settings/:id", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    await ensureLeadsCrmSchema();
+    const id = parseInt(req.params.id, 10);
+    await db.delete(crmMailSettings).where(eq(crmMailSettings.id, id));
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function matchBestMailRule(lead: any, rules: any[]) {
+  if (!rules || rules.length === 0) return null;
+  const lCountry = (lead.country || '').trim().toLowerCase();
+  const lState = (lead.state || '').trim().toLowerCase();
+  const lCity = (lead.city || '').trim().toLowerCase();
+  const lSegment = (lead.segment || 'TCG').trim().toLowerCase();
+
+  let bestRule: any = null;
+  let bestScore = -1;
+
+  for (const r of rules) {
+    const rCountry = (r.country || '').trim().toLowerCase();
+    const rState = (r.state || '').trim().toLowerCase();
+    const rCity = (r.city || '').trim().toLowerCase();
+    const rSegment = (r.segment || '').trim().toLowerCase();
+
+    if (rCountry && rCountry !== lCountry) continue;
+    if (rState && rState !== lState) continue;
+    if (rCity && rCity !== lCity) continue;
+    if (rSegment && rSegment !== lSegment) continue;
+
+    let score = 0;
+    if (rCity) score += 8;
+    if (rState) score += 4;
+    if (rCountry) score += 2;
+    if (rSegment) score += 1;
+    if (score === 0 && r.isDefault) score = 0.5;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestRule = r;
+    }
+  }
+
+  return bestRule || rules.find(r => r.isDefault) || rules[0];
+}
+
+router.get("/api-v2/admin/leads/preview", requireAuth, requireAdmin, async (_req, res) => {
     try {
       const appUrl = process.env.APP_URL || 'https://hatake.shop';
       const registrationUrl = `${appUrl}/register?invite=preview-token-demo`;
@@ -348,50 +602,211 @@ router.get("/api-v2/admin/leads/preview", requireAuth, requireAdmin, async (req,
     }
   });
 
-router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, res) => {
+router.post("/api-v2/admin/leads/preview", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { limit = 50 } = req.body || {};
-      const numLimit = Math.max(1, parseInt(limit, 10) || 50);
-      let pendingLeads = [];
-      const { leadIds } = req.body || {};
-      if (leadIds && Array.isArray(leadIds) && leadIds.length > 0) {
-        pendingLeads = await db.select().from(leads).where(inArray(leads.id, leadIds));
-      } else {
-        pendingLeads = await db.select().from(leads).where(eq(leads.status, 'pending')).limit(numLimit);
-      }
-      
-      if (pendingLeads.length === 0) {
-        return res.json({ success: true, sent: 0, message: "No pending leads found to send" });
+      await ensureLeadsCrmSchema();
+      const { lead, mailSettings, useAutoGeoRule } = req.body || {};
+      const sampleLead = lead || {
+        companyName: 'Nordic Card Vault',
+        city: 'Stockholm',
+        state: 'Stockholm',
+        country: 'Sweden',
+        location: 'Stockholm, Sweden',
+        segment: 'TCG',
+        email: 'demo@example.com',
+      };
+
+      let effectiveSettings = mailSettings || null;
+      if (useAutoGeoRule || !effectiveSettings) {
+        const rules = await db.select().from(crmMailSettings);
+        effectiveSettings = matchBestMailRule(sampleLead, rules) || effectiveSettings || {};
       }
 
-      const primaryFrom = "Hatake B2B <b2b@hatake.shop>";
-      const fallbackFrom = "Hatake B2B <hello@hatake.shop>";
-      const replyToAddress = process.env.RESEND_REPLY_TO || "ernst@hatake.eu";
+      const appUrl = process.env.APP_URL || 'https://hatake.shop';
+      const registrationUrl = `${appUrl}/register?invite=preview-token-demo`;
+      const unsubscribeUrl = `${appUrl}/api/unsubscribe?email=${encodeURIComponent(sampleLead.email || 'demo@example.com')}`;
+
+      const mailOpts: B2BMailOptions = {
+        language: effectiveSettings?.language || 'en',
+        senderName: effectiveSettings?.senderName || 'Hatake B2B',
+        replyTo: effectiveSettings?.replyTo || process.env.RESEND_REPLY_TO || 'ernst@hatake.eu',
+        subjectTemplate: effectiveSettings?.subjectTemplate,
+        headlineTemplate: effectiveSettings?.headlineTemplate,
+        introTemplate: effectiveSettings?.introTemplate,
+        regionalNote: effectiveSettings?.regionalNote,
+        ctaText: effectiveSettings?.ctaText,
+        city: sampleLead.city,
+        state: sampleLead.state,
+        country: sampleLead.country,
+        location: sampleLead.location,
+      };
+
+      const subject = buildB2BEmailSubject(
+        effectiveSettings?.subjectTemplate,
+        {
+          companyName: sampleLead.companyName || 'Partner',
+          city: sampleLead.city,
+          state: sampleLead.state,
+          country: sampleLead.country,
+          location: sampleLead.location,
+          segment: sampleLead.segment || 'TCG',
+        },
+        mailOpts.language || 'en'
+      );
+
+      const htmlContent = generateB2BEmailHtml(
+        sampleLead.companyName || 'Partner',
+        registrationUrl,
+        unsubscribeUrl,
+        sampleLead.segment || 'TCG',
+        mailOpts
+      );
+
+      res.json({
+        subject,
+        senderName: mailOpts.senderName,
+        replyTo: mailOpts.replyTo,
+        matchedRuleName: effectiveSettings?.name || 'Custom Settings',
+        html: htmlContent,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await ensureLeadsCrmSchema();
+      const {
+        limit = 50,
+        leadIds,
+        filters,
+        mailSettings,
+        useAutoGeoRules = true,
+      } = req.body || {};
+
+      const numLimit = Math.min(200, Math.max(1, parseInt(String(limit), 10) || 50));
+      let pendingLeads: any[] = [];
+
+      if (leadIds && Array.isArray(leadIds) && leadIds.length > 0) {
+        const cleanIds = leadIds.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id));
+        pendingLeads = await db.select().from(leads).where(inArray(leads.id, cleanIds));
+      } else {
+        const conditions: any[] = [eq(leads.status, 'pending')];
+        if (filters && typeof filters === 'object') {
+          if (filters.country && filters.country !== 'all') {
+            conditions.push(eq(leads.country, String(filters.country)));
+          }
+          if (filters.state && filters.state !== 'all') {
+            conditions.push(eq(leads.state, String(filters.state)));
+          }
+          if (filters.city && filters.city !== 'all') {
+            conditions.push(eq(leads.city, String(filters.city)));
+          }
+          if (filters.segment && filters.segment !== 'all') {
+            conditions.push(eq(leads.segment, String(filters.segment)));
+          }
+          if (filters.search && String(filters.search).trim()) {
+            const q = `%${String(filters.search).trim()}%`;
+            conditions.push(
+              or(
+                ilike(leads.companyName, q),
+                ilike(leads.email, q),
+                ilike(leads.city, q),
+                ilike(leads.location, q)
+              )
+            );
+          }
+        }
+        pendingLeads = await db
+          .select()
+          .from(leads)
+          .where(and(...conditions))
+          .orderBy(desc(leads.createdAt))
+          .limit(numLimit);
+      }
+
+      // Filter out any rows missing a valid email
+      pendingLeads = pendingLeads.filter(l => l.email && l.email.includes('@'));
+
+      if (pendingLeads.length === 0) {
+        return res.json({ success: true, sent: 0, message: "No matching leads found to send" });
+      }
+
+      const savedRules = await db.select().from(crmMailSettings);
+      const defaultReplyTo = process.env.RESEND_REPLY_TO || "ernst@hatake.eu";
       const appUrl = process.env.APP_URL || 'https://hatake.shop';
 
       const emailPayloads = pendingLeads.map(lead => {
-        // Always generate a fresh opaque token — store only the hash
+        const matchedRule = useAutoGeoRules ? matchBestMailRule(lead, savedRules) : null;
+        const activeCfg = mailSettings && !useAutoGeoRules
+          ? mailSettings
+          : mailSettings && mailSettings.overrideAll
+          ? mailSettings
+          : matchedRule || mailSettings || {};
+
+        const senderDisplay = String(activeCfg.senderName || 'Hatake B2B').replace(/[<>"]/g, '').trim() || 'Hatake B2B';
+        const replyToAddr = String(activeCfg.replyTo || defaultReplyTo).trim() || defaultReplyTo;
+        const lang = activeCfg.language || 'en';
+
         const rawToken = crypto.randomUUID();
         const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
         const registrationUrl = `${appUrl}/register?invite=${rawToken}`;
         const unsubscribeUrl = `${appUrl}/api/unsubscribe?email=${encodeURIComponent(lead.email)}`;
-        const htmlContent = generateB2BEmailHtml(lead.companyName || "Partner", registrationUrl, unsubscribeUrl, lead.segment || "TCG");
-        const subject = `${lead.companyName || 'Partner'}, join Hatake.Shop B2B`;
+
+        const mailOpts: B2BMailOptions = {
+          language: lang,
+          senderName: senderDisplay,
+          replyTo: replyToAddr,
+          subjectTemplate: activeCfg.subjectTemplate,
+          headlineTemplate: activeCfg.headlineTemplate,
+          introTemplate: activeCfg.introTemplate,
+          regionalNote: activeCfg.regionalNote,
+          ctaText: activeCfg.ctaText,
+          city: lead.city,
+          state: lead.state,
+          country: lead.country,
+          location: lead.location,
+        };
+
+        const htmlContent = generateB2BEmailHtml(
+          lead.companyName || "Partner",
+          registrationUrl,
+          unsubscribeUrl,
+          lead.segment || "TCG",
+          mailOpts
+        );
+
+        const subject = buildB2BEmailSubject(
+          activeCfg.subjectTemplate,
+          {
+            companyName: lead.companyName || 'Partner',
+            city: lead.city,
+            state: lead.state,
+            country: lead.country,
+            location: lead.location,
+            segment: lead.segment || 'TCG',
+          },
+          lang
+        );
+
         return {
           lead,
           rawToken,
           tokenHash,
           htmlContent,
-          subject
+          subject,
+          primaryFrom: `${senderDisplay} <b2b@hatake.shop>`,
+          fallbackFrom: `${senderDisplay} <hello@hatake.shop>`,
+          replyToAddr,
         };
       });
 
       let sent = 0;
-      let fromToUse = primaryFrom;
       let batchItems = emailPayloads.map(p => ({
-        from: fromToUse,
+        from: p.primaryFrom,
         to: [p.lead.email],
-        replyTo: replyToAddress,
+        replyTo: p.replyToAddr,
         subject: p.subject,
         html: p.htmlContent,
         tags: [{ name: 'lead_id', value: String(p.lead.id) }]
@@ -401,12 +816,11 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
       try {
         batchRes = await resend.batch.send(batchItems);
         if (batchRes.error && (batchRes.error.message?.includes('not verified') || batchRes.error.statusCode === 403)) {
-          console.warn(`[Batch Send] Domain in ${fromToUse} not verified, falling back to ${fallbackFrom}`);
-          fromToUse = fallbackFrom;
+          console.warn(`[Batch Send] Domain b2b@hatake.shop not verified, falling back to hello@hatake.shop`);
           batchItems = emailPayloads.map(p => ({
-            from: fromToUse,
+            from: p.fallbackFrom,
             to: [p.lead.email],
-            replyTo: replyToAddress,
+            replyTo: p.replyToAddr,
             subject: p.subject,
             html: p.htmlContent,
             tags: [{ name: 'lead_id', value: String(p.lead.id) }]
@@ -425,6 +839,7 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
           await db.update(leads).set({
             status: 'sent',
             sentAt,
+            lastEmailedAt: sentAt,
             inviteTokenHash: item.tokenHash,
             resendEmailId: emailId || null,
           }).where(eq(leads.id, item.lead.id));
@@ -440,31 +855,32 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
         console.warn("[Batch Send] Fallback to sequential dispatch:", batchRes?.error);
         for (const item of emailPayloads) {
           try {
-            let res = await resend.emails.send({
-              from: fromToUse,
+            let resMail = await resend.emails.send({
+              from: item.primaryFrom,
               to: item.lead.email,
-              replyTo: replyToAddress,
+              replyTo: item.replyToAddr,
               subject: item.subject,
               html: item.htmlContent,
               tags: [{ name: 'lead_id', value: String(item.lead.id) }]
             });
-            if (res.error && (res.error.message?.includes('not verified') || res.error.statusCode === 403)) {
-              res = await resend.emails.send({
-                from: fallbackFrom,
+            if (resMail.error && (resMail.error.message?.includes('not verified') || resMail.error.statusCode === 403)) {
+              resMail = await resend.emails.send({
+                from: item.fallbackFrom,
                 to: item.lead.email,
-                replyTo: replyToAddress,
+                replyTo: item.replyToAddr,
                 subject: item.subject,
                 html: item.htmlContent,
                 tags: [{ name: 'lead_id', value: String(item.lead.id) }]
               });
             }
-            if (res.data?.id) {
+            if (resMail.data?.id) {
               const sentAt = new Date();
               await db.update(leads).set({
                 status: 'sent',
                 sentAt,
+                lastEmailedAt: sentAt,
                 inviteTokenHash: item.tokenHash,
-                resendEmailId: res.data.id,
+                resendEmailId: resMail.data?.id,
               }).where(eq(leads.id, item.lead.id));
               sent++;
               (req as any).io?.emit("lead_updated", {
@@ -473,7 +889,7 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
                 sentAt: sentAt.toISOString()
               });
             } else {
-              console.error(`[Lead Send] Error for lead ${item.lead.id}:`, res.error);
+              console.error(`[Lead Send] Error for lead ${item.lead.id}:`, resMail.error);
               await db.update(leads).set({ status: 'failed' }).where(eq(leads.id, item.lead.id));
             }
           } catch (itemErr) {
@@ -486,11 +902,11 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
       return res.json({
         success: true,
         sent,
-        message: `Successfully processed ${sent} invites.`
+        message: `Successfully dispatched ${sent} personalized B2B invitation${sent === 1 ? '' : 's'}.`
       });
     } catch (err: any) {
       console.error("[Leads Send Error]:", err);
-      return res.json({ success: false, sent: 0, error: err.message });
+      return res.status(500).json({ success: false, sent: 0, error: err.message });
     }
   });
 

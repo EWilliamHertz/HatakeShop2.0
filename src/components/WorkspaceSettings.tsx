@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext.tsx';
 import { useWorkspace, Company } from './WorkspaceContext.tsx';
+import { uploadImageFile } from '../lib/uploadImage.ts';
 import { toast } from 'sonner';
 import {
   Building2, Users, ShieldCheck, MapPin, Bell,
@@ -47,15 +48,9 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-/* ─────────────────────── ImgBB upload helper ───────────────────────── */
-async function uploadToImgBB(file: File): Promise<string> {
-  const apiKey = (import.meta as any).env?.VITE_IMGBB_API_KEY || '6f1a5bbe6a6a3a4fb49fd2f8b303d8f5';
-  const fd = new FormData();
-  fd.append('image', file);
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: 'POST', body: fd });
-  const data = await res.json();
-  if (!data.success) throw new Error('ImgBB upload failed');
-  return data.data.url as string;
+/* ─────────────────────── Vercel Blob upload helper ───────────────────── */
+async function uploadWorkspaceImage(file: File, getToken?: () => Promise<string | undefined>): Promise<string> {
+  return uploadImageFile(file, getToken, 'companies');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -118,7 +113,7 @@ function ProfileTab({ company }: { company: Company }) {
     if (!file) return;
     setUploading(field === 'logoUrl' ? 'logo' : 'banner');
     try {
-      const url = await uploadToImgBB(file);
+      const url = await uploadWorkspaceImage(file, () => user?.getIdToken());
       setForm(prev => ({ ...prev, [field]: url }));
       toast.success('Image uploaded');
     } catch {

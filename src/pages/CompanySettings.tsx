@@ -2,6 +2,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { useAuth } from '../components/AuthContext.tsx';
+import { uploadImageFile } from '../lib/uploadImage.ts';
 import { toast } from 'sonner';
 import { ShieldCheck, Building2, FileText, Globe2, Loader2, Save, Languages, MapPin, CreditCard, BadgeCheck, Users, UploadCloud, Upload, Store, Share2, Bell, X, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -80,20 +81,9 @@ export function CompanySettings() {
     if (file) {
       setLoading(true);
       try {
-        const formData = new FormData();
-        formData.append('image', file);
-        const apiKey = import.meta.env.VITE_IMGBB_API_KEY || '6f1a5bbe6a6a3a4fb49fd2f8b303d8f5';
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-        if (data.success) {
-          setFormData(prev => ({ ...prev, [field]: data.data.url }));
-          toast.success("Image uploaded successfully");
-        } else {
-          toast.error("Failed to upload image to ImgBB");
-        }
+        const url = await uploadImageFile(file, () => user?.getIdToken(), 'companies');
+        setFormData(prev => ({ ...prev, [field]: url }));
+        toast.success("Image uploaded successfully");
       } catch (err) {
         toast.error("Error uploading image");
         console.error(err);

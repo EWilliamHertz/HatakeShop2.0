@@ -151,7 +151,8 @@ app.get(["/cron/drip", "/api/cron/drip", "/api-v2/cron/drip"], async (req, res) 
     res.status(500).json({ error: e.message });
   }
 });
-app.get("/api-v2/debug-firebase", (req, res) => { import("./src/lib/firebase-admin.js").then(m => { res.json({ error: m.firebaseInitError, hasJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, hasPrivKey: !!process.env.FIREBASE_PRIVATE_KEY }) }) });
+import { requireAdmin } from "./src/middleware/roles.js";
+app.get("/api-v2/debug-firebase", requireAuth, requireAdmin, (req, res) => { import("./src/lib/firebase-admin.js").then(m => { res.json({ error: m.firebaseInitError, hasJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, hasPrivKey: !!process.env.FIREBASE_PRIVATE_KEY }) }) });
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
 // ---------------------------------------------------------------------------
@@ -165,13 +166,44 @@ app.use(helmet({
 app.use(compression());
 
 // General API rate limit + stricter auth brute-force guard
-const apiLimiter = rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 15 * 60_000, max: 20, standardHeaders: true, legacyHeaders: false });
-const aiLimiter = rateLimit({ windowMs: 60_000, max: 30, standardHeaders: true, legacyHeaders: false });
+// Always return JSON on 429 so frontend JSON parsers never throw "Server returned non-JSON response (429)",
+// and skip general API rate-limiting in local development where HMR / StrictMode fires burst requests.
+const rateLimitJsonMessage = { error: 'Too many requests, please try again later.' };
+const apiLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 1200,
+  skip: () => !isProd,
+  message: rateLimitJsonMessage,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const authLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: isProd ? 40 : 200,
+  message: rateLimitJsonMessage,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const aiLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  message: rateLimitJsonMessage,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 app.use(["/api", "/api-v2"], apiLimiter);
 app.use(["/api/auth", "/api-v2/auth"], authLimiter);
 app.use(["/translate", "/api/translate", "/api-v2/translate",
          "/sourcing/ai-match", "/api/sourcing/ai-match", "/api-v2/sourcing/ai-match"], aiLimiter);
+
+// Short-lived in-memory cache for read-heavy public catalog browse endpoints; cleared on any write
+const browseResponseCache = new Map<string, { expiresAt: number; payload: any }>();
+app.use((req, _res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    browseResponseCache.clear();
+  }
+  next();
+});
 
 async function getDescendantCategoryIds(dbInstance: any, categoryId: number): Promise<number[]> {
   const allCats = await dbInstance.select({ id: categories.id, parentId: categories.parentId }).from(categories);
@@ -791,7 +823,11 @@ app.get(["/marketplace/sneak-peek", "/api/marketplace/sneak-peek", "/api-v2/mark
       const subcats = await db.select().from(categories).where(eq(categories.parentId, cat.id)).orderBy(categories.sortOrder);
       
       const rootDescIds = await getDescendantCategoryIds(db, cat.id);
-      const rootCountRes = await db.select({ count: sql`count(*)` }).from(products).where(and(inArray(products.categoryId, rootDescIds), eq(products.approvalStatus, 'approved')));
+      const rootCatCond = or(
+        inArray(products.categoryId, rootDescIds),
+        sql`${products.categoryIds} && ARRAY[${sql.join(rootDescIds.map(id => sql`${id}`), sql`, `)}]::int[]`
+      );
+      const rootCountRes = await db.select({ count: sql`count(*)` }).from(products).where(and(rootCatCond, eq(products.approvalStatus, 'approved')));
       const totalProducts = Number(rootCountRes[0].count);
       
       if (totalProducts === 0 && !cat.isVisibleIfEmpty) {
@@ -808,7 +844,7 @@ app.get(["/marketplace/sneak-peek", "/api/marketplace/sneak-peek", "/api-v2/mark
         })
         .from(products)
         .leftJoin(users, eq(products.sellerId, users.id))
-        .where(and(inArray(products.categoryId, rootDescIds), eq(products.approvalStatus, 'approved')))
+        .where(and(rootCatCond, eq(products.approvalStatus, 'approved')))
         .orderBy(desc(products.createdAt));
 
       const sellerMap = new Map();
@@ -859,12 +895,19 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
     await ensureSealedTaxonomySchema();
     const productType = (req.query.productType as string) || 'sealed';
     const sortBy = (req.query.sortBy as string) || 'company_az';
+    const cacheKey = `${productType}:${sortBy}`;
+    const cachedBrowse = browseResponseCache.get(cacheKey);
+    if (cachedBrowse && cachedBrowse.expiresAt > Date.now()) {
+      res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=60');
+      return res.json(cachedBrowse.payload);
+    }
+
     const PREVIEW_COUNT = 4;
     const typeCondition = productType === 'graded'
       ? eq(products.productType, 'graded')
       : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
 
-    const [allRows, topCategories, allCats] = await Promise.all([
+    const [allRows, allCats, countsRes] = await Promise.all([
       db.select({
         product: {
           id: products.id,
@@ -904,12 +947,20 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
         .leftJoin(users, eq(products.sellerId, users.id))
         .where(and(eq(products.approvalStatus, 'approved'), typeCondition))
         .orderBy(desc(products.createdAt)),
-      db.select().from(categories).where(sql`parent_id IS NULL`).orderBy(categories.sortOrder),
-      db.select().from(categories)
+      db.select().from(categories),
+      db.select({
+        sellerId: products.sellerId,
+        count: sql<number>`count(*)::int`
+      }).from(products)
+        .where(eq(products.approvalStatus, 'approved'))
+        .groupBy(products.sellerId)
     ]);
+    const topCategories = (allCats as any[])
+      .filter((c: any) => c.parentId == null)
+      .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
     const flat: any[] = allRows.map((r: any) => ({ ...r.product, seller: r.seller }));
-    const catalog = flat.filter((p: any) => !(p.isSponsored || p.is_sponsored || p.sponsored || p.featured));
+    const catalog = flat;
     const sponsored = flat.filter((p: any) => p.isSponsored || p.is_sponsored || p.sponsored || p.featured).slice(0, 6);
 
     // --- helpers for ordering previews ---
@@ -979,16 +1030,19 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
     // --- category previews (mixed suppliers) ---
     const catBuckets = new Map<number, any[]>();
     for (const p of catalog) {
-      let top = topAncestor(p.categoryId);
-      if (top == null && Array.isArray(p.categoryIds) && p.categoryIds.length > 0) {
+      const tops = new Set<number>();
+      const primaryTop = topAncestor(p.categoryId);
+      if (primaryTop != null) tops.add(primaryTop);
+      if (Array.isArray(p.categoryIds) && p.categoryIds.length > 0) {
         for (const cid of p.categoryIds) {
           const t = topAncestor(cid);
-          if (t != null) { top = t; break; }
+          if (t != null) tops.add(t);
         }
       }
-      if (top == null) continue;
-      if (!catBuckets.has(top)) catBuckets.set(top, []);
-      catBuckets.get(top)!.push(p);
+      for (const top of tops) {
+        if (!catBuckets.has(top)) catBuckets.set(top, []);
+        catBuckets.get(top)!.push(p);
+      }
     }
 
     const categoriesOut: any[] = [];
@@ -1022,14 +1076,6 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
       compBuckets.get(sid)!.push(p);
     }
     
-    const sellerIds = Array.from(compBuckets.keys());
-    const countsRes = sellerIds.length > 0 ? await db.select({
-      sellerId: products.sellerId,
-      count: sql<number>`count(*)::int`
-    }).from(products)
-    .where(and(inArray(products.sellerId, sellerIds), eq(products.approvalStatus, 'approved')))
-    .groupBy(products.sellerId) : [];
-    
     const countMap = new Map(countsRes.map(r => [r.sellerId, r.count]));
 
     const companiesOut = Array.from(compBuckets.entries()).map(([sid, list]) => {
@@ -1044,7 +1090,10 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
       };
     }).sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || '')));
 
-    res.json({ categories: categoriesOut, companies: companiesOut, sponsored });
+    const payload = { categories: categoriesOut, companies: companiesOut, sponsored };
+    browseResponseCache.set(cacheKey, { expiresAt: Date.now() + 20_000, payload });
+    res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=60');
+    res.json(payload);
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });

@@ -470,7 +470,20 @@ export function Home() {
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 h-full">
-                    {[...homeProducts].filter((a: any) => a.isSponsored || a.is_sponsored || a.sponsored || a.featured).slice(0, 3).map((sp: any, idx: number) => {
+                    {(() => {
+                      const sponsoredItems = [...homeProducts].filter((a: any) => a.isSponsored || a.is_sponsored || a.sponsored || a.featured);
+                      const acrylicCat = (browseData?.categories || []).find((c: any) => String(c.name || '').toLowerCase().includes('acrylic'));
+                      const acrylicProds = (acrylicCat?.products || []).map((item: any) => {
+                        const p = item.product || item;
+                        return { ...p, seller: item.seller || p.seller || {} };
+                      });
+                      const combined = [...sponsoredItems];
+                      for (const ap of acrylicProds) {
+                        if (combined.length >= 3) break;
+                        if (!combined.some((x: any) => x.id === ap.id)) combined.push(ap);
+                      }
+                      return combined.slice(0, 3);
+                    })().map((sp: any, idx: number) => {
                         let images = [];
                         try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
                         return (

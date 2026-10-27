@@ -195,8 +195,12 @@ router.post(["/users/apply-seller", "/api/users/apply-seller", "/api-v2/users/ap
     }
 
     const parentId = userProfile.teamOwnerId || userProfile.id;
-    const newRole = userProfile.role === 'admin' ? 'admin' : 'both';
-    await db.update(users).set({ role: newRole, verificationStatus: 'pending' }).where(eq(users.id, parentId));
+    const isAdmin = userProfile.role === 'admin';
+    const newRole = isAdmin ? 'admin' : 'both';
+    await db.update(users).set({
+      role: newRole,
+      verificationStatus: isAdmin ? 'verified' : 'pending'
+    }).where(eq(users.id, parentId));
 
     res.json({ success: true });
   } catch (err: any) {
@@ -325,9 +329,9 @@ router.post(["/users/team/join", "/api/users/team/join", "/api-v2/users/team/joi
     const updatedUser = await db.update(users).set({
        teamOwnerId: owner.id,
        companyName: owner.companyName,
-       role: owner.role,
+       role: userProfile.role === 'admin' ? 'admin' : owner.role,
        country: owner.country,
-       verificationStatus: owner.verificationStatus,
+       verificationStatus: userProfile.role === 'admin' ? 'verified' : owner.verificationStatus,
        teamRole: 'sales_rep'
     }).where(eq(users.id, userProfile.id)).returning();
 

@@ -31,7 +31,7 @@ const ProductCard = ({ p, formatPrice, t, isSponsored = false, onSelect }: any) 
       )}
       <div className="relative h-48 bg-slate-800 overflow-hidden flex items-center justify-center">
         {images.length > 0 ? (
-          <img src={images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <img src={images[0]} alt={p.title} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <PackageSearch className="w-10 h-10 text-slate-600" />
         )}
@@ -125,7 +125,7 @@ export function Marketplace() {
   const [searchInput, setSearchInput] = useState(search);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({ 3: true }); // TCG expanded by default
+  const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({ 3: true, 11: true }); // TCG & Storage (Acrylic) expanded by default
 
   const toggleCategory = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -206,12 +206,22 @@ export function Marketplace() {
       if (minMoq) params.set('minMoq', minMoq);
       const res = await fetch(`/api-v2/products?${params.toString()}`);
       const text = await res.text();
+      let parsed: any = null;
       try {
-        return JSON.parse(text);
-      } catch (e) {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = null;
+      }
+      if (!res.ok) {
+        const errMsg = parsed?.error || (res.status === 429 ? 'Rate limit reached — wait a few seconds and try again.' : text.substring(0, 150));
+        throw new Error(`HTTP ${res.status}: ${errMsg}`);
+      }
+      if (!parsed) {
         throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 150)}`);
       }
+      return parsed;
     },
+    staleTime: 60_000,
     placeholderData: (prev) => prev,
     enabled: !isCompanyBrowse
   });
@@ -219,11 +229,12 @@ export function Marketplace() {
   const { data: browseData = { categories: [], companies: [], sponsored: [] }, isLoading: browseLoading } = useQuery({
     queryKey: ['browse', sortBy],
     queryFn: async () => {
-      try {
-        const res = await fetch(`/api-v2/marketplace/browse?sortBy=${encodeURIComponent(sortBy)}`);
-        return res.ok ? await res.json() : { categories: [], companies: [], sponsored: [] };
-      } catch { return { categories: [], companies: [], sponsored: [] }; }
+      const res = await fetch(`/api-v2/marketplace/browse?sortBy=${encodeURIComponent(sortBy)}`);
+      if (!res.ok) throw new Error(`Browse HTTP ${res.status}`);
+      return res.json();
     },
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
     enabled: isCategoryBrowse
   });
 

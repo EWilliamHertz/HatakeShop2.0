@@ -5,6 +5,7 @@ import { Building2, Package, Megaphone, Send, Image as ImageIcon, MapPin, BadgeC
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/AuthContext.tsx';
+import { uploadImageFile } from '../lib/uploadImage.ts';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -124,18 +125,10 @@ export function Feed() {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsUploadingImage(true);
-    const formData = new FormData();
-    formData.append('image', file);
     try {
-      const apiKey = import.meta.env.VITE_IMGBB_API_KEY || '6f1a5bbe6a6a3a4fb49fd2f8b303d8f5';
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.success) {
-        setImageUrl(data.data.url);
-        toast.success("Image uploaded!");
-      } else {
-        toast.error("Failed to upload image.");
-      }
+      const url = await uploadImageFile(file, () => user?.getIdToken(), 'feed');
+      setImageUrl(url);
+      toast.success("Image uploaded!");
     } catch (err) {
       toast.error("Error uploading image");
     } finally {

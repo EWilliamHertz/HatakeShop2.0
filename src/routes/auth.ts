@@ -56,17 +56,18 @@ router.post("/api-v2/auth/sync", requireAuth, async (req: AuthRequest, res) => {
                const owner = ownerQuery[0];
                const user = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
                if (user.id !== owner.id) {
+                  const nextRole = user.role === 'admin' ? 'admin' : owner.role;
                   await db.update(users).set({
                      teamOwnerId: owner.id,
                      companyName: owner.companyName,
-                     role: owner.role,
+                     role: nextRole,
                      country: owner.country,
                      verificationStatus: owner.verificationStatus,
                      teamRole: 'sales_rep'
                   }).where(eq(users.id, user.id));
                   user.companyName = owner.companyName;
                   user.teamOwnerId = owner.id;
-                  user.role = owner.role;
+                  user.role = nextRole;
                   user.verificationStatus = owner.verificationStatus;
                   user.teamRole = 'sales_rep';
                   return res.json({ user });

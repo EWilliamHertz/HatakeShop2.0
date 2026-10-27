@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { db } from "../db/index.js";
-import { users, products, inquiries, inquiryMessages, leads, reviews, notifications } from '../db/schema.js';
+import { db, ensureLeadsCrmSchema } from "../db/index.js";
+import { users, companies, products, inquiries, inquiryMessages, leads, reviews, notifications } from '../db/schema.js';
 import { not, eq, or, and, isNull, desc, inArray, asc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { getUserProfile } from "../db/users.js";
 import { getStripe, resend } from "../lib/services.js";
 import { generateB2BEmailHtml } from "../lib/emailTemplate.js";
+import { parseLeadGeo, normalizeCountryName } from "../lib/leadGeo.js";
 import { adminDb } from "../lib/firebase-admin.js";
 
 const router = Router();
@@ -816,45 +817,129 @@ router.post(["/stripe/create-checkout-session", "/api/stripe/create-checkout-ses
 
 router.get(["/public/partners", "/api/public/partners", "/api-v2/public/partners"], async (req, res) => {
   try {
-    const invitedLeads = await db.select({ 
-      companyName: leads.companyName, 
-      location: leads.location, 
-      status: leads.status 
+    await ensureLeadsCrmSchema();
+    const invitedLeads = await db.select({
+      companyName: leads.companyName,
+      location: leads.location,
+      country: leads.country,
+      state: leads.state,
+      city: leads.city,
+      website: leads.website,
+      segment: leads.segment,
+      status: leads.status,
     }).from(leads).where(not(eq(leads.status, 'pending')));
-    
-    const responseList = invitedLeads.map(l => ({
-      name: l.companyName,
-      location: l.location,
-      signedUp: l.status === 'recruited',
-      contacted: true,
-      isLeadOnly: true
-    })).filter(l => l.name);
 
-    const sellers = await db.select({ id: users.id, companyName: users.companyName, country: users.country, verificationStatus: users.verificationStatus, profilePictureUrl: users.profilePictureUrl, region: users.region, companyFocus: users.companyFocus }).from(users).where(and(
+    const responseList: any[] = invitedLeads
+      .filter(l => l.companyName)
+      .map(l => {
+        const geo = parseLeadGeo({
+          country: l.country,
+          state: l.state,
+          city: l.city,
+          location: l.location,
+          website: l.website,
+        });
+        return {
+          name: l.companyName,
+          country: geo.country || null,
+          state: geo.state || null,
+          city: geo.city || null,
+          location: geo.location || [geo.city, geo.country].filter(Boolean).join(', ') || null,
+          website: l.website || null,
+          companyFocus: l.segment === 'Sports' ? 'Sports Cards & Memorabilia' : 'Trading Cards & Games',
+          signedUp: l.status === 'recruited',
+          contacted: true,
+          isLeadOnly: l.status !== 'recruited',
+        };
+      });
+
+    const allCompanies = await db.select().from(companies);
+    const companyById = new Map<number, any>(allCompanies.map(c => [c.id, c]));
+    const companyByNormName = new Map<string, any>(
+      allCompanies.map(c => [c.name.toLowerCase().replace(/\s+/g, ''), c])
+    );
+
+    const sellers = await db.select({
+      id: users.id,
+      companyName: users.companyName,
+      activeCompanyId: users.activeCompanyId,
+      country: users.country,
+      shippingCity: users.shippingCity,
+      verificationStatus: users.verificationStatus,
+      profilePictureUrl: users.profilePictureUrl,
+      region: users.region,
+      companyFocus: users.companyFocus,
+      website: users.website,
+    }).from(users).where(and(
       or(eq(users.role, 'seller'), eq(users.role, 'both'), eq(users.role, 'admin')),
       isNull(users.teamOwnerId)
     ));
-    
+
+    const normKey = (s?: string | null) => (s || '').toLowerCase().replace(/\s+/g, '');
+
     for (const seller of sellers) {
-       if (seller.companyName) {
-          const existingIdx = responseList.findIndex(r => r.name === seller.companyName);
-          if (existingIdx > -1) responseList.splice(existingIdx, 1);
-          
-          responseList.push({ 
-            // @ts-ignore
-            id: seller.id,
-            name: seller.companyName, 
-            location: seller.country, 
-            region: seller.region,
-            companyFocus: seller.companyFocus,
-            profilePictureUrl: seller.profilePictureUrl,
-            signedUp: true, 
-            contacted: true,
-            verificationStatus: seller.verificationStatus,
-            isLeadOnly: false
-          });
-       }
+      if (!seller.companyName) continue;
+      const key = normKey(seller.companyName);
+      const matchedComp =
+        (seller.activeCompanyId ? companyById.get(seller.activeCompanyId) : null) ||
+        companyByNormName.get(key) ||
+        null;
+
+      const displayName = matchedComp?.name || seller.companyName;
+      const country = normalizeCountryName(seller.country || matchedComp?.country) || null;
+      const city = seller.shippingCity ? String(seller.shippingCity).trim() || null : null;
+      const region = seller.region || matchedComp?.region || null;
+      const logo = seller.profilePictureUrl || matchedComp?.logoUrl || null;
+
+      const existingIdx = responseList.findIndex(r => normKey(r.name) === normKey(displayName));
+      const entry = {
+        id: seller.id,
+        name: displayName,
+        country,
+        city,
+        location: [city, country].filter(Boolean).join(', ') || country || 'Global',
+        region,
+        website: seller.website || matchedComp?.website || null,
+        companyFocus: seller.companyFocus || 'Trading Cards & Games',
+        profilePictureUrl: logo,
+        signedUp: true,
+        contacted: true,
+        verificationStatus: seller.verificationStatus,
+        isLeadOnly: false,
+      };
+
+      if (existingIdx > -1) {
+        // Prefer row with logo / country / lower primary seller ID
+        const prev = responseList[existingIdx];
+        if (prev.isLeadOnly) {
+          responseList[existingIdx] = entry;
+        } else {
+          responseList[existingIdx] = {
+            ...prev,
+            id: prev.id || entry.id,
+            country: prev.country || entry.country,
+            city: prev.city || entry.city,
+            location: prev.country ? prev.location : entry.location,
+            region: prev.region || entry.region,
+            profilePictureUrl: prev.profilePictureUrl || entry.profilePictureUrl,
+            verificationStatus:
+              prev.verificationStatus === 'verified' || prev.verificationStatus === 'audited'
+                ? prev.verificationStatus
+                : entry.verificationStatus,
+          };
+        }
+      } else {
+        responseList.push(entry);
+      }
     }
+
+    // Sort joined/verified partners first, then alphabetically
+    responseList.sort((a, b) => {
+      const aJoined = a.signedUp || !a.isLeadOnly ? 1 : 0;
+      const bJoined = b.signedUp || !b.isLeadOnly ? 1 : 0;
+      if (aJoined !== bJoined) return bJoined - aJoined;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
 
     res.json(responseList);
   } catch (err: any) {

@@ -1,49 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../components/AuthContext.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { useTranslation } from 'react-i18next';
 import { PackageSearch, MapPin } from 'lucide-react';
 import { ProductModal } from '../components/ProductModal.tsx';
-import { WishlistButton } from '../components/WishlistButton.tsx';
+import { WishlistButton, fetchUserWishlistItems } from '../components/WishlistButton.tsx';
 
 export function Wishlist() {
   const { user } = useAuth();
   const { formatPrice } = useCurrency();
   const { t } = useTranslation();
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    const fetchWishlist = async () => {
-      try {
-        let token = await user.getIdToken(true);
-        const res = await fetch('/api-v2/wishlists', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const items = await res.json();
-          const productIds = items.map((i: any) => i.productId).join(',');
-          if (productIds) {
-            const prodRes = await fetch(`/api-v2/products?ids=${productIds}`);
-            if (prodRes.ok) {
-              const data = await prodRes.json();
-              setProducts(data.products || []);
-            }
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchWishlist();
-  }, [user]);
+  const { data: wishlistItems = [], isLoading: wishlistLoading } = useQuery({
+    queryKey: ['wishlists', user?.uid || 'guest'],
+    queryFn: () => fetchUserWishlistItems(user),
+    enabled: !!user,
+    staleTime: 2 * 60_000,
+  });
+
+  const productIds = wishlistItems.map((i: any) => i?.productId).filter(Boolean).join(',');
+
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['wishlist-products', productIds],
+    queryFn: async () => {
+      if (!productIds) return [];
+      const prodRes = await fetch(`/api-v2/products?ids=${productIds}`);
+      if (!prodRes.ok) return [];
+      const data = await prodRes.json();
+      return Array.isArray(data?.products) ? data.products : [];
+    },
+    enabled: !!user && Boolean(productIds),
+    staleTime: 60_000,
+  });
+
+  const loading = !!user && (wishlistLoading || (Boolean(productIds) && productsLoading));
 
   if (loading) {
     return <div className="p-8 text-center text-slate-400">Loading...</div>;

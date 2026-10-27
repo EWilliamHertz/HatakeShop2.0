@@ -143,7 +143,22 @@ function ProtectedRoute({ children, requireAdmin, requireSeller }: { children: R
   return children;
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: (failureCount, error: any) => {
+        const msg = String(error?.message || '');
+        if (msg.includes('429') || msg.includes('401') || msg.includes('403') || msg.includes('404')) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+    },
+  },
+});
 
 export default function App() {
   return (
