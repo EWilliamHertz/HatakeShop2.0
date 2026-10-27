@@ -38,19 +38,18 @@ const mainNavItems: { name: string; label: string; path: string; icon: any; prot
   ];
 
   const managementNavItems = [
-    ...(dbUser?.role === 'admin' ? [{ name: 'Admin Panel', path: '/admin', icon: Shield, protected: true }] : []),
-    ...(dbUser?.role === 'seller' || dbUser?.role === 'both' || dbUser?.role === 'admin' ? [{ name: 'Supplier Portal', path: '/seller', icon: Store, protected: true }] : []),
+    ...(dbUser?.role === 'seller' || dbUser?.role === 'both' ? [{ name: 'Supplier Portal', path: '/seller', icon: Store, protected: true }] : []),
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 font-sans">
-      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 shadow-sm">
+    <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 font-sans w-full max-w-full overflow-x-hidden">
+      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 shadow-sm w-full overflow-x-clip">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 sm:h-20 items-center">
             
             {/* LEFT: Main Nav (Icons Only) */}
             <div className="flex items-center space-x-2">
-              <Link to="/" className="text-white font-bold text-xl tracking-tight pr-4">
+              <Link to="/" className="text-white font-bold text-xl tracking-tight pr-4 shrink-0">
                 Hatake<span className="text-cyan-400">.Shop</span>
               </Link>
               <WorkspaceSwitcher />
@@ -65,14 +64,13 @@ const mainNavItems: { name: string; label: string; path: string; icon: any; prot
                       title={t(item.name)}
                       aria-label={t(item.name)}
                       className={cn(
-                        "px-2.5 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium transition-all duration-200",
+                        "p-2 rounded-lg flex items-center justify-center transition-all duration-200",
                         active
                           ? "bg-cyan-500/10 text-cyan-300"
                           : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
                       )}
-                      >
-                      <item.icon className="w-[18px] h-[18px] shrink-0" />
-                      <span className="hidden xl:inline">{t(item.label)}</span>
+                    >
+                      <item.icon className="w-5 h-5 shrink-0" />
                     </Link>
                   )
                 })}

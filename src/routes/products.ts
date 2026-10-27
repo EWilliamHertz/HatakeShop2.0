@@ -55,12 +55,16 @@ function buildProductSearchCondition(qRaw: string) {
 router.get("/api-v2/marketplace/facets", async (req, res) => {
   try {
     await ensureSealedTaxonomySchema();
-    const productType = String(req.query.productType || 'sealed');
+    const productType = String(req.query.productType || 'all');
     const typeCondition = productType === 'all'
       ? sql`TRUE`
       : productType === 'graded'
         ? eq(products.productType, 'graded')
-        : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
+        : productType === 'oem'
+          ? eq(products.offersOem, true)
+          : productType === 'sealed'
+            ? and(sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`, eq(products.offersOem, false))
+            : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
 
     // Build dynamic conditions based on query params
     const conditions: any[] = [eq(products.approvalStatus, 'approved'), typeCondition];
@@ -275,7 +279,11 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
         ? sql`TRUE`
         : productType === 'graded'
           ? eq(products.productType, 'graded')
-          : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
+          : productType === 'oem'
+            ? eq(products.offersOem, true)
+            : productType === 'sealed'
+              ? and(sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`, eq(products.offersOem, false))
+              : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
       const conditions: any[] = [eq(products.approvalStatus, 'approved'), typeClause];
 
       const idsParam = req.query.ids as string;

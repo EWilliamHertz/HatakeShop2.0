@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, products, reviews, leads, categories } from "../db/schema.js";
-import { eq, or, and, isNull, sql } from 'drizzle-orm';
+import { users, products, reviews, leads, categories, companies, companyMembers } from "../db/schema.js";
+import { eq, or, and, isNull, sql, inArray } from 'drizzle-orm';
 import { userFollowers } from "../db/schema.js";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { getUserProfile, updateUserProfile, getOrCreateUser } from "../db/users.js";
@@ -57,7 +57,9 @@ router.get(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (
 router.get(["/company/:id", "/api/company/:id", "/api-v2/company/:id"], async (req: any, res: any) => {
   try {
     const companyId = parseInt(req.params.id, 10);
-    const company = await db.select({
+    if (isNaN(companyId)) return res.status(400).json({ error: "Invalid company ID" });
+
+    const companyUser = await db.select({
       id: users.id,
       companyName: users.companyName,
       country: users.country,
@@ -73,21 +75,79 @@ router.get(["/company/:id", "/api/company/:id", "/api-v2/company/:id"], async (r
       verificationStatus: users.verificationStatus,
     }).from(users).where(eq(users.id, companyId)).limit(1);
 
-    if (!company.length) return res.status(404).json({ error: "Company not found" });
+    let compRecord: any = companyUser[0];
+    let memberList: any[] = [];
+    let memberUserIds: number[] = [companyId];
 
-    const teamMembers = await db.select({
-      id: users.id,
-      displayName: users.displayName,
-      role: users.role,
-      teamRole: users.teamRole
-    }).from(users).where(
-      or(
-        eq(users.teamOwnerId, companyId),
-        eq(users.teamOwnerId, company[0].teamOwnerId || -1),
-        eq(users.id, companyId),
-        eq(users.id, company[0].teamOwnerId || -1)
-      )
-    );
+    if (!compRecord) {
+      // Look up in companies table (multi-tenant organization, e.g. GlimmerFall ID 9)
+      const [org] = await db.select().from(companies).where(eq(companies.id, companyId)).limit(1);
+      if (!org) return res.status(404).json({ error: "Company not found" });
+
+      compRecord = {
+        id: org.id,
+        companyName: org.name,
+        country: org.country,
+        website: org.website,
+        aboutUs: org.aboutUs,
+        socialLinks: [],
+        portfolio: [],
+        profilePictureUrl: org.logoUrl,
+        bannerUrl: org.bannerUrl,
+        createdAt: org.createdAt,
+        teamOwnerId: null,
+        role: 'seller',
+        verificationStatus: 'verified',
+      };
+
+      const orgMembers = await db.select({
+        id: users.id,
+        displayName: users.displayName,
+        role: users.role,
+        teamRole: companyMembers.role,
+        profilePictureUrl: users.profilePictureUrl,
+      })
+      .from(companyMembers)
+      .innerJoin(users, eq(companyMembers.userId, users.id))
+      .where(eq(companyMembers.companyId, companyId));
+
+      memberList = orgMembers;
+      memberUserIds = orgMembers.map(m => m.id);
+    } else {
+      // User-based company record (e.g. TopBestPKG, FoxDropStore)
+      const teamMembers = await db.select({
+        id: users.id,
+        displayName: users.displayName,
+        role: users.role,
+        teamRole: users.teamRole,
+        profilePictureUrl: users.profilePictureUrl,
+      }).from(users).where(
+        or(
+          eq(users.teamOwnerId, companyId),
+          eq(users.teamOwnerId, compRecord.teamOwnerId || -1),
+          eq(users.id, companyId),
+          eq(users.id, compRecord.teamOwnerId || -1)
+        )
+      );
+
+      // Also include any members explicitly registered in company_members
+      const extraMembers = await db.select({
+        id: users.id,
+        displayName: users.displayName,
+        role: users.role,
+        teamRole: companyMembers.role,
+        profilePictureUrl: users.profilePictureUrl,
+      })
+      .from(companyMembers)
+      .innerJoin(users, eq(companyMembers.userId, users.id))
+      .where(eq(companyMembers.companyId, companyId));
+
+      const memberMap = new Map<number, any>();
+      for (const m of teamMembers) memberMap.set(m.id, m);
+      for (const m of extraMembers) memberMap.set(m.id, m);
+      memberList = Array.from(memberMap.values());
+      memberUserIds = Array.from(memberMap.keys());
+    }
 
     const rawProducts = await db.select({
       product: products,
@@ -95,23 +155,28 @@ router.get(["/company/:id", "/api/company/:id", "/api-v2/company/:id"], async (r
     })
     .from(products)
     .leftJoin(categories, eq(products.categoryId, categories.id))
-    .where(eq(products.sellerId, companyId));
+    .where(or(
+      eq(products.companyId, companyId),
+      memberUserIds.length > 0 ? inArray(products.sellerId, memberUserIds) : sql`FALSE`
+    ));
 
     const companyProducts = rawProducts.map((r: any) => ({
       ...r.product,
       categoryName: r.categoryName
     }));
+
     const companyReviews = await db.query.reviews.findMany({
       where: eq(reviews.targetUserId, companyId)
     });
 
     res.json({
-      company: company[0],
-      teamMembers,
+      company: compRecord,
+      teamMembers: memberList,
       products: companyProducts,
       reviews: companyReviews
     });
   } catch (err: any) {
+    console.error("Error in /company/:id", err);
     res.status(500).json({ error: err.message });
   }
 });

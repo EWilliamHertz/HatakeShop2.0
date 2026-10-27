@@ -18,8 +18,8 @@
 }
 
 @layer base {
-  body {
-    @apply bg-canvas text-ink antialiased selection:bg-accent/20 selection:text-accent;
+  html, body {
+    @apply bg-canvas text-ink antialiased selection:bg-accent/20 selection:text-accent overflow-x-hidden;
   }
 }
 

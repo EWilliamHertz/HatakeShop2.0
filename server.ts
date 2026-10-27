@@ -903,9 +903,15 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
     }
 
     const PREVIEW_COUNT = 4;
-    const typeCondition = productType === 'graded'
-      ? eq(products.productType, 'graded')
-      : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
+    const typeCondition = productType === 'all'
+      ? sql`TRUE`
+      : productType === 'graded'
+        ? eq(products.productType, 'graded')
+        : productType === 'oem'
+          ? eq(products.offersOem, true)
+          : productType === 'sealed'
+            ? and(sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`, eq(products.offersOem, false))
+            : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
 
     const [allRows, allCats, countsRes] = await Promise.all([
       db.select({

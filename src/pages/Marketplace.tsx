@@ -587,7 +587,7 @@ export function Marketplace() {
   const selectedCategoryId = searchParams.get('category') ? parseInt(searchParams.get('category') as string, 10) : null;
   const selectedSellerId = searchParams.get('seller') ? parseInt(searchParams.get('seller') as string, 10) : null;
   const oemOnly = searchParams.get('oem') === '1' || searchParams.get('oem') === 'true';
-  const productScope = (searchParams.get('scope') as 'sealed' | 'graded' | 'all') || 'all';
+  const productScope = (searchParams.get('scope') as 'sealed' | 'oem' | 'graded' | 'all') || 'all';
   const maxPrice = searchParams.get('maxPrice') || '';
   const minMoq = searchParams.get('minMoq') || '';
   const sortBy = searchParams.get('sort') || 'company_az';
@@ -1422,7 +1422,13 @@ export function Marketplace() {
               ))}
               {productScope !== 'all' && (
                 <Chip
-                  label={productScope === 'graded' ? t('Graded Slabs') : t('Sealed & Supplies')}
+                  label={
+                    productScope === 'graded'
+                      ? t('Graded Slabs')
+                      : productScope === 'oem'
+                        ? t('OEM Factory')
+                        : t('Sealed TCG')
+                  }
                   onRemove={() => updateParams({ scope: null })}
                 />
               )}
@@ -1460,8 +1466,9 @@ export function Marketplace() {
                 {(
                   [
                     { id: 'all', label: t('All') },
-                    { id: 'sealed', label: t('Sealed & Supplies') },
-                    { id: 'graded', label: t('Graded') },
+                    { id: 'sealed', label: t('Sealed TCG') },
+                    { id: 'oem', label: t('OEM Factory') },
+                    { id: 'graded', label: t('Graded Slabs') },
                   ] as const
                 ).map(tab => {
                   const active = productScope === tab.id;
