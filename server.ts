@@ -151,8 +151,6 @@ app.get(["/cron/drip", "/api/cron/drip", "/api-v2/cron/drip"], async (req, res) 
     res.status(500).json({ error: e.message });
   }
 });
-import { requireAdmin } from "./src/middleware/roles.js";
-app.get("/api-v2/debug-firebase", requireAuth, requireAdmin, (req, res) => { import("./src/lib/firebase-admin.js").then(m => { res.json({ error: m.firebaseInitError, hasJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, hasPrivKey: !!process.env.FIREBASE_PRIVATE_KEY }) }) });
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
 // ---------------------------------------------------------------------------
