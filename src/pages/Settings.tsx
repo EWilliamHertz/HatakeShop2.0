@@ -171,7 +171,7 @@ export function Settings() {
                           <div className="flex-1 relative">
                              <input type="text" readOnly value="hk_prod_9f8c2e1b4a5d6e7f8g9h0i1j2k3l4m5n6" className="w-full pl-4 pr-12 py-3.5 bg-black/50 border border-white/10 text-cyan-300 font-mono text-sm rounded-xl outline-none focus:border-cyan-500/50 transition-colors shadow-inner selection:bg-cyan-500/30" />
                           </div>
-                          <button onClick={() => { navigator.clipboard.writeText('hk_prod_9f8c2e1b4a5d6e7f8g9h0i1j2k3l4m5n6'); alert('Copied API Key to clipboard!'); }} className="px-6 py-3.5 bg-white text-black hover:bg-slate-200 font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)] whitespace-nowrap">
+                          <button onClick={() => { navigator.clipboard.writeText('hk_prod_9f8c2e1b4a5d6e7f8g9h0i1j2k3l4m5n6'); toast.success('Copied API Key to clipboard!'); }} className="px-6 py-3.5 bg-white text-black hover:bg-slate-200 font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)] whitespace-nowrap">
                              Copy Key
                           </button>
                           <button className="px-6 py-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold rounded-xl transition-all border border-rose-500/20 hover:border-rose-500/50 whitespace-nowrap">

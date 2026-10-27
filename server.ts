@@ -606,15 +606,77 @@ const requireSeller = async (req: AuthRequest, res: express.Response, next: expr
   }
 };
 
-// Wishlist API
+// Wishlist & Procurement Planning API
+const DEFAULT_PROCUREMENT_SETTINGS = {
+  buckets: [
+    { id: "immediate", name: "Immediate Restock (7-14 Days / Express)", cap: 2500, description: "Fast turnaround for high-velocity singles, depleted booster boxes, and urgent store restocks via Air Express." },
+    { id: "q1_consolidation", name: "Quarterly Consolidation (30-45 Days / Ocean)", cap: 5000, description: "Bulk palletized case orders and restock cycles maximizing margins via consolidated sea freight." },
+    { id: "preorders", name: "Pre-Order Drop Waves", cap: 3000, description: "Upcoming expansion releases, collector booster cases, and Japanese/Chinese street-date allocations." },
+    { id: "oem_runs", name: "Factory OEM Runs & Store Supplies", cap: 4000, description: "Custom-printed matte sleeves, toploaders, branded deck boxes, and acrylic display cases." }
+  ]
+};
+
+app.get(["/wishlists/settings", "/api/wishlists/settings", "/api-v2/wishlists/settings"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) return res.status(401).json({ error: "Unauthorized" });
+    const settings = (userProfile.procurementSettings && (userProfile.procurementSettings as any).buckets)
+      ? userProfile.procurementSettings
+      : DEFAULT_PROCUREMENT_SETTINGS;
+    res.json(settings);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put(["/wishlists/settings", "/api/wishlists/settings", "/api-v2/wishlists/settings"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) return res.status(401).json({ error: "Unauthorized" });
+    const { buckets } = req.body;
+    if (!Array.isArray(buckets)) {
+      return res.status(400).json({ error: "Buckets must be an array" });
+    }
+    const newSettings = { buckets };
+    await db.update(users).set({
+      procurementSettings: newSettings
+    }).where(eq(users.id, userProfile.id));
+    res.json(newSettings);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get(["/wishlists", "/api/wishlists", "/api-v2/wishlists"], requireAuth, async (req: AuthRequest, res) => {
   try {
     const userProfile = await getUserProfile(req.user!.uid);
     if (!userProfile) {
       return res.json([]);
     }
-    const items = await db.select().from(wishlists).where(eq(wishlists.userId, userProfile.id));
-    res.json(items);
+    const items = await db.select().from(wishlists)
+      .where(eq(wishlists.userId, userProfile.id))
+      .orderBy(desc(wishlists.createdAt));
+
+    const productIds = items
+      .map(i => i.productId)
+      .filter((id): id is number => typeof id === 'number' && id > 0);
+
+    const productsMap = new Map<number, any>();
+    if (productIds.length > 0) {
+      const prods = await db.select().from(products).where(inArray(products.id, productIds));
+      for (const p of prods) {
+        productsMap.set(p.id, p);
+      }
+    }
+
+    const enriched = items.map(item => ({
+      ...item,
+      product: item.productId ? (productsMap.get(item.productId) || null) : null
+    }));
+
+    res.json(enriched);
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -625,6 +687,7 @@ app.post(["/wishlists/toggle", "/api/wishlists/toggle", "/api-v2/wishlists/toggl
   try {
     const { productId } = req.body;
     const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) return res.status(401).json({ error: "Unauthorized" });
     const existing = await db.select().from(wishlists).where(and(eq(wishlists.userId, userProfile.id), eq(wishlists.productId, productId)));
     
     if (existing.length > 0) {
@@ -634,6 +697,76 @@ app.post(["/wishlists/toggle", "/api/wishlists/toggle", "/api-v2/wishlists/toggl
       await db.insert(wishlists).values({ userId: userProfile.id, productId });
       res.json({ saved: true });
     }
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post(["/wishlists/custom", "/api/wishlists/custom", "/api-v2/wishlists/custom"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) return res.status(401).json({ error: "Unauthorized" });
+    const { customTitle, categoryTag, period, budgetGroup, targetQuantity, targetBudget, urgency, notes } = req.body;
+    if (!customTitle || !customTitle.trim()) {
+      return res.status(400).json({ error: "Custom title is required" });
+    }
+    const inserted = await db.insert(wishlists).values({
+      userId: userProfile.id,
+      productId: null,
+      customTitle: customTitle.trim(),
+      categoryTag: categoryTag || 'Chinese Pokémon',
+      period: period || 'immediate',
+      budgetGroup: budgetGroup || 'General Restock',
+      targetQuantity: Number(targetQuantity) || 1,
+      targetBudget: targetBudget !== undefined && targetBudget !== null && targetBudget !== '' ? String(targetBudget) : null,
+      urgency: urgency || 'standard',
+      notes: notes || null,
+    }).returning();
+    res.json(inserted[0]);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch(["/wishlists/:id", "/api/wishlists/:id", "/api-v2/wishlists/:id"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const itemId = parseInt(req.params.id, 10);
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) return res.status(401).json({ error: "Unauthorized" });
+    const existing = await db.select().from(wishlists).where(and(eq(wishlists.id, itemId), eq(wishlists.userId, userProfile.id)));
+    if (existing.length === 0) return res.status(404).json({ error: "Item not found" });
+
+    const { period, budgetGroup, targetQuantity, targetBudget, urgency, categoryTag, notes, customTitle } = req.body;
+    const updated = await db.update(wishlists).set({
+      ...(period !== undefined && { period }),
+      ...(budgetGroup !== undefined && { budgetGroup }),
+      ...(targetQuantity !== undefined && { targetQuantity: Number(targetQuantity) || 1 }),
+      ...(targetBudget !== undefined && { targetBudget: targetBudget !== null && targetBudget !== '' ? String(targetBudget) : null }),
+      ...(urgency !== undefined && { urgency }),
+      ...(categoryTag !== undefined && { categoryTag }),
+      ...(notes !== undefined && { notes }),
+      ...(customTitle !== undefined && { customTitle }),
+    }).where(eq(wishlists.id, itemId)).returning();
+
+    res.json(updated[0]);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete(["/wishlists/:id", "/api/wishlists/:id", "/api-v2/wishlists/:id"], requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const itemId = parseInt(req.params.id, 10);
+    const userProfile = await getUserProfile(req.user!.uid);
+    if (!userProfile) return res.status(401).json({ error: "Unauthorized" });
+    const existing = await db.select().from(wishlists).where(and(eq(wishlists.id, itemId), eq(wishlists.userId, userProfile.id)));
+    if (existing.length === 0) return res.status(404).json({ error: "Item not found" });
+
+    await db.delete(wishlists).where(eq(wishlists.id, itemId));
+    res.json({ success: true, deletedId: itemId });
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });

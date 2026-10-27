@@ -13,7 +13,7 @@ import { WorkspaceProvider } from './components/WorkspaceContext.tsx';
 import { CommandPalette } from "./components/CommandPalette.tsx";
 import { CartProvider } from './components/SampleCart.tsx';
 import { CurrencyProvider } from './components/CurrencyProvider.tsx';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { Layout } from './components/Layout.tsx';
 import { CookieConsent } from './components/CookieConsent.tsx';
 import { Home } from './pages/Home.tsx';
@@ -66,7 +66,7 @@ function VerificationOverlay({ user }: { user: any }) {
        setSent(true);
      } catch (e: any) {
        console.error(e);
-       alert("Error sending verification email.");
+       toast.error("Error sending verification email.");
      } finally {
        setSending(false);
      }

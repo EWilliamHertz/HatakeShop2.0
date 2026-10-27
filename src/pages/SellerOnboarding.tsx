@@ -3,6 +3,7 @@ import { useAuth } from '../components/AuthContext.tsx';
 import { useNavigate } from 'react-router-dom';
 import { Store, Building2, FileText, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 export function SellerOnboarding() {
   const { user, dbUser } = useAuth();
@@ -52,7 +53,7 @@ export function SellerOnboarding() {
       
       setStep(4);
     } catch (e: any) {
-      alert("Error Details: " + e.message);
+      toast.error("Error Details: " + e.message);
     }
   };
 

@@ -55,6 +55,7 @@ export const users = pgTable('users', {
   notificationEmails: jsonb('notification_emails').default(sql`'[]'::jsonb`),
   bannerUrl: text('banner_url'),
   activeCompanyId: integer('active_company_id'), // Added for multi-tenant context
+  procurementSettings: jsonb('procurement_settings').default(sql`'{"buckets": []}'::jsonb`),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -466,7 +467,15 @@ export const productTranslationsRelations = relations(productTranslations, ({ on
 export const wishlists = pgTable('wishlists', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull(),
-  productId: integer('product_id').notNull(),
+  productId: integer('product_id'),
+  period: text('period').default('immediate'),
+  budgetGroup: text('budget_group').default('General Restock'),
+  targetQuantity: integer('target_quantity').default(1),
+  targetBudget: numeric('target_budget', { precision: 10, scale: 2 }),
+  urgency: text('urgency').default('standard'),
+  categoryTag: text('category_tag'),
+  notes: text('notes'),
+  customTitle: text('custom_title'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

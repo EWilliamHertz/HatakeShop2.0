@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext.tsx';
 import { Save, Image as ImageIcon, CheckCircle, Search, Edit2, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function AdminSverigeTab() {
   const { user } = useAuth();
@@ -67,7 +68,7 @@ export function AdminSverigeTab() {
       setEditImages([...editImages, ...urls]);
     } catch (err) {
       console.error(err);
-      alert('Upload failed');
+      toast.error('Upload failed');
     } finally {
       setUploading(false);
     }

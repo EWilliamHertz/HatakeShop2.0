@@ -405,7 +405,7 @@ const CartDrawer = () => {
         </div>
 
         {activeItems.length > 0 && (
-          <div className="p-6 border-t border-slate-700 bg-slate-800 space-y-3">
+          <div className="p-4 sm:p-6 pb-8 sm:pb-6 border-t border-slate-700 bg-slate-800 space-y-3">
             {!isSverige && (
               <>
                 <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-700 mb-2 cursor-pointer" onClick={() => setUseNetTerms(!useNetTerms)}>

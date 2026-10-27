@@ -227,9 +227,9 @@ const mainNavItems: { name: string; label: string; path: string; icon: any; prot
         )}
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pt-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pt-4 pb-24 md:pb-8">
         <Outlet />
-            </main>
+      </main>
       <footer className="mt-auto bg-slate-950 border-t border-slate-800 py-8 text-sm relative">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           
@@ -270,6 +270,70 @@ const mainNavItems: { name: string; label: string; path: string; icon: any; prot
           
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation Bar for 1-Tap Thumb Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-2 flex items-center justify-around shadow-2xl">
+        <Link
+          to="/"
+          className={cn(
+            "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-colors",
+            location.pathname === '/' ? "text-cyan-400 font-bold" : "text-slate-400 hover:text-slate-200"
+          )}
+        >
+          <Home className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Home</span>
+        </Link>
+
+        <Link
+          to="/marketplace"
+          className={cn(
+            "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-colors",
+            location.pathname.startsWith('/marketplace') ? "text-cyan-400 font-bold" : "text-slate-400 hover:text-slate-200"
+          )}
+        >
+          <Store className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Market</span>
+        </Link>
+
+        <Link
+          to="/wishlist"
+          className={cn(
+            "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-colors",
+            location.pathname.startsWith('/wishlist') ? "text-cyan-400 font-bold" : "text-slate-400 hover:text-slate-200"
+          )}
+        >
+          <Heart className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Wishlist</span>
+        </Link>
+
+        <Link
+          to={user ? "/rfq" : "/login"}
+          className={cn(
+            "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-colors",
+            location.pathname.startsWith('/rfq') ? "text-cyan-400 font-bold" : "text-slate-400 hover:text-slate-200"
+          )}
+        >
+          <MessageSquare className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">RFQ</span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setCartOpen(true)}
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-slate-400 hover:text-slate-200 relative transition-colors"
+        >
+          <div className="relative">
+            <ShoppingBag className="w-5 h-5" />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {cartItems.length}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] mt-0.5">Cart</span>
+        </button>
+      </nav>
+
       <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
