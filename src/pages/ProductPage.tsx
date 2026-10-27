@@ -33,7 +33,7 @@ export function ProductPage() {
 
   return (
     <div className="pt-24 min-h-screen bg-slate-950">
-      <ProductModal product={product} onClose={() => navigate(-1)} />
+      <ProductModal product={product} onClose={() => (window.history.length > 1 ? navigate(-1) : navigate('/marketplace'))} />
     </div>
   );
 }

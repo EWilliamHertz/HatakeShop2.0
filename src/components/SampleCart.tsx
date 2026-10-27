@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ShoppingCart, X, Package, Trash2, Send, Loader2 } from 'lucide-react';
+import { ShoppingCart, X, Package, Trash2, Send, Loader2, Minus, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext.tsx';
 
@@ -11,12 +12,21 @@ export interface CartItem {
   sellerId: number;
   quantity?: number;
   unitCost?: number;
+  moq?: number;
 }
+
+// Accept legacy `supplierId` / `supplierName` callers and normalize to seller* fields
+const normalizeCartItem = (item: any): CartItem => ({
+  ...item,
+  sellerId: Number(item.sellerId ?? item.supplierId ?? 0),
+  sellerName: item.sellerName || item.supplierName || 'Supplier',
+});
 
 interface CartContextType {
   items: CartItem[];
   addItem: (item: CartItem) => void;
   removeItem: (productId: number) => void;
+  updateQuantity: (productId: number, quantity: number) => void;
   clearCart: () => void;
   sverigeItems: CartItem[];
   addSverigeItem: (item: CartItem) => void;
@@ -30,6 +40,7 @@ const CartContext = createContext<CartContextType>({
   items: [],
   addItem: () => {},
   removeItem: () => {},
+  updateQuantity: () => {},
   clearCart: () => {},
   sverigeItems: [],
   addSverigeItem: () => {},
@@ -92,7 +103,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const addItem = (item: CartItem) => {
+  const addItem = (rawItem: CartItem) => {
+    const item = normalizeCartItem(rawItem);
     setItems(prev => {
       const exists = prev.find(i => String(i.productId) === String(item.productId));
       if (exists) {
@@ -105,6 +117,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeItem = (productId: number) => {
     setItems(prev => prev.filter(i => String(i.productId) !== String(productId)));
+  };
+
+  const updateQuantity = (productId: number, quantity: number) => {
+    const q = Math.max(1, Math.floor(Number(quantity) || 1));
+    setItems(prev => prev.map(i => String(i.productId) === String(productId) ? { ...i, quantity: q } : i));
   };
 
   const clearCart = () => setItems([]);
@@ -128,7 +145,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <CartContext.Provider value={{ 
-      items, addItem, removeItem, clearCart, 
+      items, addItem, removeItem, updateQuantity, clearCart, 
       sverigeItems, addSverigeItem, removeSverigeItem, clearSverigeCart,
       isCartOpen, setCartOpen 
     }}>
@@ -139,7 +156,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 const CartDrawer = () => {
-  const { items, sverigeItems, isCartOpen, setCartOpen, removeItem, removeSverigeItem, clearCart, clearSverigeCart } = useCart();
+  const { items, sverigeItems, isCartOpen, setCartOpen, removeItem, removeSverigeItem, updateQuantity, clearCart, clearSverigeCart } = useCart();
   const { user } = useAuth();
   const [useNetTerms, setUseNetTerms] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -182,11 +199,11 @@ const CartDrawer = () => {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error || 'Checkout failed');
+        toast.error(data.error || 'Checkout failed');
       }
     } catch (err) {
       console.error(err);
-      alert('Checkout failed');
+      toast.error('Checkout failed');
     } finally {
       setIsCheckingOut(false);
     }
@@ -218,20 +235,21 @@ const CartDrawer = () => {
         body: JSON.stringify({ items }),
       });
       if (response.ok) {
+        toast.success('Bulk quote request sent to suppliers');
         handleClear();
         navigate('/rfq');
         setCartOpen(false);
       } else {
-        alert('Failed to request bulk quote');
+        toast.error('Failed to request bulk quote');
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to request bulk quote');
+      toast.error('Failed to request bulk quote');
     }
   };
 
   // Group by seller
-  const sellers = Array.from(new Set(activeItems.map(i => i.sellerName)));
+  const sellers = Array.from(new Set(activeItems.map(i => i.sellerName || 'Supplier')));
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
@@ -239,7 +257,7 @@ const CartDrawer = () => {
       <div className="relative w-full max-w-md bg-slate-800 h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         <div className="p-6 border-b border-slate-700 flex items-center justify-between bg-slate-900">
           <h2 className="text-xl font-semibold tracking-tight font-display text-slate-100 flex items-center">
-            <Package className="w-5 h-5 mr-2 text-[#ffcc00]" />
+            <Package className="w-5 h-5 mr-2 text-cyan-400" />
             {isSverige ? 'Svenska Butik Cart' : 'B2B Wholesale Cart'} ({activeItems.length})
           </h2>
           <div className="flex items-center gap-2">
@@ -325,15 +343,19 @@ const CartDrawer = () => {
             <div className="text-center text-slate-400 mt-20 flex flex-col items-center">
               <ShoppingCart className="w-12 h-12 text-slate-400 mb-4" />
               <p>Your cart is empty.</p>
-              <button onClick={() => setCartOpen(false)} className="mt-4 text-[#ffcc00] font-semibold tracking-tight hover:underline">Continue Browsing</button>
+              <button onClick={() => setCartOpen(false)} className="mt-4 text-cyan-400 font-semibold tracking-tight hover:underline">Continue Browsing</button>
             </div>
           ) : (
             sellers.map(seller => {
-              const sellerItems = activeItems.filter(i => i.sellerName === seller);
+              const sellerItems = activeItems.filter(i => (i.sellerName || 'Supplier') === seller);
               return (
                 <div key={seller} className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-none">
-                  <div className="bg-slate-900 px-4 py-3 border-b border-slate-700 font-semibold tracking-tight text-slate-400 text-sm">
-                    {seller}
+                  <div className="bg-slate-900 px-4 py-3 border-b border-slate-700 font-semibold tracking-tight text-slate-400 text-sm flex items-center justify-between gap-3">
+                    <span className="truncate">{seller}</span>
+                    {(() => {
+                      const sub = sellerItems.reduce((acc, i) => acc + Number(i.unitCost || 0) * (i.quantity || 1), 0);
+                      return sub > 0 ? <span className="text-xs text-slate-300 shrink-0">{isSverige ? `${sub.toFixed(2)} kr` : `€${sub.toFixed(2)}`}</span> : null;
+                    })()}
                   </div>
                   <div className="divide-y divide-slate-100">
                     {sellerItems.map(item => (
@@ -348,12 +370,28 @@ const CartDrawer = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold tracking-tight text-slate-100 truncate hover:text-cyan-400 transition-colors">{item.title}</p>
-                            <p className="text-[11px] text-slate-400 tracking-wider font-semibold mt-1 flex gap-2">
-                               <span>QTY: {item.quantity || 1}</span>
-                               {item.unitCost && <span className="text-cyan-400">| {isSverige ? `${Number(item.unitCost).toFixed(2)} kr` : `€${Number(item.unitCost).toFixed(2)}`} ea</span>}
+                            <p className="text-[11px] text-slate-400 tracking-wider font-semibold mt-1 flex flex-wrap gap-x-2">
+                              {item.unitCost ? <span className="text-cyan-400">{isSverige ? `${Number(item.unitCost).toFixed(2)} kr` : `€${Number(item.unitCost).toFixed(2)}`} ea</span> : null}
+                              {!isSverige && item.moq ? (
+                                <span className={(item.quantity || 1) >= item.moq ? 'text-emerald-400' : 'text-amber-400'}>
+                                  {(item.quantity || 1) >= item.moq ? 'Wholesale' : `Sample · MOQ ${item.moq}`}
+                                </span>
+                              ) : null}
                             </p>
-                          </div>
-                        </div>
+                            </div>
+                            </div>
+                            {!isSverige ? (
+                              <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg shrink-0">
+                                <button aria-label="Decrease quantity" onClick={() => updateQuantity(item.productId, (item.quantity || 1) - 1)} className="p-1.5 text-slate-400 hover:text-white"><Minus className="w-3 h-3" /></button>
+                                <input
+                                  type="number" min={1} value={item.quantity || 1}
+                                  onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value, 10))}
+                                  aria-label="Quantity"
+                                  className="w-12 bg-transparent text-center text-sm text-slate-100 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <button aria-label="Increase quantity" onClick={() => updateQuantity(item.productId, (item.quantity || 1) + 1)} className="p-1.5 text-slate-400 hover:text-white"><Plus className="w-3 h-3" /></button>
+                              </div>
+                            ) : <span className="text-xs text-slate-400 shrink-0">x{item.quantity || 1}</span>}
                         <button onClick={() => handleRemove(item.productId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-800 rounded-xl transition-colors shrink-0">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -414,7 +452,7 @@ const CartDrawer = () => {
                   </div>
                   <div className="border-t border-slate-700 pt-1.5 flex justify-between text-slate-200 font-bold text-sm">
                     <span>{isSverige ? 'Totalt beräknat' : 'Estimated Total'}</span>
-                    <span className="text-[#ffcc00]">
+                    <span className="text-cyan-300">
                       {isSverige ? `${(subtotal + baseShipping).toFixed(2)} kr` : `€${(subtotal + baseShipping).toFixed(2)}`}
                     </span>
                   </div>

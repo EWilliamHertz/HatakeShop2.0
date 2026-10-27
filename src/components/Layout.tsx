@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { FeedbackModal } from './FeedbackModal';
 import { useCart } from './SampleCart.tsx';
-import { Package, Search, MessageSquare, Settings, LogIn, LogOut, Hexagon, Shield, Store, Menu, X, ChevronDown, ShoppingCart, TrendingUp, Users, Home, Bot } from 'lucide-react';
+import { Package, Search, MessageSquare, Settings, LogIn, LogOut, Hexagon, Shield, Store, Menu, X, ChevronDown, ShoppingCart, TrendingUp, Building2, Newspaper, Globe, Heart, Home, Bot, ShoppingBag } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Notifications } from './Notifications.tsx';
@@ -26,13 +26,16 @@ export function Layout() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [logoMenuOpen, setLogoMenuOpen] = useState(false);
 
-const mainNavItems = [
-    { name: 'Home', path: '/', icon: Home },
-    { name: 'AI Sourcing Agent', path: '/onboarding', icon: Bot },
-    { name: 'Directory', path: '/suppliers', icon: Users },
-    { name: 'Marketplace', path: '/marketplace', icon: Store },
-    { name: 'Feed', path: '/feed', icon: Users },
-    { name: 'Messages', path: '/rfq', icon: MessageSquare, protected: true },
+const mainNavItems: { name: string; label: string; path: string; icon: any; protected?: boolean }[] = [
+    { name: 'Home', label: 'Home', path: '/', icon: Home },
+    { name: 'Marketplace', label: 'Marketplace', path: '/marketplace', icon: Store },
+    { name: 'Directory', label: 'Directory', path: '/suppliers', icon: Building2 },
+    { name: 'Launch Ledger', label: 'Ledger', path: '/leads', icon: Globe },
+    { name: 'Feed', label: 'Feed', path: '/feed', icon: Newspaper },
+    { name: 'Insights', label: 'Insights', path: '/insights', icon: TrendingUp },
+    { name: 'AI Sourcing Agent', label: 'AI Agent', path: '/onboarding', icon: Bot },
+    { name: 'Wishlist', label: 'Wishlist', path: '/wishlist', icon: Heart, protected: true },
+    { name: 'Messages', label: 'Messages', path: '/rfq', icon: MessageSquare, protected: true },
   ];
 
   const managementNavItems = [
@@ -52,23 +55,25 @@ const mainNavItems = [
                 Hatake<span className="text-cyan-400">.Shop</span>
               </Link>
               <WorkspaceSwitcher />
-              <nav className="hidden md:flex space-x-1">
+              <nav className="hidden md:flex space-x-0.5">
                 {mainNavItems.map((item) => {
                   if (item.protected && !user) return null;
-                  const active = location.pathname === item.path;
+                  const active = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
                   return (
                     <Link
                       key={item.path}
                       to={item.path}
                       title={t(item.name)}
+                      aria-label={t(item.name)}
                       className={cn(
-                        "p-2.5 rounded-lg flex items-center transition-all duration-200",
-                        active 
-                          ? "bg-accent/10 text-[#ffcc00]" 
-                          : "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+                        "px-2.5 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium transition-all duration-200",
+                        active
+                          ? "bg-cyan-500/10 text-cyan-300"
+                          : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
                       )}
-                    >
-                      <item.icon className="w-5 h-5" />
+                      >
+                      <item.icon className="w-[18px] h-[18px] shrink-0" />
+                      <span className="hidden xl:inline">{t(item.label)}</span>
                     </Link>
                   )
                 })}
@@ -118,7 +123,7 @@ const mainNavItems = [
                   <button onClick={() => setCartOpen(true)} className="relative p-2.5 text-slate-400 hover:text-slate-100 hover:bg-slate-700 rounded-full transition-colors">
                     <ShoppingCart className="w-5 h-5" />
                     {cartItems.length > 0 && (
-                      <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-white rounded-full"></span>
+                      <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-slate-950 rounded-full"></span>
                     )}
                   </button>
                   <Notifications />
@@ -167,6 +172,12 @@ const mainNavItems = [
             {/* Mobile Menu Simplified */}
             <div className="md:hidden flex items-center space-x-3">
                {user && <Notifications />}
+               <button onClick={() => setCartOpen(true)} aria-label={t('Open cart')} className="relative p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-700 rounded-lg transition-colors">
+                 <ShoppingBag className="w-6 h-6" />
+                 {cartItems.length > 0 && (
+                   <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{cartItems.length}</span>
+                 )}
+               </button>
                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-400 hover:bg-slate-700 rounded-lg transition-colors">
                  {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                </button>
@@ -188,10 +199,10 @@ const mainNavItems = [
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     "px-4 py-3 rounded-xl text-sm font-semibold tracking-tight flex items-center space-x-3 transition-all",
-                    active ? "bg-slate-700 text-slate-100" : "text-slate-400 hover:bg-slate-900"
+                    active ? "bg-cyan-500/10 text-cyan-300" : "text-slate-400 hover:bg-slate-900"
                   )}
                 >
-                  <item.icon className={cn("w-5 h-5", active ? "text-slate-100" : "text-slate-400")} />
+                  <item.icon className={cn("w-5 h-5", active ? "text-cyan-300" : "text-slate-400")} />
                   <span>{t(item.name)}</span>
                 </Link>
               )

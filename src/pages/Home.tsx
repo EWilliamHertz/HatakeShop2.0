@@ -3,37 +3,16 @@ import React, { useEffect, useState } from 'react';
 import { QuickSearchResults } from '../components/QuickSearchResults.tsx';
 
 import { useQuery } from '@tanstack/react-query';
-import { BadgeCheck, PackageSearch, Filter, MapPin, Building2, Package, Tag, X, ChevronRight, ChevronLeft, Star, Users, Store } from 'lucide-react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { BadgeCheck, PackageSearch, Filter, MapPin, Building2, Package, Tag, X, ChevronRight, ChevronLeft, Star, Users, Store, Bot } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { DigitalSlab } from '../components/DigitalSlab.tsx';
 import { useAuth } from '../components/AuthContext.tsx';
 import { useCart } from '../components/SampleCart.tsx';
 import { cn } from '../components/Layout.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
-import { LandedCostEstimator } from '../components/LandedCostEstimator.tsx';
+import { ProductModal } from '../components/ProductModal.tsx';
 import { BrowseSections } from '../components/BrowseSections.tsx';
 import { SkeletonGrid } from '../components/SkeletonGrid.tsx';
-import { ResponsiveContainer, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
-
-const generatePriceTrend = (basePrice: number) => {
-  return Array.from({ length: 90 }, (_, i) => {
-    const daysAgo = 90 - i;
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    
-    const volatility = 0.05;
-    const noise = (Math.random() - 0.5) * volatility * basePrice;
-    const price = Math.max(0, basePrice + noise + (Math.sin(i / 10) * basePrice * 0.02));
-    const quantity = Math.floor(Math.random() * 500) + 50;
-
-    return {
-      date: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      price: Number(price.toFixed(2)),
-      quantity
-    };
-  });
-};
-
 
 const CardImageCarousel = ({ images, title }: { images: string[], title: string }) => {
   const [idx, setIdx] = React.useState(0);
@@ -58,7 +37,7 @@ const CardImageCarousel = ({ images, title }: { images: string[], title: string 
 
   return (
     <div className="relative w-full h-full group overflow-hidden">
-      <img src={images[idx]} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+      <img src={images[idx]} alt={title} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
       {images.length > 1 && (
         <>
           <button 
@@ -86,9 +65,6 @@ const CardImageCarousel = ({ images, title }: { images: string[], title: string 
 };
 
 export function Home() {
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return localStorage.getItem('onboardingCompleted') !== 'true';
-  });
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { formatPrice } = useCurrency();
@@ -101,6 +77,14 @@ export function Home() {
   });
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [quickSearchTerm, setQuickSearchTerm] = useState("");
+  useEffect(() => {
+    const h = setTimeout(() => {
+      const v = searchInput.trim();
+      setQuickSearchTerm(v.length >= 2 ? v : "");
+    }, 250);
+    return () => clearTimeout(h);
+  }, [searchInput]);
   
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", productType: "sealed", sortBy: "recommended" });
@@ -236,15 +220,6 @@ export function Home() {
       } catch { return { sentCount: 0, totalGoal: 0 }; }
     }
   });
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [selectedQuantity, setSelectedQuantity] = useState<number>(0);
-  
-  useEffect(() => {
-     if (selectedProduct) {
-        setSelectedQuantity(selectedProduct.product.moq || 1);
-     }
-  }, [selectedProduct]);
-  
   const formatTiers = (tiers: any) => {
     let parsedTiers = tiers;
     if (typeof tiers === 'string') {
@@ -282,7 +257,6 @@ export function Home() {
     return (
       <div key={product.id || pIdx} onClick={() => {
           setSelectedProduct({ product, seller });
-          setActiveImageIndex(0);
       }} className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full">
         <div className="relative aspect-[4/3] bg-slate-800 overflow-hidden">
           {product.productType === 'graded' ? (
@@ -308,6 +282,12 @@ export function Home() {
               {t('MOQ')}: {product.moq}{product.offersOem ? ` Gen / ${product.oemMoq || product.moq} OEM` : ''}
             </span>
           </div>
+          {product.offersOem && (
+            <span className="absolute top-3 right-3 px-2 py-0.5 bg-cyan-500/90 text-slate-950 text-[10px] font-bold uppercase rounded-full">OEM</span>
+          )}
+          {images.length > 1 && (
+            <span className="absolute bottom-3 right-3 px-2 py-0.5 bg-slate-900/80 backdrop-blur-sm text-slate-300 text-[10px] font-semibold rounded-full border border-slate-700">📷 {images.length}</span>
+          )}
         </div>
         <div className="p-5 flex-1 flex flex-col">
           <h3 className="font-semibold tracking-tight text-slate-200 line-clamp-1 mb-1 group-hover:text-cyan-400 transition-colors flex items-center gap-2">
@@ -342,36 +322,8 @@ export function Home() {
     );
   };
 
-  const calculatePrice = () => {
-     if (!selectedProduct?.product) return null;
-     const product = selectedProduct.product;
-     const tiers = product.tieredPricing as { quantity: number, unitPrice: number, price?: number }[];
-     if (Array.isArray(tiers) && tiers.length > 0) {
-     
-     // Sort descending to find highest tier met
-     const sorted = [...tiers].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
-     for (const tier of sorted) {
-        if (selectedQuantity >= (tier.quantity ?? 0)) {
-           return Number(tier.price ?? tier.unitPrice);
-        }
-     }
-     
-     // If below lowest tier but above moq, maybe return the lowest tier price or null
-     return Number(sorted[sorted.length - 1].price ?? sorted[sorted.length - 1].unitPrice);
-     }
-     // No tiers — fall back to the base unit cost so a price still shows
-     return lowestUnitPrice(product);
-  };
-  
-  const currentPrice = calculatePrice();
-
-  const priceTrendData = React.useMemo(() => {
-     if (!selectedProduct) return [];
-     return generatePriceTrend(Number(selectedProduct.product.unitCost || currentPrice || 10));
-  }, [selectedProduct?.product?.id]);
-
   const { user } = useAuth();
-  const { addItem, items: cartItems } = useCart();
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -382,10 +334,6 @@ export function Home() {
     }
   }
 
-
-  if (showOnboarding) {
-    return <Navigate to="/onboarding" replace />;
-  }
 
   return (
     <div className="bg-slate-950 min-h-screen pb-20 flex flex-col">
@@ -428,6 +376,11 @@ export function Home() {
               </div>
               <div className="shrink-0 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
             </Link>
+            <div>
+              <Link to="/onboarding" className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors">
+                <Bot className="w-4 h-4" /> {t('Not sure where to start? Ask the AI Sourcing Agent')} →
+              </Link>
+            </div>
           </div>
 
           {/* Command Palette Search */}
@@ -451,10 +404,10 @@ export function Home() {
           </div>
 
           {/* Quick Search Results */}
-          <QuickSearchResults search={search} onSelectProduct={(p) => setSelectedProduct({ product: p, seller: p.seller })} />
+          <QuickSearchResults search={quickSearchTerm} onSelectProduct={(p) => setSelectedProduct({ product: p, seller: p.seller })} />
 
           {/* Bento Box Features */}
-          {!search && (
+          {!quickSearchTerm && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mx-auto mt-12">
             
             {/* Bento Card 1: Sponsored Products (Takes up 2 columns) */}
@@ -487,7 +440,7 @@ export function Home() {
                         let images = [];
                         try { images = Array.isArray(sp.images) ? sp.images : JSON.parse(sp.images || '[]'); } catch(e) {}
                         return (
-                          <div key={idx} onClick={() => { setSelectedProduct({ product: sp, seller: sp.seller }); setActiveImageIndex(0); }} className="bg-slate-950/50 border border-white/5 rounded-2xl p-3 flex flex-col gap-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all cursor-pointer group/card h-full">
+                          <div key={idx} onClick={() => { setSelectedProduct({ product: sp, seller: sp.seller }); }} className="bg-slate-950/50 border border-white/5 rounded-2xl p-3 flex flex-col gap-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all cursor-pointer group/card h-full">
                             <div className="relative overflow-hidden rounded-xl">
                               <img src={images[0] || "https://images.unsplash.com/photo-1615592389070-bcc97e05ad01?auto=format&fit=crop&w=400&q=80"} alt={sp.title} className="w-full h-28 object-cover group-hover/card:scale-110 transition-transform duration-700" />
                             </div>
@@ -680,7 +633,7 @@ export function Home() {
             <div 
               key={p.product.id || i} 
               className="group bg-slate-800 border border-slate-700 rounded-2xl p-0 overflow-hidden hover:border-slate-700 hover:shadow-lg hover:shadow-cyan-900/10 transition-all duration-300 cursor-pointer flex flex-col h-full w-full"
-              onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}
+              onClick={() => { setSelectedProduct(p); }}
             >
               <div className="aspect-[4/3] bg-slate-800 flex items-center justify-center overflow-hidden relative">
                 
@@ -706,6 +659,12 @@ export function Home() {
                   <div className="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-tight text-slate-400 uppercase tracking-wide border border-slate-700 shadow-none">
                     {p.product.originType}
                   </div>
+                )}
+                {p.product.offersOem && (
+                  <div className="absolute top-3 left-3 bg-cyan-500/90 text-slate-950 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide">OEM</div>
+                )}
+                {Array.isArray(p.product.images) && p.product.images.length > 1 && (
+                  <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-semibold text-slate-300 border border-slate-700">📷 {p.product.images.length}</div>
                 )}
               </div>
               <div className="p-5 flex-1 flex flex-col">
@@ -752,9 +711,9 @@ export function Home() {
                          Quote
                        </Link>
                     ) : (
-                       <button className="btn-secondary">
+                       <Link to="/login" className="btn-secondary">
                          Sign in
-                       </button>
+                       </Link>
                     )}
                   </div>
                 </div>
@@ -792,258 +751,12 @@ export function Home() {
       </div>
       )}
       {selectedProduct && (
-        <div 
-           className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
-           onClick={() => setSelectedProduct(null)}
-        >
-          <div 
-             className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row border border-slate-700"
-             onClick={(e) => e.stopPropagation()}
-          >
-            <div className="md:w-1/2 h-64 md:h-auto bg-slate-950 flex flex-col relative">
-              <div className="flex-1 flex items-center justify-center relative group">
-                {selectedProduct.product.productType === 'graded' ? (
-                  <div className="absolute inset-0 flex items-center justify-center p-8 bg-slate-900">
-                    <div className="w-full h-full max-h-[500px] max-w-[350px]">
-                      <DigitalSlab 
-                        company={selectedProduct.product.gradingCompany}
-                        grade={selectedProduct.product.grade}
-                        certNumber={selectedProduct.product.certNumber}
-                        cardName={selectedProduct.product.title}
-                        cardSet={selectedProduct.product.cardSet}
-                        cardNumber={selectedProduct.product.cardNumber}
-                        year={selectedProduct.product.cardYear}
-                        variant={selectedProduct.product.cardVariant}
-                        image={selectedProduct.product.images && selectedProduct.product.images.length > 0 ? selectedProduct.product.images[activeImageIndex] : undefined}
-                      />
-                    </div>
-                    {selectedProduct.product.images && selectedProduct.product.images.length > 1 && (
-                      <>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setActiveImageIndex((prev: number) => (prev > 0 ? prev - 1 : selectedProduct.product.images.length - 1)); }}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-200 shadow-none transition-all z-10"
-                        >
-                          <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setActiveImageIndex((prev: number) => (prev < selectedProduct.product.images.length - 1 ? prev + 1 : 0)); }}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-200 shadow-none transition-all z-10"
-                        >
-                          <ChevronRight className="w-5 h-5" />
-                        </button>
-                        <div className="absolute bottom-4 left-1/2 -translate-y-1/2 flex gap-1.5 z-10">
-                          {(selectedProduct.product.images || []).map((_: any, i: number) => (
-                            <div key={i} className={`w-2 h-2 rounded-full ${i === activeImageIndex ? 'bg-cyan-500' : 'bg-slate-600'}`} />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ) : selectedProduct.product.images && selectedProduct.product.images.length > 0 ? (
-                  <>
-                    <img 
-                      src={selectedProduct.product.images[activeImageIndex]} 
-                      alt={selectedProduct.product.title} 
-                      className="w-full h-full object-cover absolute inset-0 opacity-90"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
-                    {selectedProduct.product.images.length > 1 && (
-                      <>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setActiveImageIndex((prev: number) => (prev > 0 ? prev - 1 : selectedProduct.product.images.length - 1)); }}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-slate-900/40 hover:bg-slate-900/80 text-white p-2 rounded-full backdrop-blur-md opacity-90 hover:opacity-100 transition-all z-20"
-                        >
-                          <ChevronLeft className="w-6 h-6" />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setActiveImageIndex((prev: number) => (prev < selectedProduct.product.images.length - 1 ? prev + 1 : 0)); }}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-slate-900/40 hover:bg-slate-900/80 text-white p-2 rounded-full backdrop-blur-md opacity-90 hover:opacity-100 transition-all z-20"
-                        >
-                          <ChevronRight className="w-6 h-6" />
-                        </button>
-                        <div className="absolute bottom-6 left-0 right-0 flex justify-center space-x-3 z-10">
-                          {(Array.isArray(selectedProduct.product.images) ? selectedProduct.product.images : []).map((_: any, idx: number) => (
-                            <button 
-                              key={idx}
-                              onClick={(e) => { e.stopPropagation(); setActiveImageIndex(idx); }}
-                              className={cn("w-2.5 h-2.5 rounded-full transition-all duration-300 shadow-none", activeImageIndex === idx ? "bg-cyan-500 scale-125" : "bg-slate-500/50 hover:bg-slate-400")}
-                            />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <PackageSearch className="w-24 h-24 text-slate-400" />
-                )}
-              </div>
-            </div>
-            
-            <div className="md:w-1/2 flex flex-col max-h-[60vh] md:max-h-[90vh] overflow-y-auto bg-slate-900">
-              <div className="p-8 border-b border-slate-800 flex justify-between items-start sticky top-0 bg-slate-900/95 backdrop-blur-xl z-20">
-                <div className="pr-4">
-                  <h2 className="text-3xl font-bold tracking-tight text-slate-100 mb-2">{selectedProduct.product.title}</h2>
-                  <div className="flex items-center text-sm font-medium text-slate-400">
-                    <Building2 className="w-4 h-4 mr-2 text-slate-400" />
-                    <Link to={`/company/${selectedProduct.seller?.id || ""}`} className="hover:text-cyan-400 transition-colors">{selectedProduct.seller?.companyName || "Supplier"}</Link>{selectedProduct.seller?.verificationStatus === 'verified' && <BadgeCheck className="w-4 h-4 ml-1.5 text-cyan-500" />}
-                  </div>
-                </div>
-                <button onClick={() => setSelectedProduct(null)} className="p-2.5 text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-full transition-all active:scale-95 border border-slate-700 shrink-0">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="p-8 space-y-8 flex-1">
-                <div>
-                  <h3 className="text-[11px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest mb-3">{t('Description')}</h3>
-                  <p className="text-slate-400 whitespace-pre-line leading-relaxed font-light text-[15px]">{selectedProduct.product.description}</p>
-                </div>
-                
-                <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                  <h3 className="text-[11px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest mb-4">{t('Sourcing Details')}</h3>
-                  <div className="space-y-4 text-[15px]">
-                    <div className="flex justify-between items-center pb-3 border-b border-slate-700/50">
-                      <span className="text-slate-400">{t('Primary Origin')}</span>
-                      <span className="font-semibold text-slate-200 bg-slate-800 px-3 py-1 rounded-xl border border-slate-700/50 shadow-none">{selectedProduct.product.originType || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-slate-700/50">
-                      <span className="text-slate-400">{t('Base MOQ')}</span>
-                      <span className="font-semibold text-slate-200">{selectedProduct.product.moq} units</span>
-                    </div>
-                                        <div className="flex justify-between items-center">
-                      <span className="text-slate-400">{t('Lead Time')}</span>
-                      <span className="font-semibold text-slate-200">{selectedProduct.product.leadTimeDays} days</span>
-                    </div>
-                    {selectedProduct.product.certifications && selectedProduct.product.certifications.length > 0 && (
-                      <div className="flex justify-between items-center pt-3 border-t border-slate-700/50">
-                        <span className="text-slate-400">{t('Certifications')}</span>
-                        <div className="flex flex-wrap justify-end gap-1">
-                          {selectedProduct.product.certifications.map((c: string, i: number) => (
-                            <span key={i} className="text-xs font-semibold tracking-tight text-cyan-600 bg-cyan-950 px-2 py-1 rounded border border-cyan-900">{c}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-8 mb-8">
-                   <h3 className="text-[11px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest mb-4">{t('90-Day Wholesale Price Trend')}</h3>
-                   <div className="h-64 w-full bg-slate-800/50 rounded-xl border border-slate-700 p-4">
-                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={priceTrendData}>
-                           <defs>
-                              <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                                 <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
-                                 <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                              </linearGradient>
-                           </defs>
-                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
-                           <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} minTickGap={30} />
-                           <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => formatPrice(val)} domain={['auto', 'auto']} />
-                           <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                           <Tooltip 
-                             contentStyle={{ borderRadius: '12px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                             formatter={(value: number, name: string) => [name === 'price' ? formatPrice(value) : `${value} units`, name === 'price' ? 'Price' : 'Purchased Qty']}
-                           />
-                           <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#94a3b8' }}/>
-                           <Area yAxisId="left" type="monotone" dataKey="price" stroke="#06b6d4" strokeWidth={2} fill="url(#colorPrice)" name="price" />
-                           <Line yAxisId="right" type="monotone" dataKey="quantity" stroke="#64748b" strokeWidth={1} strokeDasharray="3 3" name="quantity" dot={false} />
-                        </AreaChart>
-                     </ResponsiveContainer>
-                   </div>
-                </div>
-
-                {selectedProduct.product.shippingOptions && selectedProduct.product.shippingOptions.length > 0 && (
-                  <div>
-                    <h3 className="text-[11px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest mb-4">{t('Logistics Options')}</h3>
-                    <div className="space-y-3">
-                      {(Array.isArray(selectedProduct.product.shippingOptions) ? selectedProduct.product.shippingOptions : []).map((opt: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center text-sm bg-slate-800 p-4 rounded-xl border border-slate-700/60 shadow-none">
-                          <span className="text-slate-400"><span className="font-semibold tracking-tight text-slate-200">{opt.type}</span> in {opt.country}</span>
-                          <span className="font-semibold text-cyan-400 bg-slate-900 px-2 py-1 rounded-lg text-xs border border-slate-800">{t('MOQ')}: {opt.moq}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {selectedProduct.product.tieredPricing && (
-                  <div className="pt-2">
-                    <h3 className="text-[11px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest mb-4">{t('Volume Pricing')}</h3>
-                    
-                    <div className="flex justify-between items-end mb-4 bg-slate-800/50 p-5 rounded-2xl border border-cyan-900/50">
-                       <span className="text-slate-400 font-medium">{selectedQuantity} Units</span>
-                       <div className="text-right">
-                          <div className="text-3xl font-semibold tracking-tight font-display text-cyan-400">{currentPrice ? formatPrice(currentPrice) : '--'}</div>
-                          <div className="text-[10px] text-cyan-500/80 uppercase tracking-widest font-semibold tracking-tight mt-1">{t('per unit')}</div>
-                       </div>
-                    </div>
-                    
-                    <input 
-                      type="range" 
-                      min={1} 
-                      max={5000} 
-                      step={1}
-                      value={selectedQuantity}
-                      onChange={e => setSelectedQuantity(parseInt(e.target.value))}
-                      className="w-full h-2 bg-slate-700 rounded-xl appearance-none cursor-pointer accent-cyan-500"
-                    />
-                    
-                    <div className="mt-4 flex justify-between text-sm">
-                       <span className="text-slate-400 font-medium">{t('Estimated Total')}: <span className="text-slate-200 font-semibold tracking-tight font-display ml-1">{currentPrice ? formatPrice(currentPrice * selectedQuantity) : '--'}</span></span>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="pt-4">
-                  <LandedCostEstimator quantity={selectedQuantity} currentPrice={currentPrice} />
-                </div>
-              </div>
-              
-              <div className="p-6 border-t border-slate-800 bg-slate-900 sticky bottom-0 z-20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
-                <div>
-                   <span className="text-[10px] font-semibold tracking-tight text-slate-400 uppercase tracking-widest block mb-0.5">{t('Wholesale Pricing')}</span>
-                   {formatTiers(selectedProduct.product.tieredPricing) ? (
-                          <div className="flex flex-col gap-1 mt-1">
-                            {formatTiers(selectedProduct.product.tieredPricing).map((t: string, i: number) => (
-                              <div key={i} className="text-lg font-semibold tracking-tight font-display text-slate-200">{t}</div>
-                            ))}
-                          </div>
-                        ) : lowestUnitPrice(selectedProduct.product) ? (
-                          <span className="text-xl font-semibold tracking-tight font-display text-slate-200">{formatPrice(Number(lowestUnitPrice(selectedProduct.product)))}<span className="text-xs text-slate-400 font-normal ml-1">PPU</span></span>
-                        ) : (
-                          <span className="text-xl font-semibold tracking-tight font-display text-slate-200">{t('Negotiable')}</span>
-                        )}
-                </div>
-                {user ? (
-                   <div className="flex gap-3 w-full md:w-auto">
-                     <button 
-                       onClick={() => addItem({
-                         productId: selectedProduct.product.id,
-                         title: selectedProduct.product.title,
-                         image: selectedProduct.product.images?.[0] || '',
-                         // @ts-ignore
-                          supplierName: selectedProduct.seller?.companyName || 'Supplier',
-                         supplierId: selectedProduct.seller?.id
-                       })}
-                       className="bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-700 rounded-xl px-6 py-3.5 shadow-none flex items-center justify-center font-medium transition-colors w-full md:w-auto"
-                     >
-                       {cartItems.find(i => i.productId === selectedProduct.product.id) ? 'Sample in Cart' : t('Request Sample')}
-                     </button>
-                     <Link to="/rfq" state={{ productId: selectedProduct.product.id, title: selectedProduct.product.title }} className="btn-primary w-full md:w-auto">
-                       {t('Start Request for Quote')}
-                     </Link>
-                   </div>
-                ) : (
-                   <button className="btn-secondary w-full md:w-auto">
-                     Sign in to Quote
-                   </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProductModal
+          product={selectedProduct}
+          products={sortedProducts}
+          onSelectProduct={setSelectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
       )}
     </div>
   );

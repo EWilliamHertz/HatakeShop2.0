@@ -18,6 +18,7 @@ import {
 import { getAuth } from 'firebase/auth';
 import { useTranslation } from 'react-i18next';
 import { parseLeadGeo } from '../lib/leadGeo.ts';
+import { toast } from 'sonner';
 
 function getCountryFlag(country?: string | null): string {
   const c = (country || '').trim().toLowerCase();
@@ -77,8 +78,11 @@ export function Suppliers() {
       return res.json();
     },
     onSuccess: () => {
-      alert('Connection updated!');
+      toast.success(t('Connection updated!'));
       queryClient.invalidateQueries({ queryKey: ['publicPartners'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || t('Could not update connection'));
     },
   });
 

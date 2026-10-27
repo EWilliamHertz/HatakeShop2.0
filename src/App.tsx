@@ -17,15 +17,7 @@ import { Toaster } from 'sonner';
 import { Layout } from './components/Layout.tsx';
 import { CookieConsent } from './components/CookieConsent.tsx';
 import { Home } from './pages/Home.tsx';
-import { Onboarding } from './pages/Onboarding.tsx';
 import { Marketplace } from './pages/Marketplace.tsx';
-import { RFQHub } from './pages/RFQHub.tsx';
-import { RFQDetails } from './pages/RFQDetails.tsx';
-import { CompanyProfile } from './pages/CompanyProfile.tsx';
-import { CompanyListings } from './pages/CompanyListings.tsx';
-import { UserProfile } from './pages/UserProfile.tsx';
-import { Settings } from './pages/Settings.tsx';
-import { CompanySettings } from './pages/CompanySettings.tsx';
 import { Login } from './pages/Login.tsx';
 import { JoinCompany } from "./pages/JoinCompany.tsx";
 import { Suppliers } from './pages/Suppliers.tsx';
@@ -40,7 +32,14 @@ const Storefront = lazy(() => import('./pages/Storefront.tsx').then(m => ({ defa
 const Leads = lazy(() => import('./pages/Leads.tsx').then(m => ({ default: m.Leads })));
 const MarketInsights = lazy(() => import('./pages/MarketInsights.tsx').then(m => ({ default: m.MarketInsights })));
 const Orders = lazy(() => import('./pages/Orders.tsx').then(m => ({ default: m.Orders })));
-const RFQDetailsLazy = RFQDetails;
+const Onboarding = lazy(() => import('./pages/Onboarding.tsx').then(m => ({ default: m.Onboarding })));
+const RFQHub = lazy(() => import('./pages/RFQHub.tsx').then(m => ({ default: m.RFQHub })));
+const RFQDetails = lazy(() => import('./pages/RFQDetails.tsx').then(m => ({ default: m.RFQDetails })));
+const CompanyProfile = lazy(() => import('./pages/CompanyProfile.tsx').then(m => ({ default: m.CompanyProfile })));
+const CompanyListings = lazy(() => import('./pages/CompanyListings.tsx').then(m => ({ default: m.CompanyListings })));
+const UserProfile = lazy(() => import('./pages/UserProfile.tsx').then(m => ({ default: m.UserProfile })));
+const Settings = lazy(() => import('./pages/Settings.tsx').then(m => ({ default: m.Settings })));
+const CompanySettings = lazy(() => import('./pages/CompanySettings.tsx').then(m => ({ default: m.CompanySettings })));
 const Wishlist = lazy(() => import('./pages/Wishlist.tsx').then(m => ({ default: m.Wishlist })));
 const SellerOnboarding = lazy(() => import('./pages/SellerOnboarding.tsx').then(m => ({ default: m.SellerOnboarding })));
 const ProductPage = lazy(() => import('./pages/ProductPage.tsx').then(m => ({ default: m.ProductPage })));
@@ -179,6 +178,7 @@ export default function App() {
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/products/:id" element={<ProductPage />} />
+            <Route path="/product/:id" element={<ProductPage />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/company/:id" element={<CompanyProfile />} />
             <Route path="/company/:id/listings" element={<CompanyListings />} />

@@ -74,6 +74,25 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      chunkSizeWarningLimit: 900,
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            // Rollup helpers must live in an always-loaded chunk, otherwise lazy vendor chunks get preloaded
+            if (id.includes('commonjsHelpers') || id.includes('vite/preload-helper') || id.includes('vite/modulepreload-polyfill')) return 'vendor-react';
+            if (!id.includes('node_modules')) return undefined;
+            if (/node_modules\/(react|react-dom|scheduler|use-sync-external-store|clsx|tailwind-merge|immer|redux|react-redux|reselect|@reduxjs|tiny-invariant|eventemitter3|decimal\.js-light|lodash|es-toolkit|react-is|prop-types|@babel\/runtime|core-js)\//.test(id)) return 'vendor-react';
+            if (id.includes('agora-rtc-sdk-ng') || id.includes('agora-')) return 'vendor-agora';
+            if (id.includes('recharts') || id.includes('/d3-') || id.includes('victory-vendor')) return 'vendor-charts';
+            if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('canvg') || id.includes('dompurify')) return 'vendor-pdf';
+            if (id.includes('firebase')) return 'vendor-firebase';
+            if (id.includes('react-dom') || id.includes('/react/') || id.includes('react-router') || id.includes('@tanstack')) return 'vendor-react';
+            return undefined;
+          },
+        },
+      },
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâ€”file watching is disabled to prevent flickering during agent edits.

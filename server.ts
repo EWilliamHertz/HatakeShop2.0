@@ -278,18 +278,20 @@ Sitemap: ${SITE_URL}/sitemap.xml
 
 app.get(["/sitemap.xml", "/api/sitemap.xml", "/api-v2/sitemap.xml"], async (req, res) => {
   try {
-    const staticPaths = ['', '/marketplace', '/suppliers', '/insights', '/feed', '/login', '/apply-seller'];
+    const staticPaths = ['', '/marketplace', '/suppliers', '/leads', '/insights', '/feed', '/login', '/apply-seller'];
     const urls: string[] = staticPaths.map(p => SITE_URL + p);
 
-    const [productRows, sellerRows, catRows] = await Promise.all([
+    const [productRows, sellerRows, catRows, companyRows] = await Promise.all([
       db.select({ id: products.id, createdAt: products.createdAt })
         .from(products).where(eq(products.approvalStatus, 'approved')).limit(5000),
       db.select({ slug: users.storeSlug }).from(users).where(isNotNull(users.storeSlug)).limit(2000),
       db.select({ id: categories.id }).from(categories).limit(1000),
+      db.select({ id: users.id }).from(users).where(and(isNotNull(users.companyName), eq(users.verificationStatus, 'verified'))).limit(2000),
     ]);
 
-    for (const p of productRows) urls.push(`${SITE_URL}/marketplace?product=${p.id}`);
+    for (const p of productRows) urls.push(`${SITE_URL}/product/${p.id}`);
     for (const s of sellerRows) if (s.slug) urls.push(`${SITE_URL}/v/${s.slug}`);
+    for (const c of companyRows) urls.push(`${SITE_URL}/company/${c.id}`);
     for (const c of catRows) urls.push(`${SITE_URL}/marketplace?category=${c.id}`);
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>

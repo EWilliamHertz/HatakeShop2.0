@@ -12,7 +12,7 @@ import { db } from '../lib/firebase.ts';
 
 function RFQDraftForm({ stateObj, user, fetchInquiries }: any) {
   const { t } = useTranslation();
-  const [quantity, setQuantity] = useState<number>(100);
+  const [quantity, setQuantity] = useState<number>(Number(stateObj?.moq) > 0 ? Number(stateObj.moq) : 100);
   const [targetBudget, setTargetBudget] = useState<number>(0);
   const [isBlindDropship, setIsBlindDropship] = useState(false);
   const [consumerName, setConsumerName] = useState('');

@@ -39,19 +39,48 @@ router.get("/api-v2/countries", async (req, res) => {
  * Only facets that actually have products are returned, so the sidebar never
  * shows empty options.
  */
+function buildProductSearchCondition(qRaw: string) {
+  const qStr = qRaw.trim();
+  const pattern = `%${qStr}%`;
+  return sql`(
+    ${products.title} ILIKE ${pattern}
+    OR COALESCE(${products.brand}, '') ILIKE ${pattern}
+    OR COALESCE(${products.description}, '') ILIKE ${pattern}
+    OR COALESCE(${products.specifications}::text, '') ILIKE ${pattern}
+    OR COALESCE(${users.companyName}, '') ILIKE ${pattern}
+    OR websearch_to_tsquery('simple', ${qStr}) @@ to_tsvector('simple', coalesce(${products.title},'') || ' ' || coalesce(${products.brand},'') || ' ' || coalesce(${products.description},''))
+  )`;
+}
+
 router.get("/api-v2/marketplace/facets", async (req, res) => {
   try {
     await ensureSealedTaxonomySchema();
-    
+    const productType = String(req.query.productType || 'sealed');
+    const typeCondition = productType === 'all'
+      ? sql`TRUE`
+      : productType === 'graded'
+        ? eq(products.productType, 'graded')
+        : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
+
     // Build dynamic conditions based on query params
-    const conditions = [eq(products.approvalStatus, 'approved'), sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`];
-    
+    const conditions: any[] = [eq(products.approvalStatus, 'approved'), typeCondition];
+
     const categoryId = req.query.category;
     if (categoryId) {
-       const parsedId = parseInt(String(categoryId), 10);
-       const catIds = await getDescendantCategoryIds(db, parsedId);
-       conditions.push(or(inArray(products.categoryId, catIds), sql`${products.categoryIds} && ARRAY[${sql.join(catIds.map(id => sql`${id}`), sql`, `)}]::int[]`));
+      const parsedId = parseInt(String(categoryId), 10);
+      if (!Number.isNaN(parsedId)) {
+        const catIds = await getDescendantCategoryIds(db, parsedId);
+        conditions.push(or(inArray(products.categoryId, catIds), sql`${products.categoryIds} && ARRAY[${sql.join(catIds.map(id => sql`${id}`), sql`, `)}]::int[]`));
+      }
     }
+
+    const sellerIdParam = req.query.seller || req.query.sellerId;
+    if (sellerIdParam) {
+      const parsedSeller = parseInt(String(sellerIdParam), 10);
+      if (!Number.isNaN(parsedSeller)) conditions.push(eq(products.sellerId, parsedSeller));
+    }
+
+    const oemOnly = req.query.oem === 'true' || req.query.oem === '1' || req.query.offersOem === 'true';
 
     const minMoq = req.query.minMoq;
     const maxPrice = req.query.maxPrice;
@@ -59,48 +88,68 @@ router.get("/api-v2/marketplace/facets", async (req, res) => {
     if (minMoq) conditions.push(sql`${products.moq} <= ${parseInt(String(minMoq))}`);
 
     const q = req.query.q;
-    if (q) {
-        const qStr = String(q).trim();
-      if (qStr) {
-        conditions.push(
-          sql`(
-            websearch_to_tsquery('simple', ${qStr}) @@ to_tsvector('simple', coalesce(${products.title},'') || ' ' || coalesce(${products.description},''))
-            OR similarity(${products.title}, ${qStr}) > 0.2
-          )` as any
-        );
-      }
+    if (q && String(q).trim()) {
+      conditions.push(buildProductSearchCondition(String(q)));
     }
 
-    // When calculating facets, we usually want to know how many WOULD match if we selected it.
-    // We'll apply cross-filtering: filter languages by everything EXCEPT language, etc.
+    const baseWithOem = oemOnly ? [...conditions, eq(products.offersOem, true)] : [...conditions];
+
+    // Cross-filtering: filter languages by everything EXCEPT language, etc.
     const languagesParam = (req.query.languages) || (req.query.language) || '';
     const sealedTypesParam = (req.query.sealedTypes) || (req.query.sealedType) || '';
     const countriesParam = (req.query.countries) || (req.query.includeCountries) || '';
-    
-    const langConds = [...conditions];
-    const typeConds = [...conditions];
-    const countryConds = [...conditions];
-    
+
+    const langConds = [...baseWithOem];
+    const typeConds = [...baseWithOem];
+    const countryConds = [...baseWithOem];
+    const oemConds = [...conditions];
+
     if (sealedTypesParam) {
-       const arr = String(sealedTypesParam).split(',').filter(Boolean);
-       if (arr.length > 0) { langConds.push(inArray(products.sealedType, arr)); countryConds.push(inArray(products.sealedType, arr)); }
+      const arr = String(sealedTypesParam).split(',').filter(Boolean);
+      if (arr.length > 0) {
+        langConds.push(inArray(products.sealedType, arr));
+        countryConds.push(inArray(products.sealedType, arr));
+        oemConds.push(inArray(products.sealedType, arr));
+      }
     }
     if (languagesParam) {
-       const arr = String(languagesParam).split(',').filter(Boolean);
-       if (arr.length > 0) { typeConds.push(inArray(products.language, arr)); countryConds.push(inArray(products.language, arr)); }
+      const arr = String(languagesParam).split(',').filter(Boolean);
+      if (arr.length > 0) {
+        typeConds.push(inArray(products.language, arr));
+        countryConds.push(inArray(products.language, arr));
+        oemConds.push(inArray(products.language, arr));
+      }
     }
     if (countriesParam) {
-       const arr = String(countriesParam).split(',').filter(Boolean);
-       if (arr.length > 0) { langConds.push(inArray(users.country, arr)); typeConds.push(inArray(users.country, arr)); }
+      const arr = String(countriesParam).split(',').filter(Boolean);
+      if (arr.length > 0) {
+        langConds.push(inArray(users.country, arr));
+        typeConds.push(inArray(users.country, arr));
+        oemConds.push(inArray(users.country, arr));
+      }
     }
 
-    const [langRows, typeRows, countryRows] = await Promise.all([
+    const [langRows, typeRows, countryRows, sellerRows, oemStats] = await Promise.all([
       db.select({ key: products.language, count: sql<number>`count(*)::int` })
         .from(products).leftJoin(users, eq(products.sellerId, users.id)).where(and(...langConds)).groupBy(products.language),
       db.select({ key: products.sealedType, count: sql<number>`count(*)::int` })
         .from(products).leftJoin(users, eq(products.sellerId, users.id)).where(and(...typeConds)).groupBy(products.sealedType),
       db.select({ key: users.country, count: sql<number>`count(*)::int` })
         .from(products).innerJoin(users, eq(products.sellerId, users.id)).where(and(...countryConds, isNotNull(users.country))).groupBy(users.country),
+      db.select({
+        id: users.id,
+        companyName: users.companyName,
+        country: users.country,
+        verificationStatus: users.verificationStatus,
+        count: sql<number>`count(*)::int`
+      })
+        .from(products).innerJoin(users, eq(products.sellerId, users.id)).where(and(...baseWithOem))
+        .groupBy(users.id, users.companyName, users.country, users.verificationStatus),
+      db.select({
+        total: sql<number>`count(*)::int`,
+        oemCount: sql<number>`count(*) filter (where ${products.offersOem} = true)::int`
+      })
+        .from(products).leftJoin(users, eq(products.sellerId, users.id)).where(and(...oemConds)),
     ]);
 
     const langMap = new Map<string, number>(langRows.map(r => [r.key || 'unset', Number(r.count)] as const));
@@ -116,11 +165,23 @@ router.get("/api-v2/marketplace/facets", async (req, res) => {
       .filter(r => r.key)
       .map(r => ({ value: r.key as string, count: Number(r.count) }))
       .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+    const sellers = sellerRows
+      .map(s => ({
+        id: s.id,
+        companyName: s.companyName || 'Supplier',
+        country: s.country || null,
+        verificationStatus: s.verificationStatus || null,
+        count: Number(s.count),
+      }))
+      .sort((a, b) => b.count - a.count || a.companyName.localeCompare(b.companyName));
 
     res.json({
       languages,
       sealedTypes,
       countries,
+      sellers,
+      totalProducts: Number(oemStats[0]?.total || 0),
+      oemCount: Number(oemStats[0]?.oemCount || 0),
       unclassified: { language: langMap.get('unset') || 0, sealedType: typeMap.get('unset') || 0 }
     });
   } catch (err: any) {
@@ -176,6 +237,7 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
           specifications: products.specifications,
           moq: products.moq,
           oemMoq: products.oemMoq,
+          offersOem: products.offersOem,
           stockQuantity: products.stockQuantity,
           unitCost: products.unitCost,
           tieredPricing: products.tieredPricing,
@@ -196,14 +258,42 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
           createdAt: products.createdAt,
           category: categories.name
         },
-        seller: { id: users.id, companyName: users.companyName, country: users.country }
+        seller: {
+          id: users.id,
+          companyName: users.companyName,
+          country: users.country,
+          verificationStatus: users.verificationStatus,
+          supplierTier: users.supplierTier,
+        }
       }).from(products)
       .leftJoin(users, eq(products.sellerId, users.id))
       .leftJoin(categories, eq(products.categoryId, categories.id));
       
       let countQuery = db.select({ count: sql`count(*)` }).from(products).leftJoin(users, eq(products.sellerId, users.id));
 
-      const conditions = [eq(products.approvalStatus, 'approved'), (productType === 'graded' ? eq(products.productType, 'graded') : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`)];
+      const typeClause = productType === 'all'
+        ? sql`TRUE`
+        : productType === 'graded'
+          ? eq(products.productType, 'graded')
+          : sql`(${products.productType} = 'sealed' OR ${products.productType} IS NULL)`;
+      const conditions: any[] = [eq(products.approvalStatus, 'approved'), typeClause];
+
+      const idsParam = req.query.ids as string;
+      if (idsParam) {
+        const parsedIds = idsParam.split(',').map(v => parseInt(v.trim(), 10)).filter(n => !Number.isNaN(n));
+        if (parsedIds.length > 0) conditions.push(inArray(products.id, parsedIds));
+      }
+
+      const sellerIdParam = (req.query.seller as string) || (req.query.sellerId as string);
+      if (sellerIdParam) {
+        const parsedSeller = parseInt(sellerIdParam, 10);
+        if (!Number.isNaN(parsedSeller)) conditions.push(eq(products.sellerId, parsedSeller));
+      }
+
+      const oemOnly = req.query.oem === 'true' || req.query.oem === '1' || req.query.offersOem === 'true';
+      if (oemOnly) {
+        conditions.push(eq(products.offersOem, true));
+      }
       
       const excludeCountries = req.query.excludeCountries as string;
       const includeRegions = req.query.includeRegions as string;
@@ -250,68 +340,51 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
          conditions.push(sql`${products.moq} <= ${moqVal}`);
       }
 
-      let textSearchFailed = false;
-      if (q) {
-        try {
-           const queryEmbedding = await generateEmbedding(q);
-           if (queryEmbedding) {
-              const vectorString = '[' + queryEmbedding.join(',') + ']';
-              query = query.orderBy(sql`${products.embedding} <-> ${vectorString}`) as any;
-           } else {
-             textSearchFailed = true;
-           }
-        } catch(e) {
-           textSearchFailed = true;
-        }
+      const qTrimmed = String(q || '').trim();
+      if (qTrimmed) {
+        conditions.push(buildProductSearchCondition(qTrimmed));
       }
-      
-      if (textSearchFailed) {
-         const qStr = String(q || '').trim();
-         if (qStr) {
-           // Tier 1: full-text search (uses the GIN index we created)
-           // websearch_to_tsquery handles multi-word, boolean, quoted phrases
-           conditions.push(
-             sql`(
-               websearch_to_tsquery('simple', ${qStr}) @@ to_tsvector('simple', coalesce(${products.title},'') || ' ' || coalesce(${products.description},''))
-               OR similarity(${products.title}, ${qStr}) > 0.2
-             )` as any
-           );
-         }
-      }
-      
+
       query = query.where(and(...conditions)) as any;
       countQuery = countQuery.where(and(...conditions)) as any;
-      
-      if (!q || textSearchFailed) {
-         if (sortBy === 'recommended') {
-           query = query.orderBy(desc(products.isSponsored), sql`RANDOM()`) as any;
-         } else if (sortBy === 'randomized') {
-           query = query.orderBy(sql`RANDOM()`) as any;
-         } else if (sortBy === 'lowest_moq' || sortBy === 'moq_asc') {
-           query = query.orderBy(products.moq) as any;
-         } else if (sortBy === 'company_az') {
-           query = query.orderBy(sql`LOWER(COALESCE(${users.companyName}, '')) ASC`, asc(products.title)) as any;
-         } else if (sortBy === 'company_za') {
-           query = query.orderBy(sql`LOWER(COALESCE(${users.companyName}, '')) DESC`, asc(products.title)) as any;
-         } else if (sortBy === 'lowest_price' || sortBy === 'price_asc') {
-           query = query.orderBy(sql`CAST(${products.unitCost} AS numeric) ASC`) as any;
-         } else if (sortBy === 'highest_price' || sortBy === 'price_desc') {
-           query = query.orderBy(sql`CAST(${products.unitCost} AS numeric) DESC`) as any;
-         } else {
-           query = query.orderBy(desc(products.createdAt)) as any;
-         }
+
+      if (qTrimmed && (!req.query.sortBy || sortBy === 'newest' || sortBy === 'recommended')) {
+        const titlePrefix = `${qTrimmed}%`;
+        const titleSub = `%${qTrimmed}%`;
+        query = query.orderBy(
+          sql`CASE WHEN ${products.title} ILIKE ${titlePrefix} THEN 0 WHEN ${products.title} ILIKE ${titleSub} THEN 1 ELSE 2 END`,
+          desc(products.isSponsored),
+          desc(products.createdAt)
+        ) as any;
+      } else if (sortBy === 'recommended') {
+        query = query.orderBy(desc(products.isSponsored), sql`RANDOM()`) as any;
+      } else if (sortBy === 'randomized') {
+        query = query.orderBy(sql`RANDOM()`) as any;
+      } else if (sortBy === 'lowest_moq' || sortBy === 'moq_asc') {
+        query = query.orderBy(products.moq) as any;
+      } else if (sortBy === 'company_az') {
+        query = query.orderBy(sql`LOWER(COALESCE(${users.companyName}, '')) ASC`, asc(products.title)) as any;
+      } else if (sortBy === 'company_za') {
+        query = query.orderBy(sql`LOWER(COALESCE(${users.companyName}, '')) DESC`, asc(products.title)) as any;
+      } else if (sortBy === 'lowest_price' || sortBy === 'price_asc') {
+        query = query.orderBy(sql`CAST(${products.unitCost} AS numeric) ASC NULLS LAST`) as any;
+      } else if (sortBy === 'highest_price' || sortBy === 'price_desc') {
+        query = query.orderBy(sql`CAST(${products.unitCost} AS numeric) DESC NULLS LAST`) as any;
+      } else {
+        query = query.orderBy(desc(products.createdAt)) as any;
       }
-      
+
       query = query.limit(limit).offset(offset) as any;
-      
+
       const [allProducts, [{ count }]] = await Promise.all([
         query,
         countQuery
       ]);
-      
+
       res.json({
         products: allProducts.map((p: any) => ({ ...p.product, seller: p.seller })),
-        totalPages: Math.ceil(Number(count) / limit),
+        totalCount: Number(count),
+        totalPages: Math.max(1, Math.ceil(Number(count) / limit)),
         currentPage: page
       });
     } catch (err: any) {
@@ -319,6 +392,51 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
       res.status(500).json({ error: err.message });
     }
   });
+
+router.get("/api-v2/products/public", async (req, res) => {
+  try {
+    const qStr = String(req.query.q || '').trim();
+    const limit = Math.min(24, Math.max(1, parseInt(String(req.query.limit || '8'), 10) || 8));
+    if (!qStr) return res.json({ products: [] });
+    const titlePrefix = `${qStr}%`;
+    const rows = await db.select({
+      product: {
+        id: products.id,
+        sellerId: products.sellerId,
+        title: products.title,
+        brand: products.brand,
+        description: products.description,
+        specifications: products.specifications,
+        moq: products.moq,
+        oemMoq: products.oemMoq,
+        offersOem: products.offersOem,
+        unitCost: products.unitCost,
+        tieredPricing: products.tieredPricing,
+        originType: products.originType,
+        images: products.images,
+        language: products.language,
+        sealedType: products.sealedType,
+        category: categories.name,
+      },
+      seller: {
+        id: users.id,
+        companyName: users.companyName,
+        country: users.country,
+        verificationStatus: users.verificationStatus,
+      }
+    })
+      .from(products)
+      .leftJoin(users, eq(products.sellerId, users.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .where(and(eq(products.approvalStatus, 'approved'), buildProductSearchCondition(qStr)))
+      .orderBy(sql`CASE WHEN ${products.title} ILIKE ${titlePrefix} THEN 0 ELSE 1 END`, desc(products.createdAt))
+      .limit(limit);
+
+    res.json({ products: rows.map((r: any) => ({ ...r.product, seller: r.seller })) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, products: [] });
+  }
+});
 
 
 

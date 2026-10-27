@@ -117,7 +117,7 @@ export function CompanyProfile() {
 
       {/* Hero Banner */}
       <div className="relative h-52 md:h-64 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 overflow-hidden">
-        {company?.bannerUrl && <img src={company?.bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+        {company?.bannerUrl && <img src={company?.bannerUrl} alt="Banner" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} className="absolute inset-0 w-full h-full object-cover opacity-40" />}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
       </div>
 
@@ -127,7 +127,7 @@ export function CompanyProfile() {
         <div className="flex flex-col md:flex-row md:items-end gap-6 mb-10">
           <div className="w-28 h-28 rounded-3xl overflow-hidden bg-slate-800 border-4 border-slate-950 shadow-2xl shrink-0 flex items-center justify-center">
             {company?.profilePictureUrl
-              ? <img src={company?.profilePictureUrl} alt={company.companyName} className="w-full h-full object-cover" />
+              ? <img src={company?.profilePictureUrl} alt={company.companyName} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} className="w-full h-full object-cover" />
               : <span className="text-4xl font-black text-white">{company.companyName?.charAt(0) || '?'}</span>}
           </div>
           <div className="flex-1 min-w-0">
@@ -139,7 +139,7 @@ export function CompanyProfile() {
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
               {company.country && <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{company.country}</span>}
-              {company.website && <a href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors"><Globe2 className="w-4 h-4" />{company.website}</a>}
+              {company.website && <a href={/^https?:\/\//i.test(company.website) ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors"><Globe2 className="w-4 h-4" />{company.website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}</a>}
               <span>Member since {new Date(company.createdAt).getFullYear()}</span>
               {products && <span className="flex items-center gap-1.5"><Package className="w-4 h-4" />{products?.length} Listings</span>}
             </div>

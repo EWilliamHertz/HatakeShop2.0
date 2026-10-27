@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { useAuth } from '../components/AuthContext.tsx';
 import { uploadImageFile } from '../lib/uploadImage.ts';
 import { toast } from 'sonner';
 import { Loader2, Save, Languages, Users, Upload, User, Mail, Lock , Code} from 'lucide-react';
-import { AffiliateDashboard } from './AffiliateDashboard.tsx';
+const AffiliateDashboard = lazy(() => import('./AffiliateDashboard.tsx').then(m => ({ default: m.AffiliateDashboard })));
 
 export function Settings() {
   const { t } = useTranslation();
@@ -223,7 +223,7 @@ const syncInventory = async () => {
                </div>
             ) : activeTab === 'referral' ? (
               <div className="-m-6 md:-m-8">
-                <AffiliateDashboard />
+                <Suspense fallback={<div className="p-6 text-slate-400">Loading…</div>}><AffiliateDashboard /></Suspense>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-8">

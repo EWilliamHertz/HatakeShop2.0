@@ -31,6 +31,8 @@ export function CompanyListings() {
   const selectedBrands = searchParams.get('brands') ? searchParams.get('brands')!.split(',') : [];
   const selectedTypes = searchParams.get('types') ? searchParams.get('types')!.split(',') : [];
   const sortOption = searchParams.get('sort') || 'newest';
+  const oemOnly = searchParams.get('oem') === '1';
+  const maxMoq = Number(searchParams.get('maxMoq')) || 0;
 
   const updateSearchParam = (key: string, value: string) => {
     setSearchParams(prev => {
@@ -64,6 +66,8 @@ export function CompanyListings() {
     selectedLanguages.length +
     selectedBrands.length +
     selectedTypes.length +
+    (oemOnly ? 1 : 0) +
+    (maxMoq ? 1 : 0) +
     (search ? 1 : 0);
 
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -93,13 +97,13 @@ export function CompanyListings() {
       const cat = p?.categoryName || p?.category || p?.originType || 'Other';
       cats[cat] = (cats[cat] || 0) + 1;
       
-      const lang = p?.language || 'Unknown';
-      langs[lang] = (langs[lang] || 0) + 1;
-      
-      const typ = p?.sealedType || p?.productType || 'Unknown';
+      // Accessory / packaging factories have no card language or sealed type - don't show empty 'Unknown' buckets
+      if (p?.language) langs[p.language] = (langs[p.language] || 0) + 1;
+
+      const typ = p?.sealedType || (p?.productType && p.productType !== 'sealed' ? p.productType : null);
       const brnd = p?.brand;
       if (brnd) brnds[brnd] = (brnds[brnd] || 0) + 1;
-      typs[typ] = (typs[typ] || 0) + 1;
+      if (typ && typ !== 'other') typs[typ] = (typs[typ] || 0) + 1;
     });
     
     return {
@@ -122,8 +126,8 @@ export function CompanyListings() {
         pDesc.toLowerCase().includes(searchLower);
         
       const pCat = p?.categoryName || p?.category || p?.originType || 'Other';
-      const pLang = p?.language || 'Unknown';
-      const pTyp = p?.sealedType || p?.productType || 'Unknown';
+      const pLang = p?.language || '';
+      const pTyp = p?.sealedType || p?.productType || '';
       
       const matchesCat = selectedCategories.length === 0 || selectedCategories.includes(pCat);
       const matchesLang = selectedLanguages.length === 0 || selectedLanguages.includes(pLang);
@@ -131,7 +135,10 @@ export function CompanyListings() {
       const matchesBrand = selectedBrands.length === 0 || (pBrnd && selectedBrands.includes(pBrnd));
       const matchesTyp = selectedTypes.length === 0 || selectedTypes.includes(pTyp);
       
-      return matchesSearch && matchesCat && matchesLang && matchesTyp && matchesBrand;
+      const matchesOem = !oemOnly || !!p?.offersOem;
+      const matchesMoq = !maxMoq || (Number(p?.moq) > 0 ? Number(p.moq) <= maxMoq : true);
+
+      return matchesSearch && matchesCat && matchesLang && matchesTyp && matchesBrand && matchesOem && matchesMoq;
     });
 
     results.sort((a: any, b: any) => {
@@ -157,9 +164,10 @@ export function CompanyListings() {
     });
 
     return results;
-  }, [safeProducts, search, selectedCategories, selectedLanguages, selectedTypes, selectedBrands, sortOption]);
+  }, [safeProducts, search, selectedCategories, selectedLanguages, selectedTypes, selectedBrands, sortOption, oemOnly, maxMoq]);
 
-  const hasFilters = brands.length > 0 || categories.length > 0 || languages.length > 0 || types.length > 0;
+  const hasOemProducts = safeProducts.some((p: any) => p?.offersOem);
+  const hasFilters = brands.length > 0 || categories.length > 1 || languages.length > 0 || types.length > 0 || hasOemProducts || safeProducts.length > 12;
 
   if (isLoading) return (
     <div className="min-h-screen bg-slate-950 flex justify-center items-center">
@@ -321,6 +329,38 @@ export function CompanyListings() {
               </div>
             )}
 
+            {/* OEM & MOQ */}
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Sourcing</p>
+              <div className="flex flex-wrap gap-2 items-center">
+                {hasOemProducts && (
+                  <button
+                    onClick={() => updateSearchParam('oem', oemOnly ? '' : '1')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                      oemOnly
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 ring-1 ring-cyan-500/20'
+                        : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'
+                    }`}
+                  >
+                    OEM / Custom Logo available
+                  </button>
+                )}
+                {[10, 100, 500, 1000].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => updateSearchParam('maxMoq', maxMoq === n ? '' : String(n))}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                      maxMoq === n
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 ring-1 ring-cyan-500/20'
+                        : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-white'
+                    }`}
+                  >
+                    MOQ ≤ {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Language */}
             {languages.length > 0 && (
               <div>
@@ -428,13 +468,18 @@ export function CompanyListings() {
                   >
                     <div className="aspect-[4/3] bg-slate-800 overflow-hidden relative">
                       {images[0]
-                        ? <img src={images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        ? <img src={images[0]} alt={p.title} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         : <div className="w-full h-full flex items-center justify-center text-slate-600"><Package className="w-8 h-8" /></div>}
                       <div className="absolute top-2 left-2">
                         <span className="bg-slate-900/90 backdrop-blur text-slate-300 text-[10px] font-semibold px-2 py-1 rounded-full border border-slate-700">
                           MOQ: {p.moq || '—'}
                         </span>
                       </div>
+                      {p.offersOem && (
+                        <div className="absolute bottom-2 left-2">
+                          <span className="bg-cyan-500/90 text-slate-950 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">OEM</span>
+                        </div>
+                      )}
                       {(p.isSponsored || p.featured) && (
                         <div className="absolute top-2 right-2">
                           <span className="bg-yellow-500 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Featured</span>
