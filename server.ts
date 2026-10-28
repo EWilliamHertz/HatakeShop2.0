@@ -1026,7 +1026,7 @@ app.get(["/marketplace/sneak-peek", "/api/marketplace/sneak-peek", "/api-v2/mark
 app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/browse"], async (req, res) => {
   try {
     await ensureSealedTaxonomySchema();
-    const productType = (req.query.productType as string) || 'sealed';
+    const productType = (req.query.productType as string) || 'all';
     const sortBy = (req.query.sortBy as string) || 'company_az';
     const cacheKey = `${productType}:${sortBy}`;
     const cachedBrowse = browseResponseCache.get(cacheKey);

@@ -7,6 +7,7 @@ import { VerificationBadge } from '../components/VerificationBadge.tsx';
 import { VendorReviews } from '../components/VendorReviews.tsx';
 import { PreorderCard } from '../components/PreorderCard.tsx';
 import { useCurrency } from '../components/CurrencyProvider.tsx';
+import { SafeImage } from '../components/SafeImage.tsx';
 import './scrollbar.css';
 
 const formatLang = (l: string) => {
@@ -438,7 +439,7 @@ export function Storefront() {
                       <Link key={p.id} to={`/products/${p.id}`} className="btn-secondary group">
                         <div className="h-52 bg-slate-900 flex items-center justify-center p-6 border-b border-slate-700">
                           {p.images && p.images[0] ? (
-                            <img src={p.images[0]} alt={p.title} className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />
+                            <SafeImage src={p.images[0]} alt={p.title} className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />
                           ) : (
                             <Box className="w-12 h-12 text-slate-400" />
                           )}

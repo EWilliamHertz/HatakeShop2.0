@@ -93,7 +93,7 @@ export function Home() {
   }, [searchInput]);
   
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", productType: "sealed", sortBy: "recommended" });
+  const [filters, setFilters] = useState({ origin: "", category: "", minMoq: "", maxPrice: "", productType: "all", sortBy: "recommended" });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   const [showFilters, setShowFilters] = useState(false);

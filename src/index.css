@@ -19,7 +19,10 @@
 
 @layer base {
   html, body {
-    @apply bg-canvas text-ink antialiased selection:bg-accent/20 selection:text-accent overflow-x-hidden;
+    @apply bg-canvas text-ink antialiased selection:bg-accent/20 selection:text-accent;
+    /* `clip` (not `hidden`) so html/body don't each become a scroll container,
+       which produced a second, nested vertical scrollbar. */
+    overflow-x: clip;
   }
 }
 

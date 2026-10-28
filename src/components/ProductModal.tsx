@@ -29,6 +29,7 @@ import { ImageMagnifier } from './ImageMagnifier.tsx';
 import { LandedCostEstimator } from './LandedCostEstimator.tsx';
 import { VerificationBadge } from './VerificationBadge.tsx';
 import { languageLabel, sealedTypeLabel, PRODUCT_LANGUAGES } from '../lib/productTaxonomy.ts';
+import { SafeImage } from './SafeImage.tsx';
 
 export interface ProductModalProps {
   product: any;
@@ -504,7 +505,7 @@ export function ProductModal({
                           : 'border-slate-800 hover:border-slate-600 opacity-70 hover:opacity-100'
                       }`}
                     >
-                      <img src={img} alt={`${product.title} - ${idx + 1}`} className="w-full h-full object-contain p-1" />
+                      <SafeImage src={img} alt={`${product.title} - ${idx + 1}`} className="w-full h-full object-contain p-1" />
                     </button>
                   ))}
                 </div>

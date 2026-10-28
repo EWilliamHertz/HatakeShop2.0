@@ -124,8 +124,9 @@ const ProductCard = ({
   onSelect: (product: any) => void;
   onQuickAddSample: (product: any, image: string, minPrice: number | null, e: React.MouseEvent) => void;
 }) => {
-  const [imgError, setImgError] = useState(false);
-  const [hoverImgError, setHoverImgError] = useState(false);
+  // URLs that failed to load; the card falls through to the next working image.
+  const [failedImgs, setFailedImgs] = useState<string[]>([]);
+  const markFailed = (src: string) => setFailedImgs(prev => (prev.includes(src) ? prev : [...prev, src]));
 
   if (!p) return null;
 
@@ -134,8 +135,9 @@ const ProductCard = ({
   const minPrice = extractMinUnitPrice(p, tiers);
   const specs = extractSpecHighlights(p.specifications);
   const langMeta = p.language ? PRODUCT_LANGUAGES.find(x => x.value === p.language) : null;
-  const primaryImg = !imgError && images[0] ? images[0] : null;
-  const secondaryImg = !hoverImgError && images.length > 1 ? images[1] : null;
+  const usableImages = images.filter((u: string) => !failedImgs.includes(u));
+  const primaryImg = usableImages[0] || null;
+  const secondaryImg = usableImages.length > 1 ? usableImages[1] : null;
   const sellerId = p.seller?.id || p.sellerId;
   const sellerName = p.seller?.companyName || 'Verified Supplier';
 
@@ -184,7 +186,7 @@ const ProductCard = ({
               alt={p.title}
               loading="lazy"
               decoding="async"
-              onError={() => setImgError(true)}
+              onError={() => markFailed(primaryImg)}
               className={`w-full h-full object-contain p-3 transition-all duration-500 ${
                 secondaryImg ? 'group-hover:opacity-0 group-hover:scale-105' : 'group-hover:scale-105'
               }`}
@@ -195,7 +197,7 @@ const ProductCard = ({
                 alt={`${p.title} alternate view`}
                 loading="lazy"
                 decoding="async"
-                onError={() => setHoverImgError(true)}
+                onError={() => markFailed(secondaryImg)}
                 className="absolute inset-0 w-full h-full object-contain p-3 opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
               />
             )}
@@ -346,13 +348,13 @@ const ProductLineRow = ({
   onSelect: (p: any) => void;
   onQuickAddSample: (product: any, image: string, minPrice: number | null, e: React.MouseEvent) => void;
 }) => {
-  const [imgError, setImgError] = useState(false);
+  const [failedImgs, setFailedImgs] = useState<string[]>([]);
   const images = parseImages(p?.images);
   const tiers = parseTiers(p?.tieredPricing);
   const minPrice = extractMinUnitPrice(p, tiers);
   const specs = extractSpecHighlights(p?.specifications);
   const langMeta = p?.language ? PRODUCT_LANGUAGES.find(x => x.value === p.language) : null;
-  const primaryImg = !imgError && images[0] ? images[0] : null;
+  const primaryImg = images.find((u: string) => !failedImgs.includes(u)) || null;
   const sellerId = p?.seller?.id || p?.sellerId;
 
   return (
@@ -368,7 +370,7 @@ const ProductLineRow = ({
             alt={p.title}
             loading="lazy"
             decoding="async"
-            onError={() => setImgError(true)}
+            onError={() => setFailedImgs(prev => (prev.includes(primaryImg) ? prev : [...prev, primaryImg]))}
             className="w-full h-full object-contain p-1.5 group-hover:scale-105 transition-transform"
           />
         ) : (
