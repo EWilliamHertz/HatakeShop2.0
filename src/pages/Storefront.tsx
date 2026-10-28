@@ -192,7 +192,7 @@ export function Storefront() {
       {/* Banner */}
       <div className="w-full h-48 md:h-64 bg-slate-800 relative overflow-hidden shadow-sm">
         {store.storeBannerUrl ? (
-          <img src={store.storeBannerUrl} alt={store.companyName} className="w-full h-full object-cover opacity-80" />
+          <SafeImage src={store.storeBannerUrl} alt={store.companyName} className="w-full h-full object-cover opacity-80" targetWidth={1200} />
         ) : (
           <div className="w-full h-full bg-gradient-to-r from-slate-900 to-slate-700 opacity-90"></div>
         )}

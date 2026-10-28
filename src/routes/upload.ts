@@ -1,10 +1,128 @@
 import { Router } from 'express';
 import { put } from '@vercel/blob';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import sharp from 'sharp';
 import { v2 as cloudinary } from 'cloudinary';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+const CACHE_DIR = path.resolve(process.env.IMAGE_CACHE_DIR || '/tmp/hatake-img-cache');
+if (!fs.existsSync(CACHE_DIR)) {
+  try {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+  } catch (e) {}
+}
+
+const ALLOWED_HOSTS = new Set([
+  'hfiagc3pdkekrkjs.public.blob.vercel-storage.com',
+  'i.ibb.co',
+  'res.cloudinary.com',
+  'images.unsplash.com',
+  'localhost',
+  '127.0.0.1'
+]);
+
+const inFlight = new Map<string, Promise<Buffer>>();
+
+/**
+ * High-performance image proxy & resizing endpoint.
+ * Converts large (1MB - 6MB) camera uploads into crisp, lightweight WebP
+ * thumbnails (~15KB - 30KB) with permanent immutable caching.
+ */
+router.get(['/image-proxy', '/api/image-proxy', '/api-v2/image-proxy'], async (req, res) => {
+  const rawUrl = req.query.url as string;
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return res.status(400).send('Missing url parameter');
+  }
+
+  let parsed: URL;
+  try {
+    parsed = rawUrl.startsWith('/')
+      ? new URL(`http://127.0.0.1:${process.env.PORT || 3000}${rawUrl}`)
+      : new URL(rawUrl);
+  } catch {
+    return res.status(400).send('Invalid url');
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const isAllowedHost =
+    ALLOWED_HOSTS.has(hostname) ||
+    hostname.endsWith('.vercel-storage.com') ||
+    hostname.endsWith('.public.blob.vercel-storage.com') ||
+    hostname.endsWith('.ibb.co') ||
+    rawUrl.startsWith('/images/') ||
+    rawUrl.startsWith('/');
+
+  if (!isAllowedHost) {
+    return res.status(403).send('Image host not permitted');
+  }
+
+  const width = Math.min(1600, Math.max(50, parseInt(req.query.w as string || '600', 10) || 600));
+  const quality = Math.min(100, Math.max(50, parseInt(req.query.q as string || '80', 10) || 80));
+
+  const cacheKey = crypto
+    .createHash('md5')
+    .update(`${rawUrl}_w${width}_q${quality}`)
+    .digest('hex');
+  const cacheFile = path.join(CACHE_DIR, `${cacheKey}.webp`);
+
+  res.setHeader('Content-Type', 'image/webp');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+  if (fs.existsSync(cacheFile)) {
+    return fs.createReadStream(cacheFile).pipe(res);
+  }
+
+  try {
+    let job = inFlight.get(cacheKey);
+    if (!job) {
+      job = (async () => {
+        let inputBuffer: Buffer;
+        if (rawUrl.startsWith('/images/')) {
+          const localPath = path.join(process.cwd(), 'public', rawUrl);
+          if (fs.existsSync(localPath)) {
+            inputBuffer = await fs.promises.readFile(localPath);
+          } else {
+            const resp = await fetch(parsed.href, { signal: AbortSignal.timeout(10000) });
+            if (!resp.ok) throw new Error(`Upstream returned ${resp.status}`);
+            inputBuffer = Buffer.from(await resp.arrayBuffer());
+          }
+        } else {
+          const resp = await fetch(parsed.href, {
+            headers: { 'User-Agent': 'HatakeImageProxy/1.0' },
+            signal: AbortSignal.timeout(12000)
+          });
+          if (!resp.ok) throw new Error(`Upstream returned ${resp.status}`);
+          inputBuffer = Buffer.from(await resp.arrayBuffer());
+        }
+
+        const webpBuf = await sharp(inputBuffer)
+          .resize(width, width, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality })
+          .toBuffer();
+
+        try {
+          await fs.promises.writeFile(cacheFile, webpBuf);
+        } catch (e) {}
+
+        return webpBuf;
+      })();
+
+      inFlight.set(cacheKey, job);
+      job.finally(() => inFlight.delete(cacheKey));
+    }
+
+    const result = await job;
+    return res.end(result);
+  } catch (err: any) {
+    console.error('Image proxy optimization error:', err.message, 'for', rawUrl);
+    // Graceful fallback: redirect directly to original source
+    return res.redirect(rawUrl);
+  }
+});
 
 router.post(["/upload", "/api/upload", "/api-v2/upload"], requireAuth, async (req, res) => {
   try {

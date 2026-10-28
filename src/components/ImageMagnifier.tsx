@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PackageSearch } from 'lucide-react';
+import { optimizeImageUrl } from './SafeImage.tsx';
 
 export function ImageMagnifier({ src, alt }: { src: string, alt: string }) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -24,6 +25,8 @@ export function ImageMagnifier({ src, alt }: { src: string, alt: string }) {
     );
   }
 
+  const displaySrc = optimizeImageUrl(src, 1200);
+
   return (
     <div 
       className="relative w-full h-full overflow-hidden group cursor-crosshair flex items-center justify-center"
@@ -32,7 +35,7 @@ export function ImageMagnifier({ src, alt }: { src: string, alt: string }) {
       onMouseMove={handleMouseMove}
     >
       <img
-        src={src}
+        src={displaySrc}
         alt={alt}
         onError={() => setHasError(true)}
         className="w-full h-full object-contain"

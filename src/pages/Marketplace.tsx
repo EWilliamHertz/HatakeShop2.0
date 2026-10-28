@@ -33,6 +33,7 @@ import { ProductModal } from '../components/ProductModal.tsx';
 import { WishlistButton } from '../components/WishlistButton.tsx';
 import { VerificationBadge } from '../components/VerificationBadge.tsx';
 import { BrowseSections } from '../components/BrowseSections.tsx';
+import { optimizeImageUrl } from '../components/SafeImage.tsx';
 
 const COUNTRY_FLAGS: Record<string, string> = {
   'China': '🇨🇳',
@@ -126,6 +127,7 @@ const ProductCard = ({
 }) => {
   // URLs that failed to load; the card falls through to the next working image.
   const [failedImgs, setFailedImgs] = useState<string[]>([]);
+  const [isHovered, setIsHovered] = useState(false);
   const markFailed = (src: string) => setFailedImgs(prev => (prev.includes(src) ? prev : [...prev, src]));
 
   if (!p) return null;
@@ -144,6 +146,7 @@ const ProductCard = ({
   return (
     <article
       onClick={() => onSelect(p)}
+      onMouseEnter={() => setIsHovered(true)}
       className={`group cursor-pointer rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 bg-slate-900/90 backdrop-blur-sm ${
         isSponsored
           ? 'border border-[#ffcc00]/50 shadow-[0_0_24px_rgba(255,204,0,0.08)] hover:border-[#ffcc00]'
@@ -182,7 +185,7 @@ const ProductCard = ({
         {primaryImg ? (
           <>
             <img
-              src={primaryImg}
+              src={optimizeImageUrl(primaryImg, 600)}
               alt={p.title}
               loading="lazy"
               decoding="async"
@@ -191,9 +194,9 @@ const ProductCard = ({
                 secondaryImg ? 'group-hover:opacity-0 group-hover:scale-105' : 'group-hover:scale-105'
               }`}
             />
-            {secondaryImg && (
+            {secondaryImg && isHovered && (
               <img
-                src={secondaryImg}
+                src={optimizeImageUrl(secondaryImg, 600)}
                 alt={`${p.title} alternate view`}
                 loading="lazy"
                 decoding="async"
@@ -366,7 +369,7 @@ const ProductLineRow = ({
       <div className="w-full sm:w-20 h-32 sm:h-20 rounded-xl bg-slate-950 border border-slate-800 shrink-0 flex items-center justify-center overflow-hidden relative">
         {primaryImg ? (
           <img
-            src={primaryImg}
+            src={optimizeImageUrl(primaryImg, 200)}
             alt={p.title}
             loading="lazy"
             decoding="async"

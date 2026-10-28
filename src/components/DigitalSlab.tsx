@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from './Layout.tsx';
+import { optimizeImageUrl } from './SafeImage.tsx';
 
 interface DigitalSlabProps {
   image?: string;
@@ -65,7 +66,7 @@ export function DigitalSlab({ company, grade, certNumber, cardName, cardSet, car
       <div className="flex-1 p-2 sm:p-4 flex items-center justify-center">
         <div className="w-full h-full max-h-[85%] max-w-[85%] bg-slate-300 rounded-lg border-2 border-slate-400/50 shadow-none flex items-center justify-center relative overflow-hidden">
             {image ? (
-              <img src={image} alt={cardName} className="w-full h-full object-cover" />
+              <img src={optimizeImageUrl(image, 500)} alt={cardName} className="w-full h-full object-cover" />
             ) : (
               <>
                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent"></div>
