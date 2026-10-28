@@ -356,10 +356,10 @@ export function Home() {
         <div className="relative pt-24 pb-16 md:pt-36 md:pb-28 px-4 max-w-6xl mx-auto flex flex-col items-center z-10">
           
           {/* Epic Typography */}
-          <div className="text-center space-y-8 max-w-5xl mx-auto">
+          <div className="text-center space-y-8 w-full min-w-0 max-w-5xl mx-auto">
             {/* Logo above heading — no extra gap, tight mb-0 so it flows into the h1 */}
             <img src="/logo.png" alt="Hatake.Shop" className="h-24 md:h-32 w-auto mx-auto mb-0 drop-shadow-[0_0_24px_rgba(99,102,241,0.35)]" />
-            <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 drop-shadow-sm !mt-4">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-[5.5rem] font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 drop-shadow-sm !mt-4">
               {t('Next-Generation')} <br/>
               <span className="bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent filter drop-shadow-[0_0_20px_rgba(99,102,241,0.3)]">{t('B2B TCG Sourcing')}</span>
             </h1>
@@ -371,7 +371,7 @@ export function Home() {
             <Link
               to="/leads"
               onClick={() => window.scrollTo(0, 0)}
-              className="relative z-50 group inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left max-w-xl mx-auto shadow-[0_0_30px_rgba(99,102,241,0.1)]"
+              className="relative z-50 group flex sm:inline-flex w-full sm:w-auto items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left max-w-xl mx-auto shadow-[0_0_30px_rgba(99,102,241,0.1)]"
             >
               <div className="shrink-0 w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
                 <span className="text-lg">📋</span>
