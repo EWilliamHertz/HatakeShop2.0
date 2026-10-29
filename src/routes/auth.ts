@@ -87,6 +87,30 @@ router.post("/api-v2/auth/sync", requireAuth, async (req: AuthRequest, res) => {
       
       const user = await getOrCreateUser(req.user.uid, req.user.email || "", req.user.name);
       
+      // Auto-match leads by email if inviteToken wasn't passed
+      if (!finalCompanyName && req.user.email) {
+         const matchedLeads = await db.select().from(leads).where(eq(leads.email, req.user.email)).limit(1);
+         if (matchedLeads.length > 0) {
+            const ml = matchedLeads[0];
+            finalCompanyName = ml.companyName || "";
+            if (ml.status !== 'recruited') {
+               const redeemedAt = new Date();
+               await db.update(leads).set({ status: 'recruited', redeemedAt }).where(eq(leads.id, ml.id));
+               (req as any).io?.emit("lead_updated", { id: ml.id, status: 'recruited', redeemedAt: redeemedAt.toISOString() });
+            }
+            const leadUpdates: any = {};
+            if (ml.country && !user.country) leadUpdates.country = ml.country;
+            if (ml.city && !user.shippingCity) leadUpdates.shippingCity = ml.city;
+            if (ml.state && !user.region) leadUpdates.region = ml.state;
+            if (ml.website && !user.website) leadUpdates.website = ml.website;
+            if (user.role === 'buyer') leadUpdates.role = 'both';
+            if (Object.keys(leadUpdates).length > 0) {
+               await db.update(users).set(leadUpdates).where(eq(users.id, user.id));
+               Object.assign(user, leadUpdates);
+            }
+         }
+      }
+
       if (finalCompanyName && !user.companyName) {
          const existingCompany = await db.select().from(users).where(and(eq(users.companyName, finalCompanyName), isNull(users.teamOwnerId))).limit(1);
          if (existingCompany.length > 0) {
@@ -105,9 +129,6 @@ router.post("/api-v2/auth/sync", requireAuth, async (req: AuthRequest, res) => {
       res.status(500).json({ error: err.message });
     }
   });
-
-
-import { adminAuth } from '../lib/firebase-admin.js';
 
 router.post("/api-v2/auth/send-verification", requireAuth, async (req: AuthRequest, res) => {
     try {

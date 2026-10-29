@@ -5,6 +5,7 @@ import { eq, or, and, isNull, sql, inArray } from 'drizzle-orm';
 import { userFollowers } from "../db/schema.js";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { getUserProfile, updateUserProfile, getOrCreateUser } from "../db/users.js";
+import { sendMembershipApprovedEmail } from "../lib/emailTemplate.js";
 
 const router = Router();
 
@@ -502,6 +503,7 @@ router.post(["/api-v2/profile/verify-vat", "/api/profile/verify-vat"], requireAu
     const viesName = nameMatch ? nameMatch[1].trim() : null;
 
     if (isValid) {
+      const wasPending = userProfile.verificationStatus === 'pending';
       await db.update(users)
         .set({
           kybAutoVerified: true,
@@ -510,6 +512,18 @@ router.post(["/api-v2/profile/verify-vat", "/api/profile/verify-vat"], requireAu
           ...(viesName && viesName !== '---' ? { companyName: viesName } : {}),
         })
         .where(eq(users.id, userProfile.id));
+
+      if (wasPending) {
+        await sendMembershipApprovedEmail({
+          id: userProfile.id,
+          email: userProfile.email,
+          companyName: viesName || userProfile.companyName,
+          displayName: userProfile.displayName,
+          supplierTier: 'Verified Supplier',
+          inviteCode: userProfile.inviteCode,
+          appUrl: process.env.APP_URL || 'https://hatake.shop'
+        });
+      }
 
       return res.json({ verified: true, companyName: viesName, message: 'VAT verified via EU VIES — Verified Supplier badge granted.' });
     }

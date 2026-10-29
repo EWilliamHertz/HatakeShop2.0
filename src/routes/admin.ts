@@ -13,7 +13,7 @@ import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from 
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
 import crypto from "crypto";
-import { generateB2BEmailHtml, buildB2BEmailSubject, B2BMailOptions } from "../lib/emailTemplate.js";
+import { generateB2BEmailHtml, buildB2BEmailSubject, B2BMailOptions, sendMembershipApprovedEmail } from "../lib/emailTemplate.js";
 import { parseLeadGeo } from "../lib/leadGeo.js";
 import { normalizeOriginType } from "../lib/productTaxonomy.js";
 import { getUserProfile } from "../db/users.js";
@@ -1107,6 +1107,9 @@ router.patch("/api-v2/admin/users/:id", requireAuth, requireAdmin, async (req: A
         profilePictureUrl, bannerUrl
       } = req.body;
       
+      const [existingUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const prevStatus = existingUser?.verificationStatus;
+
       const updateData: any = {};
       if (role !== undefined) updateData.role = role;
       if (verificationStatus !== undefined) updateData.verificationStatus = verificationStatus;
@@ -1124,13 +1127,29 @@ router.patch("/api-v2/admin/users/:id", requireAuth, requireAdmin, async (req: A
       if (profilePictureUrl !== undefined) updateData.profilePictureUrl = profilePictureUrl;
       if (bannerUrl !== undefined) updateData.bannerUrl = bannerUrl;
 
-      
-      
       // Update the user
       await db.update(users).set(updateData).where(eq(users.id, userId));
 
       // Re-fetch the user to see their current team
       const targetUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+      // Trigger membership verified email if status transitioned from pending to verified
+      if (
+        prevStatus === 'pending' &&
+        verificationStatus &&
+        (verificationStatus === 'verified' || ['verified', 'certified', 'elite'].includes(verificationStatus)) &&
+        existingUser
+      ) {
+        await sendMembershipApprovedEmail({
+          id: existingUser.id,
+          email: updateData.email || existingUser.email,
+          companyName: updateData.companyName || existingUser.companyName,
+          displayName: updateData.displayName || existingUser.displayName,
+          supplierTier: targetUser[0]?.supplierTier || 'Verified Supplier',
+          inviteCode: targetUser[0]?.inviteCode || existingUser.inviteCode,
+          appUrl: process.env.APP_URL || 'https://hatake.shop'
+        });
+      }
 
       // Sync company profile fields if applicable
       if (targetUser.length > 0) {
@@ -1350,7 +1369,7 @@ router.patch(["/admin/products/bulk", "/api/admin/products/bulk", "/api-v2/admin
 router.get("/api-v2/admin/approvals", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const pendingProducts = await db.select().from(products).where(eq(products.approvalStatus, 'pending'));
-    const pendingSellers = await db.select().from(users).where(and(eq(users.verificationStatus, 'pending'), eq(users.role, 'seller')));
+    const pendingSellers = await db.select().from(users).where(eq(users.verificationStatus, 'pending'));
     // For pendingUsers name changes, you might need a different table or logic, but we will pass empty array for now
     res.json({ pendingProducts, pendingSellers, pendingUsers: [] });
   } catch (e: any) {
@@ -1363,16 +1382,59 @@ router.post("/api-v2/admin/approvals/sellers/:id", requireAuth, requireAdmin, as
     const sellerId = parseInt(req.params.id, 10);
     const { action, tier } = req.body; // action can be 'approve', 'reject', 'set_tier'
     
+    const [seller] = await db.select().from(users).where(eq(users.id, sellerId)).limit(1);
+    if (!seller) return res.status(404).json({ error: "Seller not found" });
+
+    const prevStatus = seller.verificationStatus;
+    let nextStatus: string | null = null;
+    let newTier = seller.supplierTier || 'Verified Supplier';
+
     if (action === 'set_tier' && tier) {
-       await db.update(users).set({ verificationStatus: tier }).where(eq(users.id, sellerId));
+       nextStatus = tier;
+       newTier = tier === 'verified' ? 'Verified Supplier' : tier;
+       await db.update(users).set({ verificationStatus: tier, supplierTier: newTier }).where(eq(users.id, sellerId));
     } else if (action === 'approve') {
-      await db.update(users).set({ verificationStatus: 'verified' }).where(eq(users.id, sellerId));
+       nextStatus = 'verified';
+       newTier = 'Verified Supplier';
+       await db.update(users).set({ verificationStatus: 'verified', supplierTier: 'Verified Supplier' }).where(eq(users.id, sellerId));
     } else if (action === 'reject') {
-      await db.update(users).set({ verificationStatus: 'rejected', role: 'buyer' }).where(eq(users.id, sellerId));
+       nextStatus = 'rejected';
+       await db.update(users).set({ verificationStatus: 'rejected', role: 'buyer' }).where(eq(users.id, sellerId));
     }
+
+    if (prevStatus === 'pending' && (nextStatus === 'verified' || ['verified', 'certified', 'elite'].includes(nextStatus || ''))) {
+       await sendMembershipApprovedEmail({
+         id: seller.id,
+         email: seller.email,
+         companyName: seller.companyName,
+         displayName: seller.displayName,
+         supplierTier: newTier,
+         inviteCode: seller.inviteCode,
+         appUrl: process.env.APP_URL || 'https://hatake.shop'
+       });
+    }
+
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/api-v2/admin/test-membership-approved-email", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { email, companyName, tier, inviteCode } = req.body;
+    const targetEmail = email || req.user?.email || "ernst@hatake.eu";
+    const result = await sendMembershipApprovedEmail({
+      email: targetEmail,
+      companyName: companyName || "Hatake Partner Store",
+      displayName: "Valued Partner",
+      supplierTier: tier || "Verified Supplier",
+      inviteCode: inviteCode || "SEC-DDBZASO4",
+      appUrl: process.env.APP_URL || 'https://hatake.shop'
+    });
+    res.json({ success: true, result });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

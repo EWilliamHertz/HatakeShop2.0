@@ -647,6 +647,17 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
                         </div>
                      </div>
                      <div className="flex gap-2 items-center">
+                        <button onClick={async () => {
+                           let token; try { token = await user?.getIdToken(); } catch(err:any) { toast.error(err.message); return; }
+                           await fetch(`/api-v2/admin/approvals/sellers/${u.id}`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                              body: JSON.stringify({ action: 'approve' })
+                           });
+                           window.location.reload();
+                        }} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-semibold tracking-tight text-sm">
+                          ✓ Approve (Verify)
+                        </button>
                         <select
                           className="bg-slate-900 text-sm border-slate-700 text-slate-100 rounded focus:border-cyan-500 px-3 py-1.5"
                           onChange={async (e) => {

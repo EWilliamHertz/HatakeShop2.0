@@ -862,6 +862,8 @@ router.get(["/public/partners", "/api/public/partners", "/api-v2/public/partners
     const sellers = await db.select({
       id: users.id,
       companyName: users.companyName,
+      displayName: users.displayName,
+      email: users.email,
       activeCompanyId: users.activeCompanyId,
       country: users.country,
       shippingCity: users.shippingCity,
@@ -871,21 +873,27 @@ router.get(["/public/partners", "/api/public/partners", "/api-v2/public/partners
       companyFocus: users.companyFocus,
       website: users.website,
     }).from(users).where(and(
-      or(eq(users.role, 'seller'), eq(users.role, 'both'), eq(users.role, 'admin')),
+      or(
+        eq(users.role, 'seller'),
+        eq(users.role, 'both'),
+        eq(users.role, 'admin'),
+        eq(users.verificationStatus, 'verified')
+      ),
       isNull(users.teamOwnerId)
     ));
 
     const normKey = (s?: string | null) => (s || '').toLowerCase().replace(/\s+/g, '');
 
     for (const seller of sellers) {
-      if (!seller.companyName) continue;
-      const key = normKey(seller.companyName);
+      const resolvedCompanyName = (seller.companyName || seller.displayName || '').trim();
+      if (!resolvedCompanyName) continue;
+      const key = normKey(resolvedCompanyName);
       const matchedComp =
         (seller.activeCompanyId ? companyById.get(seller.activeCompanyId) : null) ||
         companyByNormName.get(key) ||
         null;
 
-      const displayName = matchedComp?.name || seller.companyName;
+      const displayName = matchedComp?.name || resolvedCompanyName;
       const country = normalizeCountryName(seller.country || matchedComp?.country) || null;
       const city = seller.shippingCity ? String(seller.shippingCity).trim() || null : null;
       const region = seller.region || matchedComp?.region || null;
