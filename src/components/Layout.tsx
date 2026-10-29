@@ -43,7 +43,7 @@ const mainNavItems: { name: string; label: string; path: string; icon: any; prot
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 font-sans w-full max-w-full overflow-x-clip">
-      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 shadow-sm w-full max-w-full overflow-hidden">
+      <header className="sticky top-0 z-[60] bg-slate-950/80 backdrop-blur-xl border-b border-slate-800 shadow-sm w-full max-w-full">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between h-14 sm:h-20 items-center w-full min-w-0">
             

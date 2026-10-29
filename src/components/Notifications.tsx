@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext.tsx';
 import { Bell, Check, ExternalLink } from 'lucide-react';
@@ -10,6 +10,30 @@ export function Notifications() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
@@ -50,9 +74,10 @@ export function Notifications() {
   if (!user) return null;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)} 
+        aria-label={t('Notifications')}
         className="relative p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
       >
         <Bell className="w-5 h-5" />
@@ -64,7 +89,7 @@ export function Notifications() {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-          <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1.5rem)] bg-slate-900 border border-slate-700 shadow-2xl shadow-black/50 rounded-xl overflow-hidden z-50">
+          <div className="absolute right-[-4.5rem] sm:right-0 mt-2 w-80 max-w-[calc(100vw-1.5rem)] bg-slate-900 border border-slate-700 shadow-2xl shadow-black/80 rounded-xl overflow-hidden z-50">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
               <h3 className="font-semibold text-white">{t('Notifications')}</h3>
               {unreadCount > 0 && (
