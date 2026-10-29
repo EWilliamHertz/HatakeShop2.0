@@ -37,26 +37,28 @@ export function CompanyListings() {
 
   const updateSearchParam = (key: string, value: string) => {
     setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
       if (!value || (key === 'sort' && value === 'newest')) {
-        prev.delete(key);
+        next.delete(key);
       } else {
-        prev.set(key, value);
+        next.set(key, value);
       }
-      return prev;
+      return next;
     });
   };
 
   const toggleMultiParam = (key: string, value: string) => {
     setSearchParams(prev => {
-      const current = prev.get(key) ? prev.get(key)!.split(',') : [];
+      const next = new URLSearchParams(prev);
+      const current = next.get(key) ? next.get(key)!.split(',') : [];
       if (current.includes(value)) {
-        const next = current.filter(v => v !== value);
-        if (next.length === 0) prev.delete(key);
-        else prev.set(key, next.join(','));
+        const updated = current.filter(v => v !== value);
+        if (updated.length === 0) next.delete(key);
+        else next.set(key, updated.join(','));
       } else {
-        prev.set(key, [...current, value].join(','));
+        next.set(key, [...current, value].join(','));
       }
-      return prev;
+      return next;
     });
   };
 
@@ -183,7 +185,7 @@ export function CompanyListings() {
       </Helmet>
 
       {/* Sub-header */}
-      <div className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-30">
+      <div className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-14 sm:top-20 z-30">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 min-w-0">
           <Link
             to={`/company/${id}`}
