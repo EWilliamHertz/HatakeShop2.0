@@ -323,7 +323,7 @@ export const crmMailSettings = pgTable('crm_mail_settings', {
   segment: text('segment'),
   language: text('language').default('en'),
   senderName: text('sender_name').default('Hatake B2B'),
-  replyTo: text('reply_to').default('ernst@hatake.eu'),
+  replyTo: text('reply_to').default('stefan@hatake.eu'),
   subjectTemplate: text('subject_template').notNull(),
   headlineTemplate: text('headline_template'),
   introTemplate: text('intro_template'),

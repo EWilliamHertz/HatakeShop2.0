@@ -175,7 +175,7 @@ export function ensureLeadsCrmSchema(): Promise<void> {
           "segment" text,
           "language" text DEFAULT 'en',
           "sender_name" text DEFAULT 'Hatake B2B',
-          "reply_to" text DEFAULT 'ernst@hatake.eu',
+          "reply_to" text DEFAULT 'stefan@hatake.eu',
           "subject_template" text NOT NULL,
           "headline_template" text,
           "intro_template" text,
@@ -188,6 +188,9 @@ export function ensureLeadsCrmSchema(): Promise<void> {
         )
       `);
 
+      await pool.query(`ALTER TABLE "crm_mail_settings" ALTER COLUMN "reply_to" SET DEFAULT 'stefan@hatake.eu'`).catch(() => {});
+      await pool.query(`UPDATE "crm_mail_settings" SET "reply_to" = 'stefan@hatake.eu' WHERE "reply_to" = 'ernst@hatake.eu'`).catch(() => {});
+
       const settingsCountRes = await pool.query('SELECT count(*) as count FROM "crm_mail_settings"');
       if (parseInt(settingsCountRes.rows[0]?.count || '0', 10) === 0) {
         await pool.query(`
@@ -198,7 +201,7 @@ export function ensureLeadsCrmSchema(): Promise<void> {
               'Global Default (English)',
               NULL, NULL, NULL, NULL, 'en',
               'Hatake B2B',
-              'ernst@hatake.eu',
+              'stefan@hatake.eu',
               '{{companyName}}, join Hatake.Shop B2B',
               '{{companyName}}, you''re invited.',
               'Hi {{firstName}}, we''d like to invite {{companyName}} to join Hatake B2B — the international wholesale network where verified TCG & collectibles stores source factory-direct accessories, Asian & English sealed product, and move inventory at scale.',
@@ -211,7 +214,7 @@ export function ensureLeadsCrmSchema(): Promise<void> {
               'United States — LGS & Hobby Stores',
               'United States', NULL, NULL, NULL, 'en',
               'Hatake B2B North America',
-              'ernst@hatake.eu',
+              'stefan@hatake.eu',
               'Wholesale TCG & Factory Accessories for {{companyName}} ({{city}})',
               '{{companyName}} — Wholesale Invitation for {{city}}, {{state}}',
               'Hi {{firstName}}, we''re onboarding leading card shops in {{city}}, {{state}} onto Hatake B2B. Source Japanese, Simplified Chinese & English Pokémon, One Piece, and factory-direct TopBestPKG binders, sleeves & magnetic holders at direct B2B rates.',
@@ -224,7 +227,7 @@ export function ensureLeadsCrmSchema(): Promise<void> {
               'Sweden / Sverige — Kortbutiker (Svenska)',
               'Sweden', NULL, NULL, NULL, 'sv',
               'Hatake B2B Sverige',
-              'ernst@hatake.eu',
+              'stefan@hatake.eu',
               '{{companyName}} ({{city}}) — Inbjudan till Hatake.Shop B2B',
               '{{companyName}}, välkommen till Hatake B2B.',
               'Hej {{firstName}}! Vi bjuder in utvalda kort- och hobbybutiker i {{city}} till Hatake B2B — vårt grossistnätverk för Pokémon, One Piece och fabrikstillverkade tillbehör (pärmar, toploaders, sleeves & akrylboxar) utan mellanhänder.',
@@ -237,7 +240,7 @@ export function ensureLeadsCrmSchema(): Promise<void> {
               'Germany / DACH — Fachhandel (Deutsch)',
               'Germany', NULL, NULL, NULL, 'de',
               'Hatake B2B DACH',
-              'ernst@hatake.eu',
+              'stefan@hatake.eu',
               '{{companyName}} ({{city}}) — B2B-Einladung zu Hatake.Shop',
               '{{companyName}}, Sie sind eingeladen.',
               'Hallo {{firstName}}, wir laden ausgewählte TCG- und Sammelkarten-Händler in {{city}} herzlich zu Hatake B2B ein — Ihrer Großhandelsplattform für versiegelte TCG-Produkte und Direktfabrik-Zubehör zu attraktiven Händlerkonditionen.',

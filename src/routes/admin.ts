@@ -494,7 +494,7 @@ router.post("/api-v2/admin/leads/mail-settings", requireAuth, requireAdmin, asyn
       segment: body.segment || null,
       language: body.language || 'en',
       senderName: body.senderName || 'Hatake B2B',
-      replyTo: body.replyTo || 'ernst@hatake.eu',
+      replyTo: body.replyTo || 'stefan@hatake.eu',
       subjectTemplate: body.subjectTemplate || '{{companyName}}, join Hatake.Shop B2B',
       headlineTemplate: body.headlineTemplate || null,
       introTemplate: body.introTemplate || null,
@@ -526,7 +526,7 @@ router.put("/api-v2/admin/leads/mail-settings/:id", requireAuth, requireAdmin, a
       segment: body.segment || null,
       language: body.language || 'en',
       senderName: body.senderName || 'Hatake B2B',
-      replyTo: body.replyTo || 'ernst@hatake.eu',
+      replyTo: body.replyTo || 'stefan@hatake.eu',
       subjectTemplate: body.subjectTemplate || '{{companyName}}, join Hatake.Shop B2B',
       headlineTemplate: body.headlineTemplate || null,
       introTemplate: body.introTemplate || null,
@@ -629,7 +629,7 @@ router.post("/api-v2/admin/leads/preview", requireAuth, requireAdmin, async (req
       const mailOpts: B2BMailOptions = {
         language: effectiveSettings?.language || 'en',
         senderName: effectiveSettings?.senderName || 'Hatake B2B',
-        replyTo: effectiveSettings?.replyTo || process.env.RESEND_REPLY_TO || 'ernst@hatake.eu',
+        replyTo: effectiveSettings?.replyTo || process.env.RESEND_REPLY_TO || 'stefan@hatake.eu',
         subjectTemplate: effectiveSettings?.subjectTemplate,
         headlineTemplate: effectiveSettings?.headlineTemplate,
         introTemplate: effectiveSettings?.introTemplate,
@@ -734,7 +734,7 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
       }
 
       const savedRules = await db.select().from(crmMailSettings);
-      const defaultReplyTo = process.env.RESEND_REPLY_TO || "ernst@hatake.eu";
+      const defaultReplyTo = process.env.RESEND_REPLY_TO || "stefan@hatake.eu";
       const appUrl = process.env.APP_URL || 'https://hatake.shop';
 
       const emailPayloads = pendingLeads.map(lead => {

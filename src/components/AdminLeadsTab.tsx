@@ -62,7 +62,7 @@ const EMPTY_MAIL_RULE: MailSettingRule = {
   segment: '',
   language: 'en',
   senderName: 'Hatake B2B',
-  replyTo: 'ernst@hatake.eu',
+  replyTo: 'stefan@hatake.eu',
   subjectTemplate: '{{companyName}} ({{city}}) — Join Hatake.Shop B2B',
   headlineTemplate: "{{companyName}}, you're invited.",
   introTemplate:
