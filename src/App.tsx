@@ -22,27 +22,55 @@ import { Login } from './pages/Login.tsx';
 import { JoinCompany } from "./pages/JoinCompany.tsx";
 import { Suppliers } from './pages/Suppliers.tsx';
 
+function lazyRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      if (
+        msg.includes('is not a valid JavaScript MIME type') ||
+        msg.includes('Failed to fetch dynamically imported module') ||
+        msg.includes('Loading chunk') ||
+        msg.includes('error loading dynamically imported module')
+      ) {
+        const key = 'chunk_retry_reload_ts';
+        const now = Date.now();
+        const last = parseInt(sessionStorage.getItem(key) || '0', 10);
+        if (now - last > 10000) {
+          sessionStorage.setItem(key, String(now));
+          window.location.reload();
+          return new Promise<{ default: T }>(() => {});
+        }
+      }
+      throw err;
+    }
+  });
+}
+
 // --- Code-split heavy / rarely-visited pages (keeps the public bundle small) ---
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard.tsx').then(m => ({ default: m.AdminDashboard })));
-const DatabaseViewer = lazy(() => import('./pages/DatabaseViewer.tsx').then(m => ({ default: m.DatabaseViewer })));
-const SellerDashboard = lazy(() => import('./pages/SellerDashboard.tsx').then(m => ({ default: m.SellerDashboard })));
-const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard.tsx').then(m => ({ default: m.AffiliateDashboard })));
-const Feed = lazy(() => import('./pages/Feed.tsx').then(m => ({ default: m.Feed })));
-const Storefront = lazy(() => import('./pages/Storefront.tsx').then(m => ({ default: m.Storefront })));
-const Leads = lazy(() => import('./pages/Leads.tsx').then(m => ({ default: m.Leads })));
-const Orders = lazy(() => import('./pages/Orders.tsx').then(m => ({ default: m.Orders })));
-const Onboarding = lazy(() => import('./pages/Onboarding.tsx').then(m => ({ default: m.Onboarding })));
-const RFQHub = lazy(() => import('./pages/RFQHub.tsx').then(m => ({ default: m.RFQHub })));
-const RFQDetails = lazy(() => import('./pages/RFQDetails.tsx').then(m => ({ default: m.RFQDetails })));
-const CompanyProfile = lazy(() => import('./pages/CompanyProfile.tsx').then(m => ({ default: m.CompanyProfile })));
-const CompanyListings = lazy(() => import('./pages/CompanyListings.tsx').then(m => ({ default: m.CompanyListings })));
-const UserProfile = lazy(() => import('./pages/UserProfile.tsx').then(m => ({ default: m.UserProfile })));
-const Settings = lazy(() => import('./pages/Settings.tsx').then(m => ({ default: m.Settings })));
-const CompanySettings = lazy(() => import('./pages/CompanySettings.tsx').then(m => ({ default: m.CompanySettings })));
-const Wishlist = lazy(() => import('./pages/Wishlist.tsx').then(m => ({ default: m.Wishlist })));
-const SellerOnboarding = lazy(() => import('./pages/SellerOnboarding.tsx').then(m => ({ default: m.SellerOnboarding })));
-const ProductPage = lazy(() => import('./pages/ProductPage.tsx').then(m => ({ default: m.ProductPage })));
-const SwedenShop = lazy(() => import('./pages/SwedenShop.tsx').then(m => ({ default: m.SwedenShop })));
+const AdminDashboard = lazyRetry(() => import('./pages/AdminDashboard.tsx').then(m => ({ default: m.AdminDashboard })));
+const DatabaseViewer = lazyRetry(() => import('./pages/DatabaseViewer.tsx').then(m => ({ default: m.DatabaseViewer })));
+const SellerDashboard = lazyRetry(() => import('./pages/SellerDashboard.tsx').then(m => ({ default: m.SellerDashboard })));
+const AffiliateDashboard = lazyRetry(() => import('./pages/AffiliateDashboard.tsx').then(m => ({ default: m.AffiliateDashboard })));
+const Feed = lazyRetry(() => import('./pages/Feed.tsx').then(m => ({ default: m.Feed })));
+const Storefront = lazyRetry(() => import('./pages/Storefront.tsx').then(m => ({ default: m.Storefront })));
+const Leads = lazyRetry(() => import('./pages/Leads.tsx').then(m => ({ default: m.Leads })));
+const Orders = lazyRetry(() => import('./pages/Orders.tsx').then(m => ({ default: m.Orders })));
+const Onboarding = lazyRetry(() => import('./pages/Onboarding.tsx').then(m => ({ default: m.Onboarding })));
+const RFQHub = lazyRetry(() => import('./pages/RFQHub.tsx').then(m => ({ default: m.RFQHub })));
+const RFQDetails = lazyRetry(() => import('./pages/RFQDetails.tsx').then(m => ({ default: m.RFQDetails })));
+const CompanyProfile = lazyRetry(() => import('./pages/CompanyProfile.tsx').then(m => ({ default: m.CompanyProfile })));
+const CompanyListings = lazyRetry(() => import('./pages/CompanyListings.tsx').then(m => ({ default: m.CompanyListings })));
+const UserProfile = lazyRetry(() => import('./pages/UserProfile.tsx').then(m => ({ default: m.UserProfile })));
+const Settings = lazyRetry(() => import('./pages/Settings.tsx').then(m => ({ default: m.Settings })));
+const CompanySettings = lazyRetry(() => import('./pages/CompanySettings.tsx').then(m => ({ default: m.CompanySettings })));
+const Wishlist = lazyRetry(() => import('./pages/Wishlist.tsx').then(m => ({ default: m.Wishlist })));
+const SellerOnboarding = lazyRetry(() => import('./pages/SellerOnboarding.tsx').then(m => ({ default: m.SellerOnboarding })));
+const ProductPage = lazyRetry(() => import('./pages/ProductPage.tsx').then(m => ({ default: m.ProductPage })));
+const SwedenShop = lazyRetry(() => import('./pages/SwedenShop.tsx').then(m => ({ default: m.SwedenShop })));
 
 function RouteFallback() {
   return <div className="p-8 text-center text-slate-400">Loading…</div>;
