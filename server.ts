@@ -163,6 +163,32 @@ app.use(helmet({
 }));
 app.use(compression());
 
+// Enforce strict CORS whitelist for Hatake production domains & local development
+const allowedOrigins = new Set([
+  (process.env.APP_URL || 'https://www.hatake.shop').replace(/\/$/, ''),
+  'https://www.hatake.shop',
+  'https://hatake.shop',
+  'https://hatakeshop.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+]);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    if (allowedOrigins.has(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With');
+    }
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+  }
+  next();
+});
+
 // General API rate limit + stricter auth brute-force guard
 // Always return JSON on 429 so frontend JSON parsers never throw "Server returned non-JSON response (429)",
 // and skip general API rate-limiting in local development where HMR / StrictMode fires burst requests.

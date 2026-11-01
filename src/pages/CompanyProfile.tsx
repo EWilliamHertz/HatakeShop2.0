@@ -108,12 +108,89 @@ export function CompanyProfile() {
   })();
 
   const previewProducts = (products || []).slice(0, 3);
+  const companyTitle = `${company.companyName || 'Company Profile'} | Hatake B2B Partner`;
+  const companyUrl = `https://www.hatake.shop/company/${id}`;
+  const companyImage = company?.bannerUrl || company?.profilePictureUrl || company?.logoUrl || 'https://www.hatake.shop/og-image.png';
+  const companyDesc = company.bio
+    ? company.bio.slice(0, 160)
+    : `Verified B2B wholesale partner profile for ${company.companyName} on Hatake.Shop. Sealed TCG & accessories.`;
+
+  const avgRating = reviews && reviews.length > 0
+    ? (reviews.reduce((acc: number, r: any) => acc + (Number(r.rating) || 0), 0) / reviews.length).toFixed(1)
+    : null;
+
+  const orgJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: company.companyName || 'Verified Wholesale Partner',
+    url: companyUrl,
+    logo: company?.profilePictureUrl || company?.logoUrl || 'https://www.hatake.shop/icon.svg',
+    description: companyDesc,
+    ...(avgRating
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: avgRating,
+            reviewCount: reviews.length,
+            bestRating: '5',
+            worstRating: '1',
+          },
+        }
+      : {}),
+  };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.hatake.shop/',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Suppliers',
+        item: 'https://www.hatake.shop/suppliers',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: company.companyName || 'Supplier Profile',
+        item: companyUrl,
+      },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 pb-24">
       <Helmet>
-        <title>{company.companyName || 'Company Profile'} | Hatake</title>
-        <meta name="description" content={`View the company profile for ${company.companyName} on Hatake Marketplace.`} />
+        <title>{companyTitle}</title>
+        <meta name="description" content={companyDesc} />
+        <link rel="canonical" href={companyUrl} />
+
+        {/* OpenGraph */}
+        <meta property="og:type" content="profile" />
+        <meta property="og:title" content={companyTitle} />
+        <meta property="og:description" content={companyDesc} />
+        <meta property="og:image" content={companyImage} />
+        <meta property="og:url" content={companyUrl} />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={companyTitle} />
+        <meta name="twitter:description" content={companyDesc} />
+        <meta name="twitter:image" content={companyImage} />
+
+        {/* Schema.org Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(orgJsonLd)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbJsonLd)}
+        </script>
       </Helmet>
 
       {/* Hero Banner */}

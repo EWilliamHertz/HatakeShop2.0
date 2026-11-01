@@ -73,7 +73,8 @@ db.sqlite
 *.log
 
 # Local admin, database, migration & debug scripts (NEVER publish to GitHub)
-scripts/
+scripts/*
+!scripts/backfill_embeddings.ts
 .archive-scripts/
 scratch/
 create_admin.js
