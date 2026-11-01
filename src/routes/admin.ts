@@ -473,7 +473,11 @@ router.get("/api-v2/admin/leads/mail-settings", requireAuth, requireAdmin, async
   try {
     await ensureLeadsCrmSchema();
     const rules = await db.select().from(crmMailSettings).orderBy(desc(crmMailSettings.isDefault), asc(crmMailSettings.name));
-    res.json(rules);
+    const sanitized = rules.map(r => ({
+      ...r,
+      replyTo: (!r.replyTo || String(r.replyTo).toLowerCase() === 'ernst@hatake.eu') ? 'stefan@hatake.eu' : r.replyTo
+    }));
+    res.json(sanitized);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -486,6 +490,7 @@ router.post("/api-v2/admin/leads/mail-settings", requireAuth, requireAdmin, asyn
     if (body.isDefault) {
       await db.update(crmMailSettings).set({ isDefault: false });
     }
+    const cleanReplyTo = (!body.replyTo || String(body.replyTo).toLowerCase() === 'ernst@hatake.eu') ? 'stefan@hatake.eu' : body.replyTo.trim();
     const inserted = await db.insert(crmMailSettings).values({
       name: body.name || 'Custom Geo Rule',
       country: body.country || null,
@@ -494,7 +499,7 @@ router.post("/api-v2/admin/leads/mail-settings", requireAuth, requireAdmin, asyn
       segment: body.segment || null,
       language: body.language || 'en',
       senderName: body.senderName || 'Hatake B2B',
-      replyTo: body.replyTo || 'stefan@hatake.eu',
+      replyTo: cleanReplyTo,
       subjectTemplate: body.subjectTemplate || '{{companyName}}, join Hatake.Shop B2B',
       headlineTemplate: body.headlineTemplate || null,
       introTemplate: body.introTemplate || null,
@@ -518,6 +523,7 @@ router.put("/api-v2/admin/leads/mail-settings/:id", requireAuth, requireAdmin, a
     if (body.isDefault) {
       await db.update(crmMailSettings).set({ isDefault: false });
     }
+    const cleanReplyTo = (!body.replyTo || String(body.replyTo).toLowerCase() === 'ernst@hatake.eu') ? 'stefan@hatake.eu' : body.replyTo.trim();
     const updated = await db.update(crmMailSettings).set({
       name: body.name || 'Custom Geo Rule',
       country: body.country || null,
@@ -526,7 +532,7 @@ router.put("/api-v2/admin/leads/mail-settings/:id", requireAuth, requireAdmin, a
       segment: body.segment || null,
       language: body.language || 'en',
       senderName: body.senderName || 'Hatake B2B',
-      replyTo: body.replyTo || 'stefan@hatake.eu',
+      replyTo: cleanReplyTo,
       subjectTemplate: body.subjectTemplate || '{{companyName}}, join Hatake.Shop B2B',
       headlineTemplate: body.headlineTemplate || null,
       introTemplate: body.introTemplate || null,
@@ -626,10 +632,18 @@ router.post("/api-v2/admin/leads/preview", requireAuth, requireAdmin, async (req
       const registrationUrl = `${appUrl}/register?invite=preview-token-demo`;
       const unsubscribeUrl = `${appUrl}/api/unsubscribe?email=${encodeURIComponent(sampleLead.email || 'demo@example.com')}`;
 
+      const defaultReplyTo = (process.env.RESEND_REPLY_TO && process.env.RESEND_REPLY_TO.toLowerCase() !== 'ernst@hatake.eu')
+        ? process.env.RESEND_REPLY_TO
+        : 'stefan@hatake.eu';
+      let resolvedReplyTo = String(effectiveSettings?.replyTo || defaultReplyTo).trim() || defaultReplyTo;
+      if (resolvedReplyTo.toLowerCase() === 'ernst@hatake.eu') {
+        resolvedReplyTo = defaultReplyTo;
+      }
+
       const mailOpts: B2BMailOptions = {
         language: effectiveSettings?.language || 'en',
         senderName: effectiveSettings?.senderName || 'Hatake B2B',
-        replyTo: effectiveSettings?.replyTo || process.env.RESEND_REPLY_TO || 'stefan@hatake.eu',
+        replyTo: resolvedReplyTo,
         subjectTemplate: effectiveSettings?.subjectTemplate,
         headlineTemplate: effectiveSettings?.headlineTemplate,
         introTemplate: effectiveSettings?.introTemplate,
@@ -734,7 +748,9 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
       }
 
       const savedRules = await db.select().from(crmMailSettings);
-      const defaultReplyTo = process.env.RESEND_REPLY_TO || "stefan@hatake.eu";
+      const defaultReplyTo = (process.env.RESEND_REPLY_TO && process.env.RESEND_REPLY_TO.toLowerCase() !== 'ernst@hatake.eu')
+        ? process.env.RESEND_REPLY_TO
+        : "stefan@hatake.eu";
       const appUrl = process.env.APP_URL || 'https://hatake.shop';
 
       const emailPayloads = pendingLeads.map(lead => {
@@ -746,7 +762,10 @@ router.post("/api-v2/admin/leads/send", requireAuth, requireAdmin, async (req, r
           : matchedRule || mailSettings || {};
 
         const senderDisplay = String(activeCfg.senderName || 'Hatake B2B').replace(/[<>"]/g, '').trim() || 'Hatake B2B';
-        const replyToAddr = String(activeCfg.replyTo || defaultReplyTo).trim() || defaultReplyTo;
+        let replyToAddr = String(activeCfg.replyTo || defaultReplyTo).trim() || defaultReplyTo;
+        if (replyToAddr.toLowerCase() === 'ernst@hatake.eu') {
+          replyToAddr = defaultReplyTo;
+        }
         const lang = activeCfg.language || 'en';
 
         const rawToken = crypto.randomUUID();
@@ -969,7 +988,7 @@ router.patch("/api-v2/admin/affiliates/:id", requireAuth, requireAdmin, async (r
 router.get("/api-v2/admin/test-email", requireAuth, requireAdmin, async (req, res) => {
     try {
       // Use the global resend instance
-      const adminEmails = ["ewilliamhe@gmail.com", "ernst@hatake.eu", "phoebe@topbestpkg.com"];
+      const adminEmails = ["ewilliamhe@gmail.com", "stefan@hatake.eu", "ernst@hatake.eu", "phoebe@topbestpkg.com"];
       const showcaseProducts = await db.select().from(products).where(eq(products.approvalStatus, 'approved')).orderBy(desc(products.createdAt)).limit(3);
       
       let productsHtml = '';
@@ -1423,7 +1442,7 @@ router.post("/api-v2/admin/approvals/sellers/:id", requireAuth, requireAdmin, as
 router.post("/api-v2/admin/test-membership-approved-email", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { email, companyName, tier, inviteCode } = req.body;
-    const targetEmail = email || req.user?.email || "ernst@hatake.eu";
+    const targetEmail = email || req.user?.email || "stefan@hatake.eu";
     const result = await sendMembershipApprovedEmail({
       email: targetEmail,
       companyName: companyName || "Hatake Partner Store",

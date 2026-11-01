@@ -247,7 +247,11 @@ export function generateB2BEmailHtml(
   };
 
   const brandTitle = escapeHtml((options?.senderName || 'Hatake B2B').trim() || 'Hatake B2B');
-  const contactEmail = escapeHtml((options?.replyTo || 'b2b@hatake.shop').trim() || 'b2b@hatake.shop');
+  let rawContactEmail = String(options?.replyTo || process.env.RESEND_REPLY_TO || 'stefan@hatake.eu').trim();
+  if (rawContactEmail.toLowerCase() === 'ernst@hatake.eu') {
+    rawContactEmail = 'stefan@hatake.eu';
+  }
+  const contactEmail = escapeHtml(rawContactEmail || 'stefan@hatake.eu');
 
   const headlineHtml = renderMailVariables(
     options?.headlineTemplate?.trim() || copy.defaultHeadline,
@@ -801,7 +805,9 @@ export async function sendMembershipApprovedEmail(options: SendMembershipApprove
     const primaryFrom = process.env.RESEND_FROM_EMAIL
       ? `Hatake.Shop <${process.env.RESEND_FROM_EMAIL}>`
       : "Hatake.Shop <b2b@hatake.shop>";
-    const replyTo = process.env.RESEND_REPLY_TO || "b2b@hatake.shop";
+    const replyTo = (process.env.RESEND_REPLY_TO && process.env.RESEND_REPLY_TO.toLowerCase() !== 'ernst@hatake.eu')
+      ? process.env.RESEND_REPLY_TO
+      : "stefan@hatake.eu";
 
     let resMail = await resend.emails.send({
       from: primaryFrom,

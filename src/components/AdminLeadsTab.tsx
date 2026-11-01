@@ -279,7 +279,11 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          setMailRules(data);
+          const sanitized = data.map((r: any) => ({
+            ...r,
+            replyTo: (!r.replyTo || String(r.replyTo).toLowerCase() === 'ernst@hatake.eu') ? 'stefan@hatake.eu' : r.replyTo,
+          }));
+          setMailRules(sanitized);
         }
       }
     } catch {
@@ -713,10 +717,19 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
 
     try {
       const token = await getToken();
+      const overrideRule = selectedOverrideRule
+        ? {
+            ...selectedOverrideRule,
+            replyTo: (!selectedOverrideRule.replyTo || String(selectedOverrideRule.replyTo).toLowerCase() === 'ernst@hatake.eu')
+              ? 'stefan@hatake.eu'
+              : selectedOverrideRule.replyTo,
+            overrideAll: true,
+          }
+        : undefined;
       const payload: Record<string, any> = {
         limit: targetBatchSize,
         useAutoGeoRules: dispatchRuleMode === 'auto',
-        mailSettings: selectedOverrideRule ? { ...selectedOverrideRule, overrideAll: true } : undefined,
+        mailSettings: overrideRule,
       };
 
       if (mode === 'selected') {
