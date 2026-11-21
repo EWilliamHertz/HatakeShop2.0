@@ -156,7 +156,7 @@ export function AdminDashboard() {
 const [stats, setStats] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('sverige');
   const [marketingLogs, setMarketingLogs] = useState([]);
   const [affiliates, setAffiliates] = useState([]);
   const [approvals, setApprovals] = useState<{ pendingSellers: any[]; pendingUsers: any[]; pendingProducts: any[] }>({ pendingSellers: [], pendingUsers: [], pendingProducts: [] });
@@ -456,13 +456,13 @@ const [affiliateForm, setAffiliateForm] = useState({ companyName: '', contactEma
       </div>
       
     <div className="flex space-x-6 border-b border-slate-700 mb-8 overflow-x-auto">
-         {['overview', 'approvals', 'listings', 'users', 'marketing', 'affiliates', 'leads', 'feedback', 'reviews', 'sverige', 'kort-butiker'].map(tab => (
+         {['sverige', 'listings', 'overview', 'approvals', 'users', 'marketing', 'affiliates', 'leads', 'feedback', 'reviews', 'kort-butiker'].map(tab => (
            <button 
              key={tab}
              onClick={() => setActiveTab(tab)}
-             className={`pb-3 font-semibold tracking-tight text-sm capitalize whitespace-nowrap transition-colors border-b-2 ${activeTab === tab ? 'border-ink text-slate-100' : 'border-transparent text-slate-400 hover:text-slate-100 hover:border-ink/30'}`}
+             className={`pb-3 font-semibold tracking-tight text-sm capitalize whitespace-nowrap transition-colors border-b-2 ${activeTab === tab ? 'border-cyan-400 text-cyan-300' : 'border-transparent text-slate-400 hover:text-slate-100 hover:border-cyan-400/30'}`}
            >
-             {tab === 'users' ? 'User Directory' : tab === 'sverige' ? 'Sverige Shop' : tab === 'kort-butiker' ? '🇸🇪 Kortbutiker Sverige' : tab}
+             {tab === 'users' ? 'User Directory' : tab === 'sverige' ? '🇸🇪 Hatake.Shop (B2C)' : tab === 'listings' ? '🌍 B2B & All Listings' : tab === 'kort-butiker' ? '🇸🇪 Kortbutiker Sverige' : tab}
            </button>
          ))}
       </div>

@@ -28,7 +28,6 @@ import { db, ensureSealedTaxonomySchema } from "./src/db/index.js";
 import { products, categories, inquiries, inquiryMessages, users, marketing_logs, affiliates, leads, reviews, feedback, wishlists } from "./src/db/schema.js";
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc, gte, lte } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
-import { fixOldInquiries } from "./fix_old_inquiries.js";
 import adminRouter from "./src/routes/admin.js";
 import authRouter from "./src/routes/auth.js";
 import productsRouter from "./src/routes/products.js";
@@ -127,7 +126,7 @@ app.get(["/cron/drip", "/api/cron/drip", "/api-v2/cron/drip"], async (req, res) 
 
     // 3. Auto-Archive Stale Inquiries (>30 days inactive)
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-    const activeStatuses = ['Sent', 'Pending', 'Under Negotiation'];
+    const activeStatuses: ('Sent' | 'Pending' | 'Under Negotiation')[] = ['Sent', 'Pending', 'Under Negotiation'];
     
     // We update where status is one of the active ones AND updatedAt < thirtyDaysAgo
     const archivedResult = await db.update(inquiries)
@@ -165,18 +164,29 @@ app.use(compression());
 
 // Enforce strict CORS whitelist for Hatake production domains & local development
 const allowedOrigins = new Set([
-  (process.env.APP_URL || 'https://www.hatake.shop').replace(/\/$/, ''),
+  (process.env.APP_URL || 'https://hatake.shop').replace(/\/$/, ''),
   'https://www.hatake.shop',
   'https://hatake.shop',
+  'https://b2b.hatake.shop',
   'https://hatakeshop.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://b2b.localhost:5173',
+  'http://b2b.localhost:3000',
 ]);
+
+function isAllowedCorsOrigin(origin?: string): boolean {
+  if (!origin) return false;
+  if (allowedOrigins.has(origin)) return true;
+  if (/^https:\/\/([a-z0-9-]+\.)?hatake\.shop$/i.test(origin)) return true;
+  if (/^http:\/\/(b2b\.)?localhost(:\d+)?$/i.test(origin)) return true;
+  return false;
+}
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin) {
-    if (allowedOrigins.has(origin)) {
+    if (isAllowedCorsOrigin(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -286,10 +296,39 @@ app.use(express.urlencoded({ limit: '15mb', extended: true }));
 const distDir = path.join(process.cwd(), 'dist');
 app.use(express.static(distDir, { index: false, maxAge: '1h' }));
 
-// --- SEO: robots.txt & sitemap.xml (real files for crawlers) ---
-const SITE_URL = (process.env.APP_URL || 'https://www.hatake.shop').replace(/\/$/, '');
+// --- SEO: Hostname-aware robots.txt & sitemap.xml (hatake.shop vs b2b.hatake.shop) ---
+const SITE_URL = (process.env.APP_URL || 'https://hatake.shop').replace(/\/$/, '');
+
+function resolveRequestSiteInfo(req: express.Request): {
+  isB2b: boolean;
+  canonicalBase: string;
+  siteBrand: string;
+} {
+  const rawHost = String(req.headers['x-forwarded-host'] || req.headers.host || req.hostname || 'hatake.shop')
+    .split(',')[0]
+    .trim()
+    .toLowerCase();
+  const isB2b =
+    rawHost.startsWith('b2b.') ||
+    rawHost.endsWith(':3001') ||
+    req.query?.site === 'b2b' ||
+    req.path === '/b2b' ||
+    req.path.startsWith('/b2b/');
+  const isLocal = rawHost.includes('localhost') || rawHost.startsWith('127.0.0.1');
+  const proto = String(req.headers['x-forwarded-proto'] || (isLocal ? 'http' : 'https')).split(',')[0].trim();
+
+  const canonicalBase = isLocal
+    ? `${proto}://${rawHost}`
+    : isB2b
+      ? 'https://b2b.hatake.shop'
+      : 'https://hatake.shop';
+
+  const siteBrand = isB2b ? 'B2B.Hatake.Shop' : 'Hatake.Shop';
+  return { isB2b, canonicalBase, siteBrand };
+}
 
 app.get(["/robots.txt", "/api/robots.txt", "/api-v2/robots.txt"], (req, res) => {
+  const { canonicalBase } = resolveRequestSiteInfo(req);
   res.type('text/plain');
   res.send(`User-agent: *
 Allow: /
@@ -298,42 +337,65 @@ Disallow: /admin/db
 Disallow: /api/
 Disallow: /api-v2/
 
-Sitemap: ${SITE_URL}/sitemap.xml
+Sitemap: ${canonicalBase}/sitemap.xml
 `);
 });
 
 app.get(["/sitemap.xml", "/api/sitemap.xml", "/api-v2/sitemap.xml"], async (req, res) => {
+  const { isB2b, canonicalBase } = resolveRequestSiteInfo(req);
   try {
-    const staticPaths = ['', '/marketplace', '/suppliers', '/leads', '/feed', '/login', '/apply-seller'];
-    const urls: string[] = staticPaths.map(p => SITE_URL + p);
+    const urls: string[] = [];
 
-    const [productRows, sellerRows, catRows, companyRows] = await Promise.all([
-      db.select({ id: products.id, createdAt: products.createdAt })
-        .from(products).where(eq(products.approvalStatus, 'approved')).limit(5000),
-      db.select({ slug: users.storeSlug }).from(users).where(isNotNull(users.storeSlug)).limit(2000),
-      db.select({ id: categories.id }).from(categories).limit(1000),
-      db.select({ id: users.id }).from(users).where(and(isNotNull(users.companyName), eq(users.verificationStatus, 'verified'))).limit(2000),
-    ]);
+    if (isB2b) {
+      const staticPaths = ['', '/marketplace', '/suppliers', '/leads', '/feed', '/login', '/apply-seller'];
+      for (const p of staticPaths) urls.push(canonicalBase + p);
 
-    for (const p of productRows) urls.push(`${SITE_URL}/product/${p.id}`);
-    for (const s of sellerRows) if (s.slug) urls.push(`${SITE_URL}/v/${s.slug}`);
-    for (const c of companyRows) urls.push(`${SITE_URL}/company/${c.id}`);
-    for (const c of catRows) urls.push(`${SITE_URL}/marketplace?category=${c.id}`);
+      const [productRows, sellerRows, catRows, companyRows] = await Promise.all([
+        db.select({ id: products.id, createdAt: products.createdAt })
+          .from(products).where(eq(products.approvalStatus, 'approved')).limit(5000),
+        db.select({ slug: users.storeSlug }).from(users).where(isNotNull(users.storeSlug)).limit(2000),
+        db.select({ id: categories.id }).from(categories).limit(1000),
+        db.select({ id: users.id }).from(users).where(and(isNotNull(users.companyName), eq(users.verificationStatus, 'verified'))).limit(2000),
+      ]);
+
+      for (const p of productRows) urls.push(`${canonicalBase}/product/${p.id}`);
+      for (const s of sellerRows) if (s.slug) urls.push(`${canonicalBase}/v/${s.slug}`);
+      for (const c of companyRows) urls.push(`${canonicalBase}/company/${c.id}`);
+      for (const c of catRows) urls.push(`${canonicalBase}/marketplace?category=${c.id}`);
+    } else {
+      // Flagship Swedish & Nordic B2C Storefront (hatake.shop)
+      urls.push(`${canonicalBase}/`);
+      const b2cProducts = await db
+        .select({ id: products.id })
+        .from(products)
+        .where(eq(products.isSverigeB2c, true))
+        .limit(5000);
+      for (const p of b2cProducts) {
+        urls.push(`${canonicalBase}/product/${p.id}`);
+      }
+    }
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(u => `  <url><loc>${u}</loc></url>`).join('\n')}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${urls
+  .map(
+    (u) => `  <url>
+    <loc>${u}</loc>
+    <xhtml:link rel="alternate" hreflang="sv-SE" href="${u}" />
+    <xhtml:link rel="alternate" hreflang="en" href="${u}${u.includes('?') ? '&amp;' : '?'}lang=en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="${u}" />
+  </url>`
+  )
+  .join('\n')}
 </urlset>`;
     res.type('application/xml');
     res.set('Cache-Control', 'public, max-age=3600');
     res.send(xml);
   } catch (e: any) {
-    // Never fail crawlers: emit at least the static pages
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${SITE_URL}/</loc></url>
-  <url><loc>${SITE_URL}/marketplace</loc></url>
+  <url><loc>${canonicalBase}/</loc></url>
 </urlset>`);
   }
 });
@@ -348,8 +410,30 @@ app.get(["/health", "/api/health", "/api-v2/health"], async (req, res) => {
   }
 });
 
-// NOTE: GET /api-v2/products is served by src/routes/products.ts (supports pagination,
-// language / sealed-type / country facets and sorting). Do not re-add a handler here.
+// Initialize HTTP & Socket.IO server BEFORE mounting req.io middleware and routers
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: [
+      process.env.APP_URL || 'https://hatake.shop',
+      'https://hatake.shop',
+      'https://www.hatake.shop',
+      'https://b2b.hatake.shop',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://b2b.localhost:5173',
+      'http://b2b.localhost:3000',
+    ],
+    credentials: true,
+  },
+});
+
+// Attach the Socket.IO instance to every request BEFORE the routers mount, so
+// route handlers can emit real-time events via `(req as any).io?.emit(...)`.
+app.use((req, res, next) => {
+  (req as any).io = io;
+  next();
+});
 
 // --- ROUTE MOUNTING (Supporting both /api/ and /api-v2/ prefixes to prevent 404s) ---
 import feedRouter from "./src/routes/feed.js";
@@ -358,14 +442,6 @@ import seoRouter from "./src/routes/seo.js";
 import uploadRouter from "./src/routes/upload.js";
 import workspacesRouter from "./src/routes/workspaces.js";
 const routers = [adminRouter, authRouter, productsRouter, sellerRouter, profileRouter, rfqsRouter, leadsRouter, webhooksRouter, categoriesRouter, feedRouter, notificationsRouter, cartRouter, seoRouter, uploadRouter, workspacesRouter];
-
-// Attach the Socket.IO instance to every request BEFORE the routers mount, so
-// route handlers can emit real-time events via `(req as any).io?.emit(...)`.
-// (Registered after the routers it was always undefined for router handlers.)
-app.use((req, res, next) => {
-  (req as any).io = io;
-  next();
-});
 
 for (const router of routers) {
   app.use("/", router);
@@ -389,14 +465,6 @@ botRouter.post("/webhook", async (req, res) => {
 
 app.use("/api/bot", botRouter);
 app.use("/api-v2/bot", botRouter);
-
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: [process.env.APP_URL || 'https://www.hatake.shop', 'http://localhost:5173', 'http://localhost:3000'],
-    credentials: true,
-  },
-});
 
 // --- Socket.IO authentication: resolve the user BEFORE accepting events ---
 io.use(async (socket, next) => {
@@ -1503,7 +1571,7 @@ app.post(["/seller/:id/contact", "/api/seller/:id/contact", "/api-v2/seller/:id/
 
     try {
       const buyerName = userProfile.companyName || userProfile.displayName || "A buyer";
-      const productTitle = product[0]?.title || "A product";
+      const productTitle = product?.title || "A product";
       await resend.emails.send({
         from: "Hatake.Shop <notifications@hatake.shop>",
         to: sellerProfile.email,
@@ -1511,7 +1579,7 @@ app.post(["/seller/:id/contact", "/api/seller/:id/contact", "/api-v2/seller/:id/
         html: generateNewRFQEmailHtml(
           buyerName, 
           productTitle, 
-          Number(quantity), 
+          1, 
           `${process.env.APP_URL || 'https://hatakeshop.vercel.app'}/rfq`
         )
       });
@@ -1650,126 +1718,58 @@ app.post(["/logistics/estimate", "/api/logistics/estimate", "/api-v2/logistics/e
   }
 });
 
-app.post(["/cart/rfq", "/api/cart/rfq", "/api-v2/cart/rfq"], requireAuth, async (req: AuthRequest, res) => {
-  try {
-    if (!req.user) return res.status(401).send("Unauthorized");
-    const userProfile = await getUserProfile(req.user.uid);
-    if (!userProfile) return res.status(404).send("User missing");
-
-    const { items } = req.body;
-    if (!items || !items.length) {
-      return res.status(400).json({ error: "No items in cart" });
-    }
-
-    const grouped = items.reduce((acc: any, item: any) => {
-      const sid = item.supplierId;
-      if (!acc[sid]) acc[sid] = [];
-      acc[sid].push(item.productId);
-      return acc;
-    }, {});
-
-    const createdInquiries = [];
-
-    for (const supplierId of Object.keys(grouped)) {
-      const productIds = grouped[supplierId];
-      
-      const result = await db.insert(inquiries).values({
-        buyerId: userProfile.id,
-        targetSellerId: parseInt(supplierId, 10),
-        quantity: 1,
-        status: 'Draft'
-      }).returning();
-      
-      const newInquiry = result[0];
-      
-      await db.insert(inquiryMessages).values({
-        inquiryId: newInquiry.id,
-        senderId: userProfile.id,
-        messageContent: `Requested bulk quote for product IDs: ${productIds.join(', ')}`,
-        isOfficialQuote: false
-      });
-
-      try {
-        const seller = await db.query.users.findFirst({
-          where: eq(users.id, parseInt(supplierId, 10))
-        });
-        if (seller) {
-          await adminDb.collection('inquiries').doc(newInquiry.id.toString()).set({
-            buyerUid: req.user.uid,
-            sellerUid: seller.uid
-          });
-          // Trigger Notification via Postgres
-          try {
-            const { db } = await import('./src/db/index.js');
-            const { users, notifications } = await import('./src/db/schema.js');
-            const { eq } = await import('drizzle-orm');
-            const sellerDb = await db.select().from(users).where(eq(users.uid, seller.uid)).limit(1);
-            if (sellerDb.length > 0) {
-              await db.insert(notifications).values({
-                userId: sellerDb[0].id,
-                title: "New Inquiry!",
-                message: `You received a new inquiry from ${req.user!.email}`,
-                link: '/rfq'
-              });
-            }
-          } catch(e) { console.error("Error inserting notification", e); }
-
-          if (seller.email) {
-            try {
-              const buyerName = userProfile.companyName || userProfile.displayName || "A buyer";
-              const productTitle = "Multiple Products (Bulk RFQ)";
-              
-              const htmlBody = generateNewRFQEmailHtml(
-                buyerName,
-                productTitle,
-                Number(totalQuantity),
-                `${process.env.APP_URL || 'https://hatakeshop.vercel.app'}/rfq`
-              );
-
-              await resend.emails.send({
-                from: "Hatake.Shop <notifications@hatake.eu>",
-                to: seller.email,
-                subject: `New Bulk Request for Quote from ${buyerName}`,
-                html: htmlBody
-              });
-            } catch (emailErr) {
-              console.error("Cart RFQ email failed:", emailErr);
-            }
-          }
-        }
-      } catch(e) {  
-        console.error("Firestore error creating cart rfq:", e);
-      }
-
-      createdInquiries.push(newInquiry);
-    }
-
-    res.json({ success: true, inquiries: createdInquiries });
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
 import fs from 'fs';
 
-// SEO Injection routes for Vercel Serverless
-const injectSEO = async (req: any, res: any, fetchMetadata: () => Promise<{title: string, description: string, image?: string, jsonLd?: any}>) => {
+// SEO Injection routes for Vercel Serverless & Express (Hostname-aware for hatake.shop vs b2b.hatake.shop)
+const injectSEO = async (
+  req: express.Request,
+  res: express.Response,
+  fetchMetadata: (siteInfo: ReturnType<typeof resolveRequestSiteInfo>) => Promise<{
+    title: string;
+    description: string;
+    image?: string;
+    canonicalPath?: string;
+    includeBrandSuffix?: boolean;
+    jsonLd?: any;
+  }>
+) => {
   try {
-    const isVercel = !!process.env.VERCEL;
-    const indexPath = isVercel ? path.join(process.cwd(), 'dist', 'index.html') : path.join(process.cwd(), 'index.html');
+    const distIndex = path.join(process.cwd(), 'dist', 'index.html');
+    const useDist = (process.env.NODE_ENV === 'production' || !!process.env.VERCEL) && fs.existsSync(distIndex);
+    const indexPath = useDist ? distIndex : path.join(process.cwd(), 'index.html');
     let html = fs.readFileSync(indexPath, 'utf-8');
-    
-    const meta = await fetchMetadata();
-    if (meta.title) html = html.replace(/<title>(.*?)<\/title>/, `<title>${meta.title} | Hatake.Shop</title>`);
+    const siteInfo = resolveRequestSiteInfo(req);
+
+    const meta = await fetchMetadata(siteInfo);
+    const fullTitle = meta.includeBrandSuffix === false ? meta.title : `${meta.title} | ${siteInfo.siteBrand}`;
+    const canonicalPath = meta.canonicalPath ?? req.path;
+    const canonicalUrl = `${siteInfo.canonicalBase}${canonicalPath === '/' ? '/' : canonicalPath}`;
+
+    // Strip any static canonical or hreflang links from the template before injecting dynamic ones
+    html = html.replace(/\s*<link rel="alternate" hreflang="[^"]*"[^>]*\/?>/gi, '');
+    html = html.replace(/\s*<link rel="canonical"[^>]*\/?>/gi, '');
+
+    if (meta.title) html = html.replace(/<title>(.*?)<\/title>/, `<title>${fullTitle}</title>`);
     if (meta.description) html = html.replace(/<meta name="description" content="(.*?)"\s*\/?>/, `<meta name="description" content="${meta.description}" />`);
     if (meta.image) {
       html = html.replace(/<head>/, `<head>\n    <meta property="og:image" content="${meta.image}" />\n    <meta name="twitter:image" content="${meta.image}" />`);
     }
-    html = html.replace(/<head>/, `<head>\n    <meta property="og:title" content="${meta.title} | Hatake.Shop" />\n    <meta property="og:description" content="${meta.description}" />`);
-    
-    // Inject JSON-LD Structured Data
+    const hreflangTags = [
+      `<link rel="canonical" href="${canonicalUrl}" />`,
+      `<link rel="alternate" hreflang="sv-SE" href="${canonicalUrl}" />`,
+      `<link rel="alternate" hreflang="en" href="${canonicalUrl}${canonicalUrl.includes('?') ? '&' : '?'}lang=en" />`,
+      `<link rel="alternate" hreflang="x-default" href="${canonicalUrl}" />`,
+      `<meta property="og:url" content="${canonicalUrl}" />`,
+      `<meta property="og:site_name" content="${siteInfo.siteBrand}" />`,
+      `<meta property="og:locale" content="sv_SE" />`,
+      `<meta property="og:locale:alternate" content="en_US" />`,
+    ].join('\n    ');
+
+    html = html.replace(
+      /<head>/,
+      `<head>\n    ${hreflangTags}\n    <meta property="og:title" content="${fullTitle}" />\n    <meta property="og:description" content="${meta.description}" />`
+    );
+
     if (meta.jsonLd) {
       const jsonLdScript = `<script type="application/ld+json">\n${JSON.stringify(meta.jsonLd, null, 2)}\n</script>`;
       html = html.replace(/<\/head>/, `  ${jsonLdScript}\n</head>`);
@@ -1778,68 +1778,102 @@ const injectSEO = async (req: any, res: any, fetchMetadata: () => Promise<{title
     res.send(html);
   } catch (err) {
     console.error("SEO Injection error:", err);
-    // fallback to normal
     const distPath = path.join(process.cwd(), 'dist');
     res.sendFile(path.join(distPath, 'index.html'));
   }
 };
 
-app.get("/product/:id", async (req, res, next) => {
-  // Only intercept normal GETs, not API requests
+const defaultSiteMetadata = async (siteInfo: ReturnType<typeof resolveRequestSiteInfo>, reqPath = '/') => {
+  if (siteInfo.isB2b) {
+    return {
+      title: 'B2B.Hatake.Shop — International TCG & Hobby B2B Wholesale & AI Sourcing Platform',
+      description: 'Source TCG accessories, binders, sleeves, acrylic cases, and gaming supplies directly from verified manufacturers with tiered MOQ pricing, landed cost estimation, and instant RFQs.',
+      canonicalPath: reqPath,
+      includeBrandSuffix: false,
+    };
+  }
+  return {
+    title: 'Hatake.Shop — Sveriges & Nordens TCG- & Hobbybutik | Booster Boxes, Singles & Tillbehör',
+    description: 'Handla Pokémon, One Piece, Magic: The Gathering, GlimmerFall TCG, graderade samlarkort samt Hatake Pro pärmar och sleeves direkt från svenskt lager med 1–3 dagars leverans.',
+    canonicalPath: reqPath,
+    includeBrandSuffix: false,
+  };
+};
+
+app.get("/sweden", (_req, res) => {
+  res.redirect(301, "/");
+});
+
+app.get(["/", "/b2b", "/marketplace", "/suppliers", "/leads", "/feed", "/rfq", "/onboarding"], async (req, res, next) => {
   if (req.headers.accept?.includes('application/json')) return next();
-  
-  injectSEO(req, res, async () => {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) return next();
+  injectSEO(req, res, (siteInfo) => defaultSiteMetadata(siteInfo, req.path));
+});
+
+app.get(["/product/:id", "/products/:id"], async (req, res, next) => {
+  if (req.headers.accept?.includes('application/json')) return next();
+
+  injectSEO(req, res, async (siteInfo) => {
     const productId = parseInt(req.params.id, 10);
-    if (isNaN(productId)) return { title: "Product Not Found", description: "This product could not be found." };
+    if (isNaN(productId)) return { title: "Produkt hittades inte", description: "Denna produkt kunde inte hittas." };
     const p = await db.select().from(products).where(eq(products.id, productId));
-    if (!p.length) return { title: "Product Not Found", description: "This product could not be found." };
-    let img = undefined;
+    if (!p.length) return { title: "Produkt hittades inte", description: "Denna produkt kunde inte hittas." };
+
+    const row = p[0];
+    const displayTitle = (!siteInfo.isB2b && row.sverigeTitle) ? row.sverigeTitle : row.title;
+    let img: string | undefined = undefined;
     try {
-      const imgs = JSON.parse(p[0].images as string || '[]');
+      const svImgs = Array.isArray(row.sverigeImages) ? row.sverigeImages : JSON.parse((row.sverigeImages as string) || '[]');
+      const stdImgs = Array.isArray(row.images) ? row.images : JSON.parse((row.images as string) || '[]');
+      const imgs = (!siteInfo.isB2b && svImgs.length > 0) ? svImgs : stdImgs;
       if (imgs.length) img = imgs[0];
-    } catch(e) {}
-    
-    // Add Product JSON-LD schema
+    } catch {}
+
+    const priceCurrency = siteInfo.isB2b ? 'EUR' : 'SEK';
+    const priceVal = (!siteInfo.isB2b && row.sverigePrice) ? row.sverigePrice : (row.unitCost || 0);
+
     const jsonLd = {
       "@context": "https://schema.org/",
       "@type": "Product",
-      "name": p[0].title,
+      "name": displayTitle,
       "image": img ? [img] : [],
-      "description": p[0].description || `Buy ${p[0].title} wholesale on Hatake.`,
-      "sku": p[0].id.toString(),
+      "description": row.description || `Köp ${displayTitle} hos ${siteInfo.siteBrand}.`,
+      "sku": row.id.toString(),
       "offers": {
-        "@type": "AggregateOffer",
-        "priceCurrency": "USD",
-        "lowPrice": p[0].unitCost || 0,
-        "offerCount": 1,
-        "availability": "https://schema.org/InStock"
+        "@type": "Offer",
+        "priceCurrency": priceCurrency,
+        "price": priceVal,
+        "availability": row.isPreorder ? "https://schema.org/PreOrder" : "https://schema.org/InStock",
+        "url": `${siteInfo.canonicalBase}/product/${row.id}`,
       }
     };
 
     return {
-      title: p[0].title,
-      description: `Wholesale B2B marketplace. Buy ${p[0].title} from trusted suppliers.`,
+      title: displayTitle,
+      description: siteInfo.isB2b
+        ? `Wholesale B2B marketplace. Source ${displayTitle} directly from verified suppliers on B2B.Hatake.Shop.`
+        : `Köp ${displayTitle} hos Hatake.Shop — Snabb leverans (1–3 dagar) från svenskt lager och säker betalning med Stripe.`,
       image: img,
-      jsonLd
+      canonicalPath: `/product/${row.id}`,
+      jsonLd,
     };
   });
 });
 
 app.get("/company/:id", async (req, res, next) => {
   if (req.headers.accept?.includes('application/json')) return next();
-  
-  injectSEO(req, res, async () => {
+
+  injectSEO(req, res, async (siteInfo) => {
     const compId = parseInt(req.params.id, 10);
     if (isNaN(compId)) return { title: "Company Not Found", description: "This company could not be found." };
     const c = await db.select().from(users).where(eq(users.id, compId));
     if (!c.length) return { title: "Company Not Found", description: "This company could not be found." };
-    
-    // Add Organization JSON-LD schema
+
     const jsonLd = {
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": c[0].companyName || c[0].displayName || "Company",
-      "url": `${process.env.APP_URL || 'https://www.hatake.shop'}/company/${compId}`,
+      "url": `${siteInfo.canonicalBase}/company/${compId}`,
       "logo": c[0].profilePictureUrl || "",
       "description": `Wholesale B2B supplier profile for ${c[0].companyName || c[0].displayName}.`
     };
@@ -1847,15 +1881,16 @@ app.get("/company/:id", async (req, res, next) => {
     return {
       title: c[0].companyName || c[0].displayName || "Company Profile",
       description: `View the B2B wholesale profile, reviews, and products for ${c[0].companyName || c[0].displayName}.`,
-      image: c[0].profilePictureUrl,
-      jsonLd
+      image: c[0].profilePictureUrl || undefined,
+      canonicalPath: `/company/${compId}`,
+      jsonLd,
     };
   });
 });
 
 app.get("/company/:id/listings", async (req, res, next) => {
   if (req.headers.accept?.includes('application/json')) return next();
-  
+
   injectSEO(req, res, async () => {
     const compId = parseInt(req.params.id, 10);
     if (isNaN(compId)) return { title: "Company Not Found", description: "This company could not be found." };
@@ -1864,7 +1899,8 @@ app.get("/company/:id/listings", async (req, res, next) => {
     return {
       title: `${c[0].companyName || c[0].displayName || "Company"} Listings`,
       description: `Browse all products and wholesale listings from ${c[0].companyName || c[0].displayName}.`,
-      image: c[0].profilePictureUrl
+      image: c[0].profilePictureUrl || undefined,
+      canonicalPath: `/company/${compId}/listings`,
     };
   });
 });
@@ -1886,13 +1922,20 @@ async function startLocalServer() {
   }
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT} (B2C) and http://localhost:${PORT}/b2b (B2B)`);
   });
+
+  if (PORT === 3000) {
+    const b2bSecondaryServer = createServer(app);
+    b2bSecondaryServer.on("error", () => {});
+    b2bSecondaryServer.listen(3001, "0.0.0.0", () => {
+      console.log(`Dedicated B2B mirror also running on http://localhost:3001`);
+    });
+  }
 }
 
-// Only start the manual HTTP server for local development.
-// In production, Vercel automatically runs `app` as a Serverless Function.
-if (process.env.NODE_ENV !== 'production') {
+// Start the HTTP server unless running inside Vercel Serverless Functions (where process.env.VERCEL is set).
+if (!process.env.VERCEL) {
   startLocalServer();
 }
 

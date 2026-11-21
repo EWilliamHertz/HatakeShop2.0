@@ -52,7 +52,7 @@ router.get(["/inventory/sync"], requireApiKey, async (req: any, res: any) => {
         stockQuantity: p.stockQuantity,
         moq: p.moq,
         images: p.images,
-        updatedAt: p.updatedAt
+        updatedAt: p.createdAt
       }))
     });
   } catch (error: any) {
@@ -81,6 +81,8 @@ router.post(["/inventory/sync"], requireApiKey, async (req: any, res: any) => {
         unitCost: String(item.unitCost),
         stockQuantity: item.stockQuantity || 0,
         moq: item.moq || 1,
+        originType: item.originType || 'Direct Factory',
+        leadTimeDays: item.leadTimeDays || 14,
         approvalStatus: user.role === 'admin' ? 'approved' : 'pending'
       });
       inserted++;

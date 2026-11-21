@@ -21,7 +21,14 @@ export function UserProfile() {
   if (isLoading) return <div className="p-8 text-center text-slate-400">Loading user profile...</div>;
   if (error || !user) return <div className="p-8 text-center text-red-400">Error loading user profile</div>;
 
-  const roleDisplay = user.teamRole === 'owner' ? 'Administrator' : user.teamRole === 'sales_rep' ? 'Sales Representative' : 'Catalog Manager';
+  const roleDisplay =
+    user.role === 'admin' || user.teamRole === 'owner' || user.teamRole === 'admin'
+      ? 'Administrator'
+      : user.teamRole === 'sales_rep'
+        ? 'Sales Representative'
+        : user.teamRole === 'catalog_manager'
+          ? 'Catalog Manager'
+          : 'Team Member';
   const companyId = user.teamOwnerId || user.id;
 
   return (

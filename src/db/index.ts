@@ -262,4 +262,9 @@ export function ensureLeadsCrmSchema(): Promise<void> {
 
 ensureLeadsCrmSchema().catch(() => {});
 
+export function ensureSverigeB2cCatalog(): Promise<void> {
+  return ensureSealedTaxonomySchema();
+}
+
+
 

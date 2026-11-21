@@ -757,7 +757,7 @@ router.post(["/stripe/create-checkout-session", "/api/stripe/create-checkout-ses
       orderBy: [desc(inquiryMessages.createdAt)]
     });
 
-    const unitCost = Number(lastQuote?.unitPriceProposed || prod.unitCost || prod.unitPrice || 0);
+    const unitCost = Number(lastQuote?.unitPriceProposed || prod.unitCost || (prod as any).unitPrice || 0);
     if (unitCost <= 0) {
       return res.status(400).json({ error: "Invalid price for checkout" });
     }

@@ -23,6 +23,7 @@ function SverigeToggle({ product, user, queryClient }: { product: any, user: any
             body: JSON.stringify({ isSverigeB2c: newVal })
           });
           queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+          queryClient.invalidateQueries({ queryKey: ['sverige-admin-products'] });
         } catch(err) { 
           console.error(err); 
           setChecked(!newVal); // revert
@@ -53,6 +54,7 @@ export function AdminListings() {
   const [bulkSealedType, setBulkSealedType] = useState<string>('');
   const [bulkProductType, setBulkProductType] = useState<string>('');
   const [bulkOriginType, setBulkOriginType] = useState<string>('');
+  const [bulkSverigeB2c, setBulkSverigeB2c] = useState<string>('');
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterLanguage, setFilterLanguage] = useState<string>('');
@@ -60,6 +62,7 @@ export function AdminListings() {
   const [filterProductType, setFilterProductType] = useState<string>('');
   const [filterOrigin, setFilterOrigin] = useState<string>('');
   const [filterSponsored, setFilterSponsored] = useState<string>('');
+  const [filterSverigeB2c, setFilterSverigeB2c] = useState<string>('');
   const [filterCompany, setFilterCompany] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('newest');
@@ -101,9 +104,11 @@ export function AdminListings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['sverige-admin-products'] });
       setSelectedIds([]);
       setBulkCategoryIds([]);
       setBulkSponsored('');
+      setBulkSverigeB2c('');
       setBulkLanguage('');
       setBulkSealedType('');
     }
@@ -124,8 +129,9 @@ export function AdminListings() {
     const matchesProductType = filterProductType === '' || p.productType === filterProductType;
     const matchesOrigin = filterOrigin === '' || p.originType === filterOrigin;
     const matchesSponsored = filterSponsored === '' || (filterSponsored === 'true' ? p.isSponsored : !p.isSponsored);
+    const matchesSverige = filterSverigeB2c === '' || (filterSverigeB2c === 'true' ? Boolean(p.isSverigeB2c) : !p.isSverigeB2c);
     const matchesCompany = filterCompany === '' || p.sellerId?.toString() === filterCompany;
-    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType && matchesProductType && matchesOrigin && matchesSponsored && matchesCompany;
+    return matchesSearch && matchesCategory && matchesStatus && matchesLanguage && matchesSealedType && matchesProductType && matchesOrigin && matchesSponsored && matchesSverige && matchesCompany;
   }).sort((a: any, b: any) => {
     if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -155,6 +161,7 @@ export function AdminListings() {
     const updates: any = {};
     if (bulkCategoryIds.length > 0) updates.categoryIds = bulkCategoryIds;
     if (bulkSponsored !== '') updates.isSponsored = bulkSponsored === 'true';
+    if (bulkSverigeB2c !== '') updates.isSverigeB2c = bulkSverigeB2c === 'true';
     if (bulkLanguage !== '') updates.language = bulkLanguage === '__clear' ? null : bulkLanguage;
     if (bulkSealedType !== '') updates.sealedType = bulkSealedType === '__clear' ? null : bulkSealedType;
     if (bulkProductType !== '') updates.productType = bulkProductType === '__clear' ? null : bulkProductType;
@@ -206,6 +213,15 @@ export function AdminListings() {
               <option value="">All Placements</option>
               <option value="true">Sponsored Only</option>
               <option value="false">Regular Only</option>
+            </select>
+          <select 
+              value={filterSverigeB2c} 
+              onChange={e => setFilterSverigeB2c(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">All Storefronts</option>
+              <option value="true">🇸🇪 hatake.shop (B2C)</option>
+              <option value="false">🌐 B2B Only</option>
             </select>
             <select
             value={filterCompany}
@@ -366,9 +382,18 @@ export function AdminListings() {
               <option value="">-- Set Origin --</option>
               {ORIGIN_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
+            <select 
+              value={bulkSverigeB2c} 
+              onChange={e => setBulkSverigeB2c(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
+            >
+              <option value="">-- Set Sverige B2C --</option>
+              <option value="true">🇸🇪 Add to hatake.shop (B2C)</option>
+              <option value="false">Remove from hatake.shop (B2C)</option>
+            </select>
             <button 
               onClick={handleBulkUpdate}
-              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkLanguage === '' && bulkSealedType === '' && bulkProductType === '' && bulkOriginType === '') || bulkUpdateMutation.isPending}
+              disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkSverigeB2c === '' && bulkLanguage === '' && bulkSealedType === '' && bulkProductType === '' && bulkOriginType === '') || bulkUpdateMutation.isPending}
               className="btn-primary"
             >
               {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}

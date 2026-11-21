@@ -1,41 +1,115 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #020617; /* slate-950 */
-  --color-surface: #0f172a; /* slate-900 */
-  --color-surface-hover: #1e293b; /* slate-800 */
-  --color-ink: #e2e8f0; /* slate-200 */
-  --color-ink-light: #94a3b8; /* slate-400 */
-  --color-hairline: #1e293b; /* slate-800 */
-  
+  --color-canvas: #020617;
+  --color-surface: #0f172a;
+  --color-surface-hover: #1e293b;
+  --color-ink: #e2e8f0;
+  --color-ink-light: #94a3b8;
+  --color-hairline: #1e293b;
+
   /* Premium Wholesale Accent (Cyan) */
-  --color-accent: #06b6d4; /* cyan-500 */
-  --color-accent-hover: #22d3ee; /* cyan-400 */
-  --color-accent-light: #164e63; /* cyan-900 */
-  
+  --color-accent: #06b6d4;
+  --color-accent-hover: #22d3ee;
+  --color-accent-light: #164e63;
+
   --font-display: 'Inter', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, sans-serif;
 }
 
+/* ── Nordic Light Mode Variable & Contrast Adaptation (Default Theme) ── */
+html.theme-light {
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-ink: #0f172a;
+  --color-ink-light: #475569;
+  --color-hairline: #e2e8f0;
+
+  /* Invert Slate scale in Light Mode so every existing slate card, input, table & modal adapts cleanly */
+  --color-slate-950: #f1f5f9;
+  --color-slate-900: #ffffff;
+  --color-slate-800: #e2e8f0;
+  --color-slate-700: #cbd5e1;
+  --color-slate-600: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-400: #475569;
+  --color-slate-300: #334155;
+  --color-slate-200: #1e293b;
+  --color-slate-100: #0f172a;
+
+  /* Soften -950 / -900 dark accent backgrounds into light pastel tints in Light Mode */
+  --color-indigo-950: #eef2ff;
+  --color-indigo-900: #e0e7ff;
+  --color-cyan-950: #ecfeff;
+  --color-cyan-900: #cffafe;
+  --color-sky-950: #f0f9ff;
+  --color-sky-900: #e0f2fe;
+  --color-emerald-950: #ecfdf5;
+  --color-emerald-900: #d1fae5;
+  --color-amber-950: #fffbeb;
+  --color-amber-900: #fef3c7;
+  --color-purple-950: #faf5ff;
+  --color-purple-900: #f3e8ff;
+  --color-rose-950: #fff1f2;
+  --color-rose-900: #ffe4e6;
+
+  /* Deepen pastel accent text colors for high contrast on white/pastel backgrounds */
+  --color-cyan-300: #0369a1;
+  --color-cyan-400: #0284c7;
+  --color-sky-300: #0369a1;
+  --color-indigo-300: #3730a3;
+  --color-indigo-400: #4338ca;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #059669;
+  --color-amber-300: #b45309;
+  --color-amber-400: #d97706;
+  --color-purple-300: #6d28d9;
+  --color-purple-400: #7c3aed;
+}
+
+html.theme-light .text-white {
+  color: #0f172a;
+}
+
+html.theme-light .text-slate-950 {
+  color: #0f172a;
+}
+
+/* Preserve white text inside vibrant colored buttons, badges, and dark lightbox overlays */
+html.theme-light .btn-primary,
+html.theme-light .btn-danger,
+html.theme-light .bg-indigo-500,
+html.theme-light .bg-indigo-600,
+html.theme-light .bg-cyan-500,
+html.theme-light .bg-cyan-600,
+html.theme-light .bg-emerald-500,
+html.theme-light .bg-emerald-600,
+html.theme-light .bg-rose-500,
+html.theme-light .bg-red-600,
+html.theme-light .bg-purple-500,
+html.theme-light .bg-purple-500\/90,
+html.theme-light .theme-keep-dark,
+html.theme-light .theme-keep-dark .text-white {
+  color: #ffffff !important;
+}
+
 @layer base {
   html, body {
-    @apply bg-canvas text-ink antialiased selection:bg-accent/20 selection:text-accent;
-    /* `clip` (not `hidden`) so html/body don't each become a scroll container,
-       which produced a second, nested vertical scrollbar. */
+    @apply bg-canvas text-ink antialiased selection:bg-accent/20 selection:text-accent transition-colors duration-200;
     overflow-x: clip;
   }
 }
 
-/* Utilities for Premium B2B Wholesale look */
 @layer utilities {
   .panel {
     @apply bg-surface border border-hairline rounded-xl shadow-sm transition-shadow duration-200 hover:shadow-md;
   }
-  
+
   .btn-primary {
     @apply bg-gradient-to-r from-cyan-500 to-indigo-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition-all active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center;
   }
-  
+
   .btn-secondary {
     @apply bg-slate-800/80 backdrop-blur-md border border-slate-700 text-slate-200 px-6 py-3 rounded-xl font-semibold hover:bg-slate-700 hover:border-slate-600 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center;
   }
@@ -51,19 +125,19 @@
   .input-modern {
     @apply bg-slate-900 border border-slate-700 text-slate-200 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all w-full shadow-sm;
   }
-  
+
   .heading-xl {
     @apply font-display text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight;
   }
-  
+
   .heading-lg {
     @apply font-display text-2xl md:text-3xl font-bold tracking-tight text-white;
   }
-  
+
   .heading-md {
     @apply font-display text-lg md:text-xl font-semibold tracking-tight text-white;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;

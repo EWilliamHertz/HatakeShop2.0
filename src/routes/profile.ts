@@ -40,7 +40,7 @@ router.get(["/users/:id", "/api/users/:id", "/api-v2/users/:id"], async (req: an
 router.get(["/profile", "/api/profile", "/api-v2/profile"], requireAuth, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
-    let user = await getUserProfile(req.user?.uid);
+    let user = await getUserProfile(req.user?.uid, req.user?.email);
     if (!user) {
         user = await getOrCreateUser(req.user?.uid, req.user.email || "", req.user.name);
     }
@@ -145,7 +145,19 @@ router.get(["/company/:id", "/api/company/:id", "/api-v2/company/:id"], async (r
 
       const memberMap = new Map<number, any>();
       for (const m of teamMembers) memberMap.set(m.id, m);
-      for (const m of extraMembers) memberMap.set(m.id, m);
+      for (const m of extraMembers) {
+        const existing = memberMap.get(m.id);
+        if (existing) {
+          // Never downgrade an admin or owner to 'member'
+          if (existing.role === 'admin' || existing.teamRole === 'owner') {
+            continue;
+          }
+        }
+        memberMap.set(m.id, {
+          ...m,
+          teamRole: m.role === 'admin' ? 'owner' : m.teamRole,
+        });
+      }
       memberList = Array.from(memberMap.values());
       memberUserIds = Array.from(memberMap.keys());
     }

@@ -7,7 +7,7 @@ export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logOut } = useAuth();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -31,7 +31,7 @@ export function CommandPalette() {
     { name: 'My Orders', icon: <Package className="w-4 h-4" />, action: () => navigate('/orders') },
     { name: 'Account Settings', icon: <Settings className="w-4 h-4" />, action: () => navigate('/settings') },
     { name: 'Seller Dashboard', icon: <FileText className="w-4 h-4" />, action: () => navigate('/seller') },
-    { name: 'Log Out', icon: <LogOut className="w-4 h-4" />, action: () => { logout(); navigate('/'); } },
+    { name: 'Log Out', icon: <LogOut className="w-4 h-4" />, action: () => { logOut(); navigate('/'); } },
   ];
 
   const filteredCommands = commands.filter(cmd => cmd.name.toLowerCase().includes(query.toLowerCase()));

@@ -1,5 +1,5 @@
 import { Whiteboard } from "../components/Whiteboard.tsx";
-import { EyeOff, Package } from 'lucide-react';
+import { EyeOff, Package, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';

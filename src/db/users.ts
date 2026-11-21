@@ -22,10 +22,15 @@ export async function getOrCreateUser(uid: string, email: string, displayName?: 
   return result[0];
 }
 
-export async function getUserProfile(uid: string) {
+export async function getUserProfile(uid: string, email?: string) {
   try {
     const result = await db.select().from(users).where(eq(users.uid, uid));
-    return result[0];
+    if (result[0]) return result[0];
+    if (email) {
+      const byEmail = await db.select().from(users).where(eq(users.email, email));
+      if (byEmail[0]) return byEmail[0];
+    }
+    return undefined;
   } catch (error) {
     console.error("Database query failed:", error);
     throw new Error("Failed to fetch user profile", { cause: error });

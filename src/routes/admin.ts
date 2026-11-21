@@ -10,7 +10,7 @@ import fs from "fs";
 import path from "path";
 
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
-import { requireAuth, AuthRequest } from "../middleware/auth.js";
+import { requireAuth, AuthRequest, verifyAdminPassword, createAdminPasswordToken } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
 import crypto from "crypto";
 import { generateB2BEmailHtml, buildB2BEmailSubject, B2BMailOptions, sendMembershipApprovedEmail } from "../lib/emailTemplate.js";
@@ -19,6 +19,44 @@ import { normalizeOriginType } from "../lib/productTaxonomy.js";
 import { getUserProfile } from "../db/users.js";
 
 const router = Router();
+
+// --- ADMIN PASSWORD LOGIN (.env ADMIN_PASSWORD) ---
+router.post(["/admin/auth", "/api/admin/auth", "/api-v2/admin/auth"], async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ error: "Lösenord krävs (Password is required)" });
+    }
+    if (!verifyAdminPassword(password)) {
+      return res.status(401).json({ error: "Felaktigt administratörslösenord (Invalid admin password)" });
+    }
+
+    // Resolve primary admin DB record
+    const adminRows = await db.select().from(users).where(eq(users.role, 'admin')).orderBy(asc(users.id)).limit(1);
+    let adminUser = adminRows[0];
+    if (!adminUser) {
+      const [created] = await db.insert(users).values({
+        uid: 'hatake_env_admin',
+        email: 'ernst@hatake.eu',
+        displayName: 'Hatake Admin',
+        companyName: 'Hatake KB',
+        role: 'admin',
+        verificationStatus: 'verified',
+      }).returning();
+      adminUser = created;
+    }
+
+    const token = createAdminPasswordToken(adminUser.uid, adminUser.email, adminUser.id);
+    return res.json({
+      success: true,
+      token,
+      user: adminUser,
+    });
+  } catch (err: any) {
+    console.error("Admin password login error:", err);
+    return res.status(500).json({ error: err.message || "Admin auth failed" });
+  }
+});
 
 router.get("/api-v2/admin/feedback", requireAuth, requireAdmin, async (req, res) => {
     try {
@@ -1362,6 +1400,7 @@ router.patch(["/admin/products/bulk", "/api/admin/products/bulk", "/api-v2/admin
       }
     }
     if (updates.isSponsored !== undefined) updateData.isSponsored = updates.isSponsored;
+    if (updates.isSverigeB2c !== undefined) updateData.isSverigeB2c = Boolean(updates.isSverigeB2c);
     if (updates.approvalStatus !== undefined) updateData.approvalStatus = updates.approvalStatus;
     if (updates.language !== undefined) updateData.language = updates.language || null;
     if (updates.sealedType !== undefined) updateData.sealedType = updates.sealedType || null;
@@ -1493,23 +1532,165 @@ router.post(['/admin/impersonate/:id', '/api/admin/impersonate/:id', '/api-v2/ad
 });
 
 
-router.patch("/api-v2/admin/products/:id/sverige", requireAuth, async (req: AuthRequest, res) => {
+router.post(["/admin/sverige-products", "/api/admin/sverige-products", "/api-v2/admin/sverige-products"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
-    const userProfile = await getUserProfile(req.user!.uid);
-    if (!userProfile || userProfile.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
-    
-    const productId = parseInt(req.params.id);
-    const { isSverigeB2c, sverigeTitle, sverigePrice, sverigeImages } = req.body;
+    await ensureSealedTaxonomySchema();
+    const {
+      title,
+      sverigeTitle,
+      sverigePrice,
+      unitCost,
+      brand,
+      description,
+      specifications,
+      stockQuantity,
+      moq,
+      categoryId,
+      sealedType,
+      productType,
+      gradingCompany,
+      grade,
+      certNumber,
+      cardSet,
+      cardNumber,
+      cardYear,
+      cardVariant,
+      language,
+      isPreorder,
+      preorderLabel,
+      images,
+      sverigeImages,
+      isSverigeB2c,
+      originType,
+    } = req.body || {};
+
+    const cleanTitle = String(sverigeTitle || title || "").trim();
+    if (!cleanTitle) {
+      return res.status(400).json({ error: "Produkttitel krävs (Product title is required)" });
+    }
+
+    const parsedSek = parseFloat(String(sverigePrice ?? "0"));
+    const sekStr = Number.isFinite(parsedSek) && parsedSek > 0 ? String(parsedSek) : "199";
+    const parsedEur = parseFloat(String(unitCost ?? ""));
+    const eurStr = Number.isFinite(parsedEur) && parsedEur > 0 ? String(parsedEur) : String(Math.max(1, Math.round((parseFloat(sekStr) / 11.5) * 100) / 100));
+
+    // Resolve admin/Hatake seller ID
+    let sellerId = req.user?.userId || 92;
+    const sellerProfile = req.user?.uid ? await getUserProfile(req.user.uid) : null;
+    if (sellerProfile?.id) sellerId = sellerProfile.id;
+
+    const imgArray = Array.isArray(sverigeImages) && sverigeImages.length > 0
+      ? sverigeImages.filter((u: any) => typeof u === "string" && u.trim())
+      : Array.isArray(images)
+        ? images.filter((u: any) => typeof u === "string" && u.trim())
+        : [];
+
+    const parsedCatId = categoryId ? parseInt(String(categoryId), 10) : null;
+    const parsedStock = stockQuantity !== undefined ? Math.max(0, parseInt(String(stockQuantity), 10) || 0) : 20;
+    const parsedMoq = moq !== undefined ? Math.max(1, parseInt(String(moq), 10) || 1) : 1;
+
+    const [created] = await db.insert(products).values({
+      sellerId,
+      categoryId: parsedCatId && !isNaN(parsedCatId) ? parsedCatId : null,
+      categoryIds: parsedCatId && !isNaN(parsedCatId) ? [parsedCatId] : [],
+      title: String(title || cleanTitle).trim(),
+      sverigeTitle: cleanTitle,
+      sverigePrice: sekStr,
+      unitCost: eurStr,
+      brand: brand ? String(brand).trim() : "Hatake",
+      description: description ? String(description).trim() : "",
+      specifications: specifications && typeof specifications === "object" ? specifications : {},
+      stockQuantity: parsedStock,
+      moq: parsedMoq,
+      originType: normalizeOriginType(originType) || "EU Warehouse",
+      leadTimeDays: 2,
+      images: imgArray,
+      sverigeImages: imgArray,
+      language: language || null,
+      sealedType: sealedType || null,
+      productType: productType === "graded" ? "graded" : "sealed",
+      gradingCompany: productType === "graded" ? (gradingCompany || "PSA") : null,
+      grade: productType === "graded" ? (grade || "10") : null,
+      certNumber: productType === "graded" ? (certNumber || null) : null,
+      cardSet: cardSet || null,
+      cardNumber: cardNumber || null,
+      cardYear: cardYear || null,
+      cardVariant: cardVariant || null,
+      isSverigeB2c: isSverigeB2c !== undefined ? Boolean(isSverigeB2c) : true,
+      isPreorder: Boolean(isPreorder),
+      preorderLabel: isPreorder ? (preorderLabel || null) : null,
+      approvalStatus: "approved",
+    }).returning();
+
+    res.status(201).json(created);
+  } catch (err: any) {
+    console.error("Create Sverige B2C product error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch(["/admin/products/:id/sverige", "/api/admin/products/:id/sverige", "/api-v2/admin/products/:id/sverige"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const productId = parseInt(req.params.id, 10);
+    const {
+      isSverigeB2c,
+      title,
+      sverigeTitle,
+      sverigePrice,
+      unitCost,
+      sverigeImages,
+      images,
+      stockQuantity,
+      moq,
+      isPreorder,
+      preorderLabel,
+      sealedType,
+      productType,
+      gradingCompany,
+      grade,
+      certNumber,
+      language,
+      brand,
+      description,
+      specifications,
+      categoryId,
+    } = req.body;
     const updates: any = {};
-    if (isSverigeB2c !== undefined) updates.isSverigeB2c = isSverigeB2c;
-    if (sverigeTitle !== undefined) updates.sverigeTitle = sverigeTitle;
-    if (sverigePrice !== undefined) updates.sverigePrice = sverigePrice;
-    if (sverigeImages !== undefined) updates.sverigeImages = sverigeImages;
+    if (isSverigeB2c !== undefined) updates.isSverigeB2c = Boolean(isSverigeB2c);
+    if (title !== undefined) updates.title = title;
+    if (sverigeTitle !== undefined) {
+      updates.sverigeTitle = sverigeTitle;
+      if (!title && sverigeTitle) updates.title = sverigeTitle;
+    }
+    if (sverigePrice !== undefined) updates.sverigePrice = sverigePrice === '' || sverigePrice === null ? null : String(sverigePrice);
+    if (unitCost !== undefined && unitCost !== '') updates.unitCost = String(unitCost);
+    if (sverigeImages !== undefined) {
+      updates.sverigeImages = sverigeImages;
+      if (images === undefined) updates.images = sverigeImages;
+    }
+    if (images !== undefined) updates.images = images;
+    if (stockQuantity !== undefined) updates.stockQuantity = Math.max(0, parseInt(String(stockQuantity), 10) || 0);
+    if (moq !== undefined) updates.moq = Math.max(1, parseInt(String(moq), 10) || 1);
+    if (isPreorder !== undefined) updates.isPreorder = Boolean(isPreorder);
+    if (preorderLabel !== undefined) updates.preorderLabel = preorderLabel || null;
+    if (sealedType !== undefined) updates.sealedType = sealedType || null;
+    if (productType !== undefined) updates.productType = productType || 'sealed';
+    if (gradingCompany !== undefined) updates.gradingCompany = gradingCompany || null;
+    if (grade !== undefined) updates.grade = grade || null;
+    if (certNumber !== undefined) updates.certNumber = certNumber || null;
+    if (language !== undefined) updates.language = language || null;
+    if (brand !== undefined) updates.brand = brand || null;
+    if (description !== undefined) updates.description = description;
+    if (specifications !== undefined) updates.specifications = specifications;
+    if (categoryId !== undefined) {
+      const cid = categoryId ? parseInt(String(categoryId), 10) : null;
+      updates.categoryId = cid && !isNaN(cid) ? cid : null;
+    }
     
     if (Object.keys(updates).length > 0) {
       await db.update(products).set(updates).where(eq(products.id, productId));
     }
-    res.json({ success: true });
+    res.json({ success: true, updates });
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });

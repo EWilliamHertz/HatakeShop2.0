@@ -34,13 +34,11 @@ export const Globe = () => {
         // Dubai
         { location: [25.2048, 55.2708], size: 0.08 }
       ],
-      onRender: (state) => {
-        // Called on every animation frame.
-        // `state` will be an empty object, return updated params.
+      onRender: (state: any) => {
         state.phi = phi;
         phi += 0.005;
       },
-    });
+    } as any);
 
     return () => {
       globe.destroy();

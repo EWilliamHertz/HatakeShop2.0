@@ -12,7 +12,7 @@ import { generateB2BEmailHtml } from "../lib/emailTemplate.js";
 import { getUserProfile, getOrCreateUser } from "../db/users.js";
 import { getTranslatedProduct } from "../lib/translate.js";
 import { PRODUCT_LANGUAGES, SEALED_TYPES } from "../lib/productTaxonomy.js";
-import { ensureSealedTaxonomySchema } from "../db/index.js";
+import { ensureSealedTaxonomySchema, ensureSverigeB2cCatalog } from "../db/index.js";
 
 const router = Router();
 
@@ -502,7 +502,7 @@ router.post('/api-v2/products/:id/reviews', requireAuth, async (req: any, res) =
 
 router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
   try {
-    const { items } = req.body;
+    const { items, isB2cOrder, shippingTier, customerEmail } = req.body;
     if (!items || !items.length) {
       return res.status(400).json({ error: 'No items provided' });
     }
@@ -518,36 +518,36 @@ router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
     // Calculate total amount and verify products
     let totalAmount = 0;
     const validatedItems: any[] = [];
-    const productIds = items.map((i: any) => i.productId);
+    const productIds = items.map((i: any) => Number(i.productId)).filter(Boolean);
     
     const dbProducts = await db.select().from(products).where(inArray(products.id, productIds));
     const productMap = new Map<number, (typeof dbProducts)[number]>(dbProducts.map(p => [p.id, p] as const));
 
     let sellerId: number | null = null;
-    let isSverigeOrder = false;
+    let isSverigeOrder = Boolean(isB2cOrder);
 
     for (const item of items) {
-      const dbProduct = productMap.get(item.productId);
+      const dbProduct = productMap.get(Number(item.productId));
       if (!dbProduct) return res.status(404).json({ error: `Product ${item.productId} not found` });
-
-      if (sellerId === null) {
-        sellerId = dbProduct.sellerId;
-      } else if (sellerId !== dbProduct.sellerId) {
-        return res.status(400).json({ error: 'All items must be from the same seller' });
-      }
 
       if (dbProduct.isSverigeB2c) {
         isSverigeOrder = true;
       }
 
-      const rawPrice = dbProduct.isSverigeB2c && dbProduct.sverigePrice ? dbProduct.sverigePrice : dbProduct.unitCost;
+      if (sellerId === null) {
+        sellerId = dbProduct.sellerId;
+      } else if (!isSverigeOrder && sellerId !== dbProduct.sellerId) {
+        return res.status(400).json({ error: 'All items in a direct B2B checkout must be from the same seller (use Bulk RFQ for multi-vendor carts).' });
+      }
+
+      const rawPrice = (isSverigeOrder || dbProduct.isSverigeB2c) && dbProduct.sverigePrice ? dbProduct.sverigePrice : dbProduct.unitCost;
       const unitPrice = parseFloat(rawPrice?.toString() || '0');
       const itemTotal = unitPrice * (item.quantity || 1);
       totalAmount += itemTotal;
 
       validatedItems.push({
-        productId: item.productId,
-        title: (dbProduct.isSverigeB2c && dbProduct.sverigeTitle ? dbProduct.sverigeTitle : dbProduct.title),
+        productId: Number(item.productId),
+        title: ((isSverigeOrder || dbProduct.isSverigeB2c) && dbProduct.sverigeTitle ? dbProduct.sverigeTitle : dbProduct.title),
         quantity: item.quantity || 1,
         unitPrice: unitPrice
       });
@@ -556,7 +556,7 @@ router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
     // Create Order
     const [order] = await db.insert(orders).values({
       buyerId: userProfile.id,
-      sellerId: sellerId as number,
+      sellerId: (sellerId || 1) as number,
       totalAmount: totalAmount.toString(),
       status: 'pending'
     }).returning();
@@ -577,69 +577,72 @@ router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
       return res.status(500).json({ error: 'Stripe not configured' });
     }
 
-    // Determine currency: SEK for Sweden shop, EUR for wholesale
+    // Determine currency: SEK for Sweden B2C shop, EUR for wholesale
     const currency = isSverigeOrder ? 'sek' : 'eur';
+    const qualifiesForFreeShipping = isSverigeOrder && totalAmount >= 999;
 
-    // Shipping options: Standard & Express with explicit shipping fees
-    const shippingOptions = isSverigeOrder ? [
-      {
-        shipping_rate_data: {
-          type: 'fixed_amount' as const,
-          fixed_amount: {
-            amount: 4900, // 49.00 SEK
-            currency: 'sek',
-          },
-          display_name: 'Standardfrakt PostNord / DHL (Sverige)',
-          delivery_estimate: {
-            minimum: { unit: 'business_day' as const, value: 2 },
-            maximum: { unit: 'business_day' as const, value: 4 },
-          },
+    // Shipping options: Standard & Express with explicit shipping fees (put user's selected tier first)
+    const standardB2cOption = {
+      shipping_rate_data: {
+        type: 'fixed_amount' as const,
+        fixed_amount: {
+          amount: qualifiesForFreeShipping ? 0 : 4900, // Free >= 999 kr, otherwise 49.00 SEK
+          currency: 'sek',
+        },
+        display_name: qualifiesForFreeShipping ? 'Fri Standardfrakt PostNord / DHL (Sverige)' : 'Standardfrakt PostNord / DHL (Sverige)',
+        delivery_estimate: {
+          minimum: { unit: 'business_day' as const, value: 1 },
+          maximum: { unit: 'business_day' as const, value: 3 },
         },
       },
-      {
-        shipping_rate_data: {
-          type: 'fixed_amount' as const,
-          fixed_amount: {
-            amount: 8900, // 89.00 SEK
-            currency: 'sek',
-          },
-          display_name: 'Expressfrakt (1-2 vardagar)',
-          delivery_estimate: {
-            minimum: { unit: 'business_day' as const, value: 1 },
-            maximum: { unit: 'business_day' as const, value: 2 },
-          },
+    };
+    const expressB2cOption = {
+      shipping_rate_data: {
+        type: 'fixed_amount' as const,
+        fixed_amount: {
+          amount: 8900, // 89.00 SEK
+          currency: 'sek',
         },
-      }
-    ] : [
-      {
-        shipping_rate_data: {
-          type: 'fixed_amount' as const,
-          fixed_amount: {
-            amount: 1500, // €15.00
-            currency: 'eur',
-          },
-          display_name: 'Standard Freight Shipping (EU & International)',
-          delivery_estimate: {
-            minimum: { unit: 'business_day' as const, value: 3 },
-            maximum: { unit: 'business_day' as const, value: 7 },
-          },
+        display_name: 'Expressfrakt Hemleverans (1–2 vardagar)',
+        delivery_estimate: {
+          minimum: { unit: 'business_day' as const, value: 1 },
+          maximum: { unit: 'business_day' as const, value: 2 },
         },
       },
-      {
-        shipping_rate_data: {
-          type: 'fixed_amount' as const,
-          fixed_amount: {
-            amount: 3500, // €35.00
-            currency: 'eur',
+    };
+
+    const shippingOptions = isSverigeOrder
+      ? (shippingTier === 'express' ? [expressB2cOption, standardB2cOption] : [standardB2cOption, expressB2cOption])
+      : [
+          {
+            shipping_rate_data: {
+              type: 'fixed_amount' as const,
+              fixed_amount: {
+                amount: 1500, // €15.00
+                currency: 'eur',
+              },
+              display_name: 'Standard Freight Shipping (EU & International)',
+              delivery_estimate: {
+                minimum: { unit: 'business_day' as const, value: 3 },
+                maximum: { unit: 'business_day' as const, value: 7 },
+              },
+            },
           },
-          display_name: 'Express Priority Freight (1-3 days)',
-          delivery_estimate: {
-            minimum: { unit: 'business_day' as const, value: 1 },
-            maximum: { unit: 'business_day' as const, value: 3 },
-          },
-        },
-      }
-    ];
+          {
+            shipping_rate_data: {
+              type: 'fixed_amount' as const,
+              fixed_amount: {
+                amount: 3500, // €35.00
+                currency: 'eur',
+              },
+              display_name: 'Express Priority Freight (1-3 days)',
+              delivery_estimate: {
+                minimum: { unit: 'business_day' as const, value: 1 },
+                maximum: { unit: 'business_day' as const, value: 3 },
+              },
+            },
+          }
+        ];
 
     // Allowed shipping destination countries
     const allowedShippingCountries = [
@@ -659,7 +662,7 @@ router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
           product_data: {
             name: item.title,
           },
-          unit_amount: Math.round(item.unitPrice * 100), // Stripe expects cents / öre
+          unit_amount: Math.max(100, Math.round(item.unitPrice * 100)), // Stripe expects cents / öre
         },
         quantity: item.quantity,
       })),
@@ -669,7 +672,7 @@ router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
       shipping_options: shippingOptions,
       phone_number_collection: { enabled: true },
       success_url: `${baseUrl}/orders?success=true&order_id=${order.id}`,
-      cancel_url: `${baseUrl}/${isSverigeOrder ? 'sweden' : 'cart'}?canceled=true`,
+      cancel_url: `${baseUrl}/${isSverigeOrder ? '?canceled=true' : 'marketplace?canceled=true'}`,
       metadata: {
         orderId: order.id.toString(),
         isSverige: isSverigeOrder ? 'true' : 'false',
@@ -677,13 +680,16 @@ router.post('/api-v2/checkout/session', optionalAuth, async (req: any, res) => {
       },
     };
 
-    // If customer email is known, prefill it in Stripe Checkout
-    if (userProfile.email && userProfile.email !== 'guest@hatake.shop') {
-      sessionParams.customer_email = userProfile.email;
+    // If customer email is provided or known, prefill it in Stripe Checkout
+    const emailToPrefill = (typeof customerEmail === 'string' && customerEmail.includes('@'))
+      ? customerEmail.trim()
+      : (userProfile.email && userProfile.email !== 'guest@hatake.shop' ? userProfile.email : null);
+    if (emailToPrefill) {
+      sessionParams.customer_email = emailToPrefill;
     }
 
     // Connect transfer if seller has an active connected Stripe account; otherwise payments collect directly to platform
-    if (sellerId) {
+    if (sellerId && !isSverigeOrder) {
       const sellerInfo = await db.select({ stripeAccountId: users.stripeAccountId, stripeOnboardingComplete: users.stripeOnboardingComplete }).from(users).where(eq(users.id, sellerId as number)).limit(1);
       if (sellerInfo.length && sellerInfo[0].stripeAccountId && sellerInfo[0].stripeOnboardingComplete) {
         const totalCents = Math.round(totalAmount * 100);
@@ -724,16 +730,26 @@ router.get('/api-v2/orders', requireAuth, async (req: any, res) => {
 });
 
 
-router.get("/api-v2/sverige-products", async (req, res) => {
+router.get(["/sverige-products", "/api/sverige-products", "/api-v2/sverige-products"], async (req, res) => {
   try {
-    const p = await db.select().from(products).where(eq(products.isSverigeB2c, true));
-    // Also fetch seller info for these products
-    const s = await db.select().from(users);
+    await ensureSverigeB2cCatalog();
+    const [p, s, allCategories] = await Promise.all([
+      db.select().from(products).where(eq(products.isSverigeB2c, true)).orderBy(desc(products.isSponsored), desc(products.createdAt)),
+      db.select({
+        id: users.id,
+        companyName: users.companyName,
+        country: users.country,
+        verificationStatus: users.verificationStatus,
+      }).from(users),
+      db.select().from(categories),
+    ]);
     const sellerMap = Object.fromEntries(s.map(x => [x.id, x]));
-    
+    const categoryMap = Object.fromEntries(allCategories.map(c => [c.id, c.name]));
+
     res.json(p.map(prod => ({
        ...prod,
-       seller: sellerMap[prod.sellerId] || {}
+       categoryName: prod.categoryId ? (categoryMap[prod.categoryId] || null) : null,
+       seller: sellerMap[prod.sellerId] || { companyName: 'Hatake Sverige', country: 'Sweden', verificationStatus: 'verified' }
     })));
   } catch (err: any) {
     res.status(500).json({ error: err.message });

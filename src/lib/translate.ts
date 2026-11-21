@@ -1,7 +1,6 @@
 import { db } from '../db/index.js';
 import { productTranslations, messageTranslations } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
-import fetch from 'node-fetch';
 
 const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 

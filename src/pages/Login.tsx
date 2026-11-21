@@ -173,7 +173,7 @@ export function Login() {
           className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-bold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20 w-full disabled:opacity-50"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : (isRegister ? <UserPlus className="w-5 h-5 mr-2" /> : <LogIn className="w-5 h-5 mr-2" />)}
-          {isRegister ? 'Register' : 'Sign In'}
+          {isRegister ? t('Register') : t('Sign In')}
         </button>
       </form>
 
@@ -182,7 +182,7 @@ export function Login() {
           onClick={() => setIsRegister(!isRegister)} 
           className="text-[#ffcc00] hover:text-[#ffcc00]-hover text-sm font-semibold transition-colors"
         >
-          {isRegister ? 'Already have an account? Sign In' : 'Need an account? Register'}
+          {isRegister ? t('Already have an account? Sign In') : t('Need an account? Register')}
         </button>
       </div>
 
@@ -198,7 +198,7 @@ export function Login() {
           className="btn-secondary w-full"
         >
           <Chrome className="w-5 h-5 mr-2 text-slate-400" />
-          Continue with Google
+          {t('Continue with Google')}
         </button>
       </div>
 

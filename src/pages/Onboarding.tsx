@@ -3,11 +3,13 @@ import { motion } from 'framer-motion';
 import { Search, ArrowRight, Loader2, Sparkles, MessageSquare, Briefcase, ShoppingBag, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 const MOCK_PRODUCTS: any[] = [];
 
 export function Onboarding() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(0); 
@@ -173,10 +175,10 @@ export function Onboarding() {
             <Sparkles className="absolute w-5 h-5 text-cyan-400 pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
-            Tailor Your Hatake Experience
+            {t('Tailor Your Hatake Experience')}
           </h1>
           <p className="text-lg text-slate-400 mb-6">
-            Tell our AI about your business. We'll instantly organize the entire platform to prioritize the inventory that matters to you.
+            {t("Tell our AI about your business. We'll instantly organize the entire platform to prioritize the inventory that matters to you.")}
           </p>
           
           {step === 0 && (
@@ -186,15 +188,15 @@ export function Onboarding() {
                 className={`px-6 py-2.5 rounded-full font-bold transition-all border ${(selectedRole === 'buyer' || selectedRole === 'both') ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50' : 'bg-slate-900/50 text-slate-400 border-slate-700 hover:border-slate-500'}`}
               >
                 <ShoppingBag className="w-4 h-4 inline-block mr-2 -mt-1" />
-                Buyer
+                {t('Buyer')}
               </button>
-              <span className="text-slate-500 text-sm font-medium">and/or</span>
+              <span className="text-slate-500 text-sm font-medium">{t('and/or')}</span>
               <button 
                 onClick={() => handleRoleToggle('seller')}
                 className={`px-6 py-2.5 rounded-full font-bold transition-all border ${(selectedRole === 'seller' || selectedRole === 'both') ? 'bg-[#ffcc00]/20 text-[#ffcc00] border-[#ffcc00]/50' : 'bg-slate-900/50 text-slate-400 border-slate-700 hover:border-slate-500'}`}
               >
                 <Briefcase className="w-4 h-4 inline-block mr-2 -mt-1" />
-                Seller
+                {t('Seller')}
               </button>
             </div>
           )}

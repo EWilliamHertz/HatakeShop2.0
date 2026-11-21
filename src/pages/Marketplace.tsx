@@ -769,7 +769,7 @@ export function Marketplace() {
   });
 
   // Fetch paginated catalog products whenever in Grid or Line-Sheet mode
-  const { data = {}, isLoading, error } = useQuery({
+  const { data = {}, isLoading, isFetching, error } = useQuery({
     queryKey: [
       'products',
       search,
@@ -825,7 +825,7 @@ export function Marketplace() {
   });
 
   const rawProducts = Array.isArray(data) ? data : data?.products || [];
-  const flatProducts = React.useMemo(
+  const currentFlatProducts = React.useMemo(
     () =>
       rawProducts
         .filter(Boolean)
@@ -836,6 +836,23 @@ export function Marketplace() {
         }),
     [rawProducts]
   );
+
+  const [accumulatedFlatProducts, setAccumulatedFlatProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (page === 1) {
+      setAccumulatedFlatProducts(currentFlatProducts);
+    } else if (currentFlatProducts.length > 0) {
+      setAccumulatedFlatProducts((prev) => {
+        const existingIds = new Set(prev.map((x) => x?.id));
+        const nextItems = currentFlatProducts.filter((x: any) => !existingIds.has(x?.id));
+        return [...prev, ...nextItems];
+      });
+    }
+  }, [currentFlatProducts, page, isLoading]);
+
+  const flatProducts = accumulatedFlatProducts.length > 0 ? accumulatedFlatProducts : currentFlatProducts;
 
   const totalPages = data?.totalPages || 1;
   const totalCount = typeof data?.totalCount === 'number' ? data.totalCount : facets?.totalProducts || flatProducts.length;
@@ -1748,52 +1765,34 @@ export function Marketplace() {
                 </div>
               )}
 
-              {/* Numbered Pagination Footer */}
+              {/* Downward Arrow Progressive Load More Footer (Page X / XX) */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-1.5 pt-6">
-                  <button
-                    type="button"
-                    disabled={page <= 1}
-                    onClick={() => {
-                      updateParams({ page: String(page - 1) }, false);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-200 disabled:opacity-40 hover:border-cyan-500/40 transition-colors"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                    {t('Prev')}
-                  </button>
+                <div className="flex flex-col items-center justify-center gap-3 pt-8">
+                  <div className="text-xs font-bold text-slate-400 tabular-nums">
+                    {t('Page')} {page} / {totalPages} · {t('Showing')} {flatProducts.length} / {totalCount}
+                  </div>
 
-                  {pageNumbers.map(num => (
+                  {page < totalPages ? (
                     <button
-                      key={num}
                       type="button"
+                      disabled={isFetching}
                       onClick={() => {
-                        updateParams({ page: String(num) }, false);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        updateParams({ page: String(page + 1) }, false);
                       }}
-                      className={`w-9 h-9 rounded-xl text-xs font-bold tabular-nums transition-all border ${
-                        num === page
-                          ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md shadow-cyan-950/50'
-                          : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
-                      }`}
+                      className="inline-flex flex-col items-center gap-1.5 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-60"
                     >
-                      {num}
+                      <span>
+                        {isFetching
+                          ? t('Laddar nästa sida...')
+                          : `${t('Ladda fler produkter')} (${t('Page')} ${page + 1} / ${totalPages})`}
+                      </span>
+                      <ChevronDown className="w-5 h-5 animate-bounce" />
                     </button>
-                  ))}
-
-                  <button
-                    type="button"
-                    disabled={page >= totalPages}
-                    onClick={() => {
-                      updateParams({ page: String(page + 1) }, false);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-200 disabled:opacity-40 hover:border-cyan-500/40 transition-colors"
-                  >
-                    {t('Next')}
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  ) : (
+                    <div className="text-xs font-semibold text-slate-500">
+                      ✓ {t('Alla produkter visade')} ({flatProducts.length})
+                    </div>
+                  )}
                 </div>
               )}
             </div>

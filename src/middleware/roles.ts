@@ -8,6 +8,16 @@ import { getUserProfile } from "../db/users.js";
 export const requireAdmin = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
+    if (req.user.isAdminPasswordAuth) {
+      db.insert(adminAuditLog).values({
+        uid: req.user.uid,
+        email: req.user.email || 'ernst@hatake.eu',
+        method: req.method,
+        route: req.originalUrl.split('?')[0].slice(0, 200),
+        statusCode: res.statusCode,
+      }).catch(() => {});
+      return next();
+    }
     let userProfile = await getUserProfile(req.user.uid);
     if (!userProfile && req.user.email) {
       const byEmail = await db.select().from(users).where(eq(users.email, req.user.email));
@@ -34,6 +44,7 @@ export const requireAdmin = async (req: AuthRequest, res: express.Response, next
 export const requireSeller = async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
+    if (req.user.isAdminPasswordAuth) return next();
     const userProfile = await getUserProfile(req.user.uid);
     if (userProfile?.role !== 'seller' && userProfile?.role !== 'both' && userProfile?.role !== 'admin') {
       return res.status(403).send("Forbidden: Sellers only");
