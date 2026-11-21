@@ -10,7 +10,7 @@ import fs from "fs";
 import path from "path";
 
 import { eq, or, ilike, sql, and, desc, isNotNull, inArray, ne, not, asc } from "drizzle-orm";
-import { requireAuth, AuthRequest, verifyAdminPassword, createAdminPasswordToken } from "../middleware/auth.js";
+import { requireAuth, AuthRequest, verifyAdminPassword, createAdminPasswordToken, extractAdminPasswordTokenFromReq, verifyAdminPasswordToken } from "../middleware/auth.js";
 import { requireAdmin, requireSeller } from "../middleware/roles.js";
 import crypto from "crypto";
 import { generateB2BEmailHtml, buildB2BEmailSubject, B2BMailOptions, sendMembershipApprovedEmail } from "../lib/emailTemplate.js";
@@ -55,6 +55,20 @@ router.post(["/admin/auth", "/api/admin/auth", "/api-v2/admin/auth"], async (req
   } catch (err: any) {
     console.error("Admin password login error:", err);
     return res.status(500).json({ error: err.message || "Admin auth failed" });
+  }
+});
+
+// Verify if an existing ADMIN_PASSWORD token is still cryptographically valid
+router.get(["/admin/verify", "/api/admin/verify", "/api-v2/admin/verify"], async (req, res) => {
+  try {
+    const candidate = extractAdminPasswordTokenFromReq(req);
+    const verified = candidate ? verifyAdminPasswordToken(candidate) : null;
+    if (!verified) {
+      return res.status(401).json({ valid: false, error: "Invalid or expired ADMIN_PASSWORD session" });
+    }
+    return res.json({ valid: true, admin: verified });
+  } catch (err: any) {
+    return res.status(401).json({ valid: false, error: err.message });
   }
 });
 

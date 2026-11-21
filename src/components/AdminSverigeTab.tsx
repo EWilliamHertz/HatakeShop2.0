@@ -106,8 +106,13 @@ export function AdminSverigeTab() {
   const [isBatchSaving, setIsBatchSaving] = useState(false);
 
   const getToken = async () => {
+    const adminTok =
+      sessionStorage.getItem('hatake_admin_token') ||
+      localStorage.getItem('hatake_admin_token') ||
+      '';
+    if (adminTok) return adminTok;
     const tok = await user?.getIdToken();
-    return tok || localStorage.getItem('hatake_admin_token') || '';
+    return tok || '';
   };
 
   const { data: products = [], isLoading } = useQuery({

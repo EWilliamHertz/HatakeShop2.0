@@ -287,8 +287,11 @@ function ProtectedRoute({
   if (loading) return <div className="p-8 text-center text-slate-400">{t('Loading...')}</div>;
 
   if (requireAdmin) {
-    const isDbAdmin = isAdminPasswordSession || dbUser?.role?.toLowerCase() === 'admin';
-    if (!user || !isDbAdmin) {
+    // STRICT ADMIN_PASSWORD LOCK:
+    // Accessing /admin ALWAYS requires unlocking with the .env ADMIN_PASSWORD.
+    // Even if a user is logged in via Firebase or has role='admin' in the DB,
+    // they must enter ADMIN_PASSWORD to unlock the Admin session.
+    if (!isAdminPasswordSession) {
       return <AdminPasswordGate />;
     }
     return children;

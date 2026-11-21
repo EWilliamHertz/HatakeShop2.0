@@ -16,7 +16,10 @@ function SverigeToggle({ product, user, queryClient }: { product: any, user: any
         setChecked(newVal);
         setLoading(true);
         try {
-          const token = await user?.getIdToken();
+          const token =
+            sessionStorage.getItem('hatake_admin_token') ||
+            localStorage.getItem('hatake_admin_token') ||
+            (await user?.getIdToken());
           await fetch(`/api-v2/admin/products/${product.id}/sverige`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -70,13 +73,21 @@ export function AdminListings() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
-      let token; try { token = await user?.getIdToken(); } catch(e) {}
+      let token =
+        sessionStorage.getItem('hatake_admin_token') ||
+        localStorage.getItem('hatake_admin_token') ||
+        '';
+      if (!token) {
+        try {
+          token = (await user?.getIdToken()) || '';
+        } catch (e) {}
+      }
       const res = await fetch('/api-v2/admin/products', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Failed to fetch products');
       return res.json();
-    }
+    },
   });
 
   const { data: categoriesData = [] } = useQuery({
@@ -85,12 +96,20 @@ export function AdminListings() {
       const res = await fetch('/api-v2/categories');
       if (!res.ok) throw new Error('Failed to fetch categories');
       return res.json();
-    }
+    },
   });
 
   const bulkUpdateMutation = useMutation({
-    mutationFn: async (payload: { productIds: number[], updates: any }) => {
-      let token; try { token = await user?.getIdToken(); } catch(e) {}
+    mutationFn: async (payload: { productIds: number[]; updates: any }) => {
+      let token =
+        sessionStorage.getItem('hatake_admin_token') ||
+        localStorage.getItem('hatake_admin_token') ||
+        '';
+      if (!token) {
+        try {
+          token = (await user?.getIdToken()) || '';
+        } catch (e) {}
+      }
       const res = await fetch('/api-v2/admin/products/bulk', {
         method: 'PATCH',
         headers: { 

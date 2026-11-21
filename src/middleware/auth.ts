@@ -26,7 +26,7 @@ export function verifyAdminPassword(candidate: string): boolean {
 export function createAdminPasswordToken(uid: string, email: string, userId: number): string {
   const secret = getAdminPasswordSecret();
   if (!secret) throw new Error('ADMIN_PASSWORD is not configured');
-  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
   const payload = Buffer.from(JSON.stringify({ uid, email, userId, expiresAt }), 'utf8').toString('base64url');
   const sig = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
   return `hatake_admin.${payload}.${sig}`;
@@ -79,6 +79,28 @@ export function verifyAdminPasswordToken(token: string): {
   }
 
   return null;
+}
+
+export function extractAdminPasswordTokenFromReq(req: Request): string {
+  const headerToken = req.headers['x-admin-token'];
+  if (typeof headerToken === 'string' && headerToken.trim()) {
+    return headerToken.trim();
+  }
+  const headerPass = req.headers['x-admin-password'];
+  if (typeof headerPass === 'string' && headerPass.trim()) {
+    return headerPass.trim();
+  }
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const bearer = authHeader.split('Bearer ')[1]?.trim() || '';
+    if (bearer.startsWith('hatake_admin.') || verifyAdminPassword(bearer)) {
+      return bearer;
+    }
+  }
+  if (typeof req.query.adminToken === 'string' && req.query.adminToken.trim()) {
+    return req.query.adminToken.trim();
+  }
+  return '';
 }
 
 // Cache Google SecureToken X.509 public certificates to verify Firebase RS256 tokens
@@ -147,6 +169,18 @@ async function resolveFirebaseToken(token: string): Promise<DecodedIdToken> {
 }
 
 export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  // 1. Check if a valid ADMIN_PASSWORD token was supplied via header or bearer
+  const adminTokenCandidate = extractAdminPasswordTokenFromReq(req);
+  if (adminTokenCandidate) {
+    const adminDecoded = verifyAdminPasswordToken(adminTokenCandidate);
+    if (adminDecoded) {
+      req.user = adminDecoded as any;
+      next();
+      return;
+    }
+  }
+
+  // 2. Otherwise verify standard Firebase Bearer token
   let token = '';
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -179,6 +213,15 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 };
 
 export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  const adminTokenCandidate = extractAdminPasswordTokenFromReq(req);
+  if (adminTokenCandidate) {
+    const adminDecoded = verifyAdminPasswordToken(adminTokenCandidate);
+    if (adminDecoded) {
+      req.user = adminDecoded as any;
+      return next();
+    }
+  }
+
   let token = '';
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {

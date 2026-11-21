@@ -48,11 +48,20 @@ export function AdminKortButikerTab() {
     notes: '',
   });
 
+  const getToken = async () => {
+    const adminTok =
+      sessionStorage.getItem('hatake_admin_token') ||
+      localStorage.getItem('hatake_admin_token') ||
+      '';
+    if (adminTok) return adminTok;
+    return (await user?.getIdToken()) || '';
+  };
+
   // Query card shops
   const { data: shops = [], isLoading, isFetching } = useQuery<SwedishCardShop[]>({
     queryKey: ['admin-kort-butiker'],
     queryFn: async () => {
-      const token = await user?.getIdToken();
+      const token = await getToken();
       const res = await fetch('/api-v2/admin/kort-butiker', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -64,7 +73,7 @@ export function AdminKortButikerTab() {
   // Add shop mutation
   const addMutation = useMutation({
     mutationFn: async (newShop: typeof formData) => {
-      const token = await user?.getIdToken();
+      const token = await getToken();
       const res = await fetch('/api-v2/admin/kort-butiker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -90,7 +99,7 @@ export function AdminKortButikerTab() {
   // Update shop mutation
   const updateMutation = useMutation({
     mutationFn: async (shop: SwedishCardShop) => {
-      const token = await user?.getIdToken();
+      const token = await getToken();
       const res = await fetch(`/api-v2/admin/kort-butiker/${shop.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -115,7 +124,7 @@ export function AdminKortButikerTab() {
   // Delete shop mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const token = await user?.getIdToken();
+      const token = await getToken();
       const res = await fetch(`/api-v2/admin/kort-butiker/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -135,7 +144,7 @@ export function AdminKortButikerTab() {
   // Sync from uploaded file on disk
   const syncFileMutation = useMutation({
     mutationFn: async () => {
-      const token = await user?.getIdToken();
+      const token = await getToken();
       const res = await fetch('/api-v2/admin/kort-butiker/sync-file', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -158,7 +167,7 @@ export function AdminKortButikerTab() {
   // Import custom CSV data
   const importCsvMutation = useMutation({
     mutationFn: async (csvData: string) => {
-      const token = await user?.getIdToken();
+      const token = await getToken();
       const res = await fetch('/api-v2/admin/kort-butiker/import-csv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },

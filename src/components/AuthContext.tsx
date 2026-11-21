@@ -16,11 +16,13 @@ interface AuthContextType {
   dbUser: any | null;
   loading: boolean;
   isAdminPasswordSession: boolean;
+  adminToken: string | null;
   signIn: () => Promise<void>;
   signInWithEmail: (e: string, p: string) => Promise<void>;
   registerWithEmail: (e: string, p: string, n: string) => Promise<void>;
   signInWithCustom: (token: string) => Promise<void>;
   adminLoginWithPassword: (password: string) => Promise<void>;
+  lockAdminSession: () => void;
   logOut: () => Promise<void>;
   updateDbUser: (data: any) => void;
 }
@@ -30,17 +32,33 @@ const AuthContext = createContext<AuthContextType>({
   dbUser: null,
   loading: true,
   isAdminPasswordSession: false,
+  adminToken: null,
   signIn: async () => {},
   signInWithEmail: async () => {},
   registerWithEmail: async () => {},
   signInWithCustom: async () => {},
   adminLoginWithPassword: async () => {},
+  lockAdminSession: () => {},
   logOut: async () => {},
   updateDbUser: () => {},
 });
 
 const ADMIN_TOKEN_KEY = 'hatake_admin_token';
 const ADMIN_USER_KEY = 'hatake_admin_user';
+
+export function getAdminAuthHeaders(fallbackBearerToken?: string | null): Record<string, string> {
+  const savedAdminToken =
+    sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+  const bearer = savedAdminToken || fallbackBearerToken || '';
+  const headers: Record<string, string> = {};
+  if (bearer) {
+    headers['Authorization'] = `Bearer ${bearer}`;
+  }
+  if (savedAdminToken) {
+    headers['X-Admin-Token'] = savedAdminToken;
+  }
+  return headers;
+}
 
 function buildAdminSessionUser(token: string, adminDbUser: any): User {
   const fakeUser: any = {
@@ -60,25 +78,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [dbUser, setDbUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdminPasswordSession, setIsAdminPasswordSession] = useState(false);
+  const [adminToken, setAdminToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // 1. Check if an active .env Admin Password session exists
-    const savedAdminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
-    const savedAdminUserRaw = localStorage.getItem(ADMIN_USER_KEY);
-    if (savedAdminToken && savedAdminUserRaw) {
-      try {
-        const parsedAdmin = JSON.parse(savedAdminUserRaw);
-        setUser(buildAdminSessionUser(savedAdminToken, parsedAdmin));
-        setDbUser({ ...parsedAdmin, role: 'admin', verificationStatus: 'verified' });
-        setIsAdminPasswordSession(true);
-        setLoading(false);
-      } catch {}
+    // 1. Verify if an active .env ADMIN_PASSWORD session exists and is cryptographically valid on server
+    const savedAdminToken =
+      sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
+    const savedAdminUserRaw =
+      sessionStorage.getItem(ADMIN_USER_KEY) || localStorage.getItem(ADMIN_USER_KEY);
+
+    if (savedAdminToken) {
+      fetch('/api-v2/admin/verify', {
+        headers: {
+          Authorization: `Bearer ${savedAdminToken}`,
+          'X-Admin-Token': savedAdminToken,
+        },
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((verified) => {
+          if (verified?.valid) {
+            setAdminToken(savedAdminToken);
+            setIsAdminPasswordSession(true);
+            if (!auth.currentUser && savedAdminUserRaw) {
+              try {
+                const parsedAdmin = JSON.parse(savedAdminUserRaw);
+                setUser(buildAdminSessionUser(savedAdminToken, parsedAdmin));
+                setDbUser({ ...parsedAdmin, role: 'admin', verificationStatus: 'verified' });
+              } catch {}
+            }
+          } else {
+            sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+            sessionStorage.removeItem(ADMIN_USER_KEY);
+            localStorage.removeItem(ADMIN_TOKEN_KEY);
+            localStorage.removeItem(ADMIN_USER_KEY);
+            setAdminToken(null);
+            setIsAdminPasswordSession(false);
+          }
+        })
+        .catch(() => {
+          setIsAdminPasswordSession(false);
+          setAdminToken(null);
+        });
     }
 
     // 2. Optimistically load cached Firebase session
     const cachedUser = localStorage.getItem('cached_user_session');
     const cachedDbUser = localStorage.getItem('cached_db_user_session');
-    if (cachedUser && !savedAdminToken) {
+    if (cachedUser) {
       try {
         const parsed = JSON.parse(cachedUser);
         const cachedToken = localStorage.getItem('cached_token');
@@ -106,27 +152,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      const activeAdminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
-      const activeAdminUserRaw = localStorage.getItem(ADMIN_USER_KEY);
+      const activeAdminToken =
+        sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
+      const activeAdminUserRaw =
+        sessionStorage.getItem(ADMIN_USER_KEY) || localStorage.getItem(ADMIN_USER_KEY);
 
       if (!currentUser && activeAdminToken && activeAdminUserRaw) {
         try {
           const parsedAdmin = JSON.parse(activeAdminUserRaw);
           setUser(buildAdminSessionUser(activeAdminToken, parsedAdmin));
           setDbUser({ ...parsedAdmin, role: 'admin', verificationStatus: 'verified' });
-          setIsAdminPasswordSession(true);
           setLoading(false);
           return;
         } catch {}
       }
 
+      let rawFirebaseTokenGetter: ((forceRefresh?: boolean) => Promise<string>) | null = null;
+      if (currentUser) {
+        // Override getIdToken so that if an active ADMIN_PASSWORD session is unlocked,
+        // admin API calls using user.getIdToken() automatically pass the signed admin token!
+        const origGetIdToken = currentUser.getIdToken.bind(currentUser);
+        rawFirebaseTokenGetter = origGetIdToken;
+        (currentUser as any).getIdToken = async (forceRefresh?: boolean) => {
+          const unlockedAdminTok =
+            sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
+          if (unlockedAdminTok && unlockedAdminTok.startsWith('hatake_admin.')) {
+            return unlockedAdminTok;
+          }
+          return origGetIdToken(forceRefresh);
+        };
+      }
+
       setUser(currentUser);
       if (currentUser) {
-        setIsAdminPasswordSession(false);
         let profileData = null;
         let token = '';
         try {
-          token = await currentUser.getIdToken(true);
+          // Use the underlying Firebase ID token for /api-v2/profile
+          token = rawFirebaseTokenGetter
+            ? await rawFirebaseTokenGetter(true)
+            : await currentUser.getIdToken(true);
 
           try {
             let profileRes = await fetch('/api-v2/profile', {
@@ -197,15 +262,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setDbUser({
               id: currentUser.uid,
               email: currentUser.email,
-              role: currentUser.email?.toLowerCase() === 'ernst@hatake.eu' ? 'admin' : 'buyer',
+              role: 'buyer',
               verificationStatus: 'verified',
               displayName: currentUser.displayName || prettyName,
             });
           }
         }
       } else {
-        setDbUser(null);
-        setIsAdminPasswordSession(false);
+        if (!activeAdminToken) {
+          setDbUser(null);
+          setIsAdminPasswordSession(false);
+          setAdminToken(null);
+        }
         localStorage.removeItem('cached_user_session');
         localStorage.removeItem('cached_db_user_session');
         localStorage.removeItem('cached_token');
@@ -231,14 +299,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role: 'admin',
       verificationStatus: 'verified',
     };
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+    sessionStorage.setItem(ADMIN_USER_KEY, JSON.stringify(adminUser));
     localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
     localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(adminUser));
-    localStorage.setItem('cached_token', data.token);
-    localStorage.setItem('cached_db_user_session', JSON.stringify(adminUser));
 
-    setUser(buildAdminSessionUser(data.token, adminUser));
-    setDbUser(adminUser);
+    setAdminToken(data.token);
     setIsAdminPasswordSession(true);
+
+    // If user is already signed in via Firebase, make sure user.getIdToken() returns the unlocked admin token
+    if (auth.currentUser) {
+      const cu = auth.currentUser;
+      const origGetIdToken = cu.getIdToken.bind(cu);
+      (cu as any).getIdToken = async (forceRefresh?: boolean) => {
+        const unlockedAdminTok =
+          sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
+        if (unlockedAdminTok && unlockedAdminTok.startsWith('hatake_admin.')) {
+          return unlockedAdminTok;
+        }
+        return origGetIdToken(forceRefresh);
+      };
+      setUser(cu);
+      setDbUser((prev: any) => ({ ...(prev || adminUser), role: 'admin', verificationStatus: 'verified' }));
+    } else {
+      setUser(buildAdminSessionUser(data.token, adminUser));
+      setDbUser(adminUser);
+    }
+  };
+
+  const lockAdminSession = () => {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(ADMIN_USER_KEY);
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_USER_KEY);
+    setAdminToken(null);
+    setIsAdminPasswordSession(false);
+    if (!auth.currentUser) {
+      setUser(null);
+      setDbUser(null);
+    }
   };
 
   const signIn = async () => {
@@ -275,11 +374,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logOut = async () => {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(ADMIN_USER_KEY);
     localStorage.removeItem(ADMIN_TOKEN_KEY);
     localStorage.removeItem(ADMIN_USER_KEY);
     localStorage.removeItem('cached_user_session');
     localStorage.removeItem('cached_db_user_session');
     localStorage.removeItem('cached_token');
+    setAdminToken(null);
     setIsAdminPasswordSession(false);
     try {
       await signOut(auth);
@@ -310,11 +412,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         dbUser,
         loading,
         isAdminPasswordSession,
+        adminToken,
         signIn,
         signInWithEmail,
         registerWithEmail,
         signInWithCustom,
         adminLoginWithPassword,
+        lockAdminSession,
         logOut,
         updateDbUser,
       }}

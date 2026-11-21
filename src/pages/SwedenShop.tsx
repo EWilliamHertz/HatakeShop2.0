@@ -762,22 +762,15 @@ export function SwedenShop() {
           </div>
           <div className="space-y-2 max-w-lg mx-auto">
             <h3 className="text-xl sm:text-2xl font-black text-white">
-              {t('Butikskatalogen är redo för dina produkter')}
+              {t('Nya produkter fylls på i vårt svenska lager')}
             </h3>
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
               {t(
-                'Alla platshållarprodukter har rensats bort. Logga in i Adminpanelen (/admin) för att lägga till och publicera produkter på hatake.shop.'
+                'Vi uppdaterar just nu sortimentet med nya booster-boxar, graderade samlarkort och tillbehör. Titta gärna in snart igen eller besök vår B2B-grossistplattform.'
               )}
             </p>
           </div>
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to="/admin"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-sky-400 hover:from-cyan-400 hover:to-sky-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/20 transition-all"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>{t('Öppna /admin & lägg till produkter')}</span>
-            </Link>
             <a
               href={b2bHref}
               onClick={(e) => {

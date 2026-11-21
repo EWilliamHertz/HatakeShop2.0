@@ -95,9 +95,15 @@ function B2bBottomAdminPanel() {
     let active = true;
     (async () => {
       try {
-        const token = (await user?.getIdToken()) || localStorage.getItem('hatake_admin_token') || '';
+        const token =
+          sessionStorage.getItem('hatake_admin_token') ||
+          localStorage.getItem('hatake_admin_token') ||
+          (await user?.getIdToken()) ||
+          '';
         const [statsRes, b2cRes] = await Promise.all([
-          fetch('/api-v2/admin/stats', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
+          fetch('/api-v2/admin/stats', {
+            headers: { Authorization: `Bearer ${token}`, 'X-Admin-Token': token },
+          }).catch(() => null),
           fetch('/api-v2/sverige-products').catch(() => null),
         ]);
         if (!active) return;
@@ -256,9 +262,9 @@ export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
-  const isAdminAccount = Boolean(
-    isAdminPasswordSession || dbUser?.role?.toLowerCase() === 'admin'
-  );
+  // STRICT ADMIN PASSWORD LOCK:
+  // Admin navigation and docks are ONLY visible when unlocked via ADMIN_PASSWORD (.env)
+  const isAdminAccount = Boolean(isAdminPasswordSession);
 
   // Live header search for B2C storefront
   const [headerSearch, setHeaderSearch] = useState(searchParams.get('q') || '');
@@ -511,14 +517,6 @@ export function Layout() {
 
                   {user ? (
                     <div className="hidden sm:flex items-center gap-1.5">
-                      {isAdminAccount && (
-                        <Link
-                          to="/admin"
-                          className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 text-xs font-bold hover:bg-amber-500/25 transition-colors"
-                        >
-                          {t('Admin')}
-                        </Link>
-                      )}
                       <Link
                         to="/orders"
                         title={t('Order History')}
@@ -802,8 +800,8 @@ export function Layout() {
                       className={cn(
                         'px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all duration-200 whitespace-nowrap',
                         location.pathname.startsWith('/admin')
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25'
+                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent'
                       )}
                     >
                       <Shield className="w-3.5 h-3.5 shrink-0" />
