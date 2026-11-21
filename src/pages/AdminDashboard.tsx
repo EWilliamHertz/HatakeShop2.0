@@ -685,7 +685,7 @@ export function AdminDashboard() {
     },
     {
       id: 'b2b-catalog',
-      title: '🌐 B2B Wholesale Catalog',
+      title: `🌐 ${t('B2B Wholesale Catalog')}`,
       subtitle: t('Wholesale Listings & Bulk Tools'),
       icon: Building2,
       badge: stats?.productCount || 0,
@@ -743,7 +743,7 @@ export function AdminDashboard() {
                 </h1>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-extrabold">
                   <Lock className="w-3 h-3" />
-                  <span>ADMIN_PASSWORD UNLOCKED</span>
+                  <span>{t('ADMIN_PASSWORD UNLOCKED')}</span>
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 mt-1">

@@ -1,8 +1,44 @@
 /**
- * Shared taxonomy for sealed TCG products.
+ * Shared taxonomy for sealed TCG & Merchandise products.
  * Used by the API (filtering + classification), the seller/admin forms,
  * the marketplace filters, and the DB backfill script.
  */
+
+export const PRODUCT_DOMAINS = [
+  { value: 'tcg', label: 'TCG (Trading Card Game)' },
+  { value: 'merchandise', label: 'Merchandise & Tillbehör' },
+] as const;
+
+export type ProductDomain = typeof PRODUCT_DOMAINS[number]['value'];
+
+export const TCG_GAMES = [
+  { value: 'pokemon', label: 'Pokémon TCG', short: 'Pokémon' },
+  { value: 'magic', label: 'Magic: The Gathering', short: 'MTG' },
+  { value: 'yugioh', label: 'Yu-Gi-Oh!', short: 'Yu-Gi-Oh!' },
+  { value: 'lorcana', label: 'Disney Lorcana', short: 'Lorcana' },
+  { value: 'one_piece', label: 'One Piece Card Game', short: 'One Piece' },
+  { value: 'digimon', label: 'Digimon Card Game', short: 'Digimon' },
+  { value: 'dragon_ball', label: 'Dragon Ball Super', short: 'Dragon Ball' },
+  { value: 'flesh_and_blood', label: 'Flesh and Blood', short: 'FaB' },
+  { value: 'star_wars', label: 'Star Wars: Unlimited', short: 'SWU' },
+  { value: 'weiss_schwarz', label: 'Weiß Schwarz', short: 'Weiß Schwarz' },
+  { value: 'glimmerfall', label: 'GlimmerFall TCG', short: 'GlimmerFall' },
+  { value: 'sports', label: 'Sports Cards', short: 'Sports' },
+  { value: 'other', label: 'Other / General Hobby', short: 'Other' },
+] as const;
+
+export type TcgGame = typeof TCG_GAMES[number]['value'];
+
+export const MERCHANDISE_FORMATS = [
+  { value: 'accessory', label: 'Pärmar & Tillbehör (Binders, Sleeves, Toploaders)' },
+  { value: 'binder', label: 'Card Binders & Albums' },
+  { value: 'sleeves', label: 'Card Sleeves & Inner Sleeves' },
+  { value: 'toploaders', label: 'Toploaders & Magnetic Holders' },
+  { value: 'acrylic_case', label: 'Acrylic Display Cases' },
+  { value: 'deck_box', label: 'Deck Boxes & Storage' },
+  { value: 'playmat', label: 'Playmats & Table Gear' },
+  { value: 'collectible_merch', label: 'Figures, Plush & Merchandise' },
+] as const;
 
 export const PRODUCT_LANGUAGES = [
   { value: 'en',      label: 'English',                         short: 'EN',  flag: '🇺🇸' },
@@ -26,11 +62,60 @@ export const SEALED_TYPES = [
   { value: 'blister',            label: 'Blisters',               group: 'Packs' },
   { value: 'deck',               label: 'Decks & Battle Sets',    group: 'Decks' },
   { value: 'case',               label: 'Sealed Cases',           group: 'Cases' },
-  { value: 'accessory',          label: 'Accessories & Supplies', group: 'Other' },
+  { value: 'single',             label: 'Single Cards',           group: 'Singles' },
+  { value: 'accessory',          label: 'Accessories & Supplies', group: 'Merchandise' },
+  { value: 'binder',             label: 'Card Binders & Albums',  group: 'Merchandise' },
+  { value: 'sleeves',            label: 'Card Sleeves',           group: 'Merchandise' },
+  { value: 'toploaders',         label: 'Toploaders & Magnetic Holders', group: 'Merchandise' },
+  { value: 'acrylic_case',       label: 'Acrylic Display Cases',  group: 'Merchandise' },
+  { value: 'deck_box',           label: 'Deck Boxes & Storage',   group: 'Merchandise' },
+  { value: 'playmat',            label: 'Playmats',               group: 'Merchandise' },
+  { value: 'collectible_merch',  label: 'Figures, Plush & Merchandise', group: 'Merchandise' },
   { value: 'other',              label: 'Other Sealed Products',  group: 'Other' },
 ] as const;
 
 export type SealedType = typeof SEALED_TYPES[number]['value'];
+
+export const tcgGameLabel = (v?: string | null): string => {
+  if (!v) return '';
+  const match = TCG_GAMES.find(g => g.value === v || g.label.toLowerCase() === v.toLowerCase());
+  return match ? match.label : v;
+};
+
+export function inferProductDomain(p: any): ProductDomain {
+  const explicit = String(p?.productDomain || p?.specifications?.productDomain || '').toLowerCase();
+  if (explicit === 'merchandise' || explicit === 'tcg') return explicit as ProductDomain;
+  const st = String(p?.sealedType || '').toLowerCase();
+  const title = String(p?.sverigeTitle || p?.title || '').toLowerCase();
+  const brand = String(p?.brand || '').toLowerCase();
+  if (
+    ['accessory', 'binder', 'sleeves', 'toploaders', 'acrylic_case', 'deck_box', 'playmat', 'collectible_merch'].includes(st) ||
+    brand.includes('topbestpkg') ||
+    /pärm|binder|toploader|sleeve|deckbox|deck case|playmat|spelmatta|akryl|acrylic|magnethållare|magnetic card holder|plush|merch/i.test(title)
+  ) {
+    return 'merchandise';
+  }
+  return 'tcg';
+}
+
+export function inferTcgGame(p: any): string {
+  if (p?.tcgGame) return String(p.tcgGame);
+  if (p?.specifications?.tcgGame) return String(p.specifications.tcgGame);
+  const text = `${p?.brand || ''} ${p?.sverigeTitle || ''} ${p?.title || ''}`.toLowerCase();
+  if (/pok[eé]mon/.test(text)) return 'pokemon';
+  if (/magic|mtg/.test(text)) return 'magic';
+  if (/yu-?gi-?oh/.test(text)) return 'yugioh';
+  if (/lorcana/.test(text)) return 'lorcana';
+  if (/one piece/.test(text)) return 'one_piece';
+  if (/digimon/.test(text)) return 'digimon';
+  if (/dragon ball/.test(text)) return 'dragon_ball';
+  if (/flesh and blood|\bfab\b/.test(text)) return 'flesh_and_blood';
+  if (/star wars/.test(text)) return 'star_wars';
+  if (/weiss|weiß/.test(text)) return 'weiss_schwarz';
+  if (/glimmerfall/.test(text)) return 'glimmerfall';
+  if (/sport|topps|panini|nfl|nba|fifa/.test(text)) return 'sports';
+  return 'other';
+}
 
 export const ORIGIN_TYPES = [
   { value: 'Direct Factory',                label: 'Direct Factory',                short: 'Factory' },

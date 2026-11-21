@@ -19,15 +19,30 @@ import {
   Link as LinkIcon,
   Layers,
   Check,
+  Sparkles,
+  ShoppingBag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProductModal } from './ProductModal.tsx';
 import { SafeImage } from './SafeImage.tsx';
 import { getB2cPriceSEK } from '../pages/SwedenShop.tsx';
 import { useCurrency } from './CurrencyProvider.tsx';
-import { PRODUCT_LANGUAGES, SEALED_TYPES } from '../lib/productTaxonomy.ts';
+import {
+  PRODUCT_LANGUAGES,
+  SEALED_TYPES,
+  MERCHANDISE_FORMATS,
+  TCG_GAMES,
+  ProductDomain,
+  inferProductDomain,
+  inferTcgGame,
+  tcgGameLabel,
+  sealedTypeLabel,
+} from '../lib/productTaxonomy.ts';
 
-interface NewProductFormState {
+interface ProductFormState {
+  id?: number;
+  productDomain: ProductDomain;
+  tcgGame: string;
   sverigeTitle: string;
   sverigePrice: string;
   brand: string;
@@ -41,12 +56,13 @@ interface NewProductFormState {
   gradingCompany: string;
   grade: string;
   certNumber: string;
-  alsoShowOnB2b: boolean;
   unitCostEur: string;
   moq: string;
 }
 
-const INITIAL_NEW_PRODUCT: NewProductFormState = {
+const INITIAL_PRODUCT_FORM: ProductFormState = {
+  productDomain: 'tcg',
+  tcgGame: 'pokemon',
   sverigeTitle: '',
   sverigePrice: '',
   brand: 'Pokémon',
@@ -60,44 +76,32 @@ const INITIAL_NEW_PRODUCT: NewProductFormState = {
   gradingCompany: 'PSA',
   grade: '10',
   certNumber: '',
-  alsoShowOnB2b: false,
   unitCostEur: '',
   moq: '1',
 };
+
+const TCG_ONLY_FORMATS = SEALED_TYPES.filter((s) => s.group !== 'Merchandise');
 
 export function AdminSverigeTab() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const { formatSEK } = useCurrency();
   const queryClient = useQueryClient();
+
   const [search, setSearch] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [previewProduct, setPreviewProduct] = useState<any>(null);
 
-  // Create New Product Modal state
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newForm, setNewForm] = useState<NewProductFormState>(INITIAL_NEW_PRODUCT);
+  // Create & Edit Modal state (both share clean scrollable modal UX)
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [formState, setFormState] = useState<ProductFormState>(INITIAL_PRODUCT_FORM);
   const [imageUrlInput, setImageUrlInput] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Import from B2B Catalog Modal state
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [catalogSekPrices, setCatalogSekPrices] = useState<Record<number, string>>({});
-
-  // Single-row edit states
-  const [editTitle, setEditTitle] = useState('');
-  const [editBrand, setEditBrand] = useState('');
-  const [editPrice, setEditPrice] = useState('');
-  const [editStock, setEditStock] = useState('20');
-  const [editCategoryType, setEditCategoryType] = useState('booster_box');
-  const [editLanguage, setEditLanguage] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editPreorder, setEditPreorder] = useState(false);
-  const [editPreorderLabel, setEditPreorderLabel] = useState('');
-  const [editImages, setEditImages] = useState<string[]>([]);
-  const [editImageUrlInput, setEditImageUrlInput] = useState('');
-  const [uploading, setUploading] = useState(false);
 
   // Batch edit states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -106,10 +110,7 @@ export function AdminSverigeTab() {
   const [isBatchSaving, setIsBatchSaving] = useState(false);
 
   const getToken = async () => {
-    const adminTok =
-      sessionStorage.getItem('hatake_admin_token') ||
-      localStorage.getItem('hatake_admin_token') ||
-      '';
+    const adminTok = sessionStorage.getItem('hatake_admin_token') || '';
     if (adminTok) return adminTok;
     const tok = await user?.getIdToken();
     return tok || '';
@@ -130,7 +131,7 @@ export function AdminSverigeTab() {
     queryFn: async () => {
       const token = await getToken();
       const res = await fetch('/api-v2/admin/products', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, 'X-Admin-Token': token },
       });
       if (!res.ok) return [];
       return res.json();
@@ -140,6 +141,8 @@ export function AdminSverigeTab() {
   const updateMutation = useMutation({
     mutationFn: async (data: {
       id: number;
+      productDomain?: ProductDomain;
+      tcgGame?: string | null;
       sverigeTitle?: string;
       brand?: string;
       sverigePrice?: string;
@@ -147,6 +150,9 @@ export function AdminSverigeTab() {
       stockQuantity?: number;
       sealedType?: string | null;
       productType?: string;
+      gradingCompany?: string | null;
+      grade?: string | null;
+      certNumber?: string | null;
       language?: string | null;
       description?: string;
       isPreorder?: boolean;
@@ -156,7 +162,11 @@ export function AdminSverigeTab() {
       const token = await getToken();
       const res = await fetch(`/api-v2/admin/products/${data.id}/sverige`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'X-Admin-Token': token,
+        },
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Failed to update');
@@ -167,7 +177,7 @@ export function AdminSverigeTab() {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products-all-for-b2c-picker'] });
       toast.success(t('Produkt uppdaterad på hatake.shop'));
-      setEditingId(null);
+      setModalMode(null);
     },
     onError: (err: any) => {
       toast.error(err?.message || t('Kunde inte spara ändringar'));
@@ -179,7 +189,7 @@ export function AdminSverigeTab() {
       const token = await getToken();
       const res = await fetch(`/api-v2/admin/products/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, 'X-Admin-Token': token },
       });
       if (!res.ok) throw new Error('Failed to delete product');
       return res.json();
@@ -209,7 +219,11 @@ export function AdminSverigeTab() {
         });
         const res = await fetch('/api-v2/upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            'X-Admin-Token': token,
+          },
           body: JSON.stringify({ image: base64 }),
         });
         const data = await res.json();
@@ -226,97 +240,22 @@ export function AdminSverigeTab() {
     }
   };
 
-  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const urls = await uploadFiles(e.target.files);
-    if (urls.length > 0) setEditImages((prev) => [...prev, ...urls]);
-  };
-
-  const handleNewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleModalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const urls = await uploadFiles(e.target.files);
     if (urls.length > 0) {
-      setNewForm((prev) => ({ ...prev, images: [...prev.images, ...urls] }));
+      setFormState((prev) => ({ ...prev, images: [...prev.images, ...urls] }));
     }
   };
 
-  const handleCreateNewProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newForm.sverigeTitle.trim()) {
-      toast.error(t('Ange en produkttitel'));
-      return;
-    }
-    if (!newForm.sverigePrice.trim() || parseFloat(newForm.sverigePrice) <= 0) {
-      toast.error(t('Ange ett giltigt pris i SEK'));
-      return;
-    }
-
-    setCreating(true);
-    try {
-      const token = await getToken();
-      const isGraded = newForm.categoryType === 'graded';
-      const finalImages = [...newForm.images];
-      if (imageUrlInput.trim()) {
-        finalImages.push(imageUrlInput.trim());
-      }
-
-      const res = await fetch('/api-v2/admin/sverige-products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: newForm.sverigeTitle.trim(),
-          sverigeTitle: newForm.sverigeTitle.trim(),
-          sverigePrice: newForm.sverigePrice.trim(),
-          unitCost: newForm.unitCostEur.trim() || undefined,
-          brand: newForm.brand.trim() || 'Hatake',
-          description: newForm.description.trim(),
-          stockQuantity: Math.max(0, parseInt(newForm.stockQuantity, 10) || 15),
-          moq: Math.max(1, parseInt(newForm.moq, 10) || 1),
-          productType: isGraded ? 'graded' : 'sealed',
-          sealedType: isGraded ? null : newForm.categoryType,
-          gradingCompany: isGraded ? newForm.gradingCompany : null,
-          grade: isGraded ? newForm.grade : null,
-          certNumber: isGraded ? newForm.certNumber : null,
-          language: newForm.language || null,
-          isPreorder: newForm.isPreorder,
-          preorderLabel: newForm.isPreorder ? newForm.preorderLabel.trim() : null,
-          images: finalImages,
-          sverigeImages: finalImages,
-          isSverigeB2c: true,
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Kunde inte skapa produkten');
-      }
-
-      toast.success(`${t('Produkt tillagd på hatake.shop')}: ${newForm.sverigeTitle}`);
-      setNewForm(INITIAL_NEW_PRODUCT);
-      setImageUrlInput('');
-      setShowCreateModal(false);
-      queryClient.invalidateQueries({ queryKey: ['sverige-admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-    } catch (err: any) {
-      toast.error(err?.message || t('Kunde inte skapa produkten'));
-    } finally {
-      setCreating(false);
-    }
+  const openCreateModal = () => {
+    setFormState(INITIAL_PRODUCT_FORM);
+    setImageUrlInput('');
+    setModalMode('create');
   };
 
-  const startEdit = (p: any) => {
-    setEditingId(p.id);
-    setEditTitle(p.sverigeTitle || p.title || '');
-    setEditBrand(p.brand || 'Pokémon');
-    setEditPrice(String(p.sverigePrice || getB2cPriceSEK(p) || ''));
-    setEditStock(String(typeof p.stockQuantity === 'number' ? p.stockQuantity : 20));
-    setEditCategoryType(p.productType === 'graded' ? 'graded' : p.sealedType || 'booster_box');
-    setEditLanguage(p.language || '');
-    setEditDescription(p.description || '');
-    setEditPreorder(Boolean(p.isPreorder));
-    setEditPreorderLabel(p.preorderLabel || '');
-    setEditImageUrlInput('');
+  const openEditModal = (p: any) => {
+    const domain = inferProductDomain(p);
+    const game = inferTcgGame(p);
     let imgs: string[] = [];
     try {
       imgs =
@@ -326,29 +265,167 @@ export function AdminSverigeTab() {
             ? p.images
             : JSON.parse(p.images || '[]');
     } catch {}
-    setEditImages(imgs);
+
+    setFormState({
+      id: p.id,
+      productDomain: domain,
+      tcgGame: game,
+      sverigeTitle: p.sverigeTitle || p.title || '',
+      sverigePrice: String(p.sverigePrice || getB2cPriceSEK(p) || ''),
+      brand: p.brand || (domain === 'merchandise' ? 'Hatake' : 'Pokémon'),
+      categoryType:
+        p.productType === 'graded'
+          ? 'graded'
+          : p.sealedType || (domain === 'merchandise' ? 'accessory' : 'booster_box'),
+      language: p.language || '',
+      stockQuantity: String(typeof p.stockQuantity === 'number' ? p.stockQuantity : 20),
+      isPreorder: Boolean(p.isPreorder),
+      preorderLabel: p.preorderLabel || '',
+      description: p.description || '',
+      images: imgs,
+      gradingCompany: p.gradingCompany || 'PSA',
+      grade: p.grade || '10',
+      certNumber: p.certNumber || '',
+      unitCostEur: String(p.unitCost || ''),
+      moq: String(p.moq || '1'),
+    });
+    setImageUrlInput('');
+    setModalMode('edit');
   };
 
-  const saveEdit = (id: number) => {
-    const isGraded = editCategoryType === 'graded';
-    const nextImgs = [...editImages];
-    if (editImageUrlInput.trim()) {
-      nextImgs.push(editImageUrlInput.trim());
-    }
-    updateMutation.mutate({
-      id,
-      sverigeTitle: editTitle.trim(),
-      brand: editBrand.trim() || 'Hatake',
-      sverigePrice: editPrice.trim(),
-      stockQuantity: Math.max(0, parseInt(editStock, 10) || 0),
-      productType: isGraded ? 'graded' : 'sealed',
-      sealedType: isGraded ? null : editCategoryType,
-      language: editLanguage || null,
-      description: editDescription.trim(),
-      isPreorder: editPreorder,
-      preorderLabel: editPreorder ? editPreorderLabel.trim() : '',
-      sverigeImages: nextImgs,
+  const handleDomainSwitch = (nextDomain: ProductDomain) => {
+    setFormState((prev) => {
+      const nextFormat =
+        nextDomain === 'merchandise'
+          ? MERCHANDISE_FORMATS.some((m) => m.value === prev.categoryType)
+            ? prev.categoryType
+            : 'binder'
+          : TCG_ONLY_FORMATS.some((tOpt) => tOpt.value === prev.categoryType) ||
+              prev.categoryType === 'graded'
+            ? prev.categoryType
+            : 'booster_box';
+      const nextLang = nextDomain === 'merchandise' ? '' : prev.language || 'en';
+      const nextBrand =
+        nextDomain === 'merchandise' && prev.brand === 'Pokémon'
+          ? 'Hatake'
+          : nextDomain === 'tcg' && prev.brand === 'Hatake'
+            ? 'Pokémon'
+            : prev.brand;
+      return {
+        ...prev,
+        productDomain: nextDomain,
+        categoryType: nextFormat,
+        language: nextLang,
+        brand: nextBrand,
+      };
     });
+  };
+
+  const handleGameChange = (nextGame: string) => {
+    const gameMeta = TCG_GAMES.find((g) => g.value === nextGame);
+    setFormState((prev) => ({
+      ...prev,
+      tcgGame: nextGame,
+      brand:
+        prev.productDomain === 'tcg' && gameMeta && nextGame !== 'other'
+          ? gameMeta.short === 'Pokémon'
+            ? 'Pokémon'
+            : gameMeta.label
+          : prev.brand,
+    }));
+  };
+
+  const handleSubmitModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formState.sverigeTitle.trim()) {
+      toast.error(t('Ange en produkttitel'));
+      return;
+    }
+    if (!formState.sverigePrice.trim() || parseFloat(formState.sverigePrice) <= 0) {
+      toast.error(t('Ange ett giltigt pris i SEK'));
+      return;
+    }
+
+    const isGraded = formState.categoryType === 'graded';
+    const finalImages = [...formState.images];
+    if (imageUrlInput.trim()) {
+      finalImages.push(imageUrlInput.trim());
+    }
+
+    if (modalMode === 'edit' && formState.id) {
+      updateMutation.mutate({
+        id: formState.id,
+        productDomain: formState.productDomain,
+        tcgGame: formState.tcgGame || null,
+        sverigeTitle: formState.sverigeTitle.trim(),
+        brand: formState.brand.trim() || 'Hatake',
+        sverigePrice: formState.sverigePrice.trim(),
+        stockQuantity: Math.max(0, parseInt(formState.stockQuantity, 10) || 0),
+        productType: isGraded ? 'graded' : 'sealed',
+        sealedType: isGraded ? null : formState.categoryType,
+        gradingCompany: isGraded ? formState.gradingCompany : null,
+        grade: isGraded ? formState.grade : null,
+        certNumber: isGraded ? formState.certNumber : null,
+        language: formState.language || null,
+        description: formState.description.trim(),
+        isPreorder: formState.isPreorder,
+        preorderLabel: formState.isPreorder ? formState.preorderLabel.trim() : '',
+        sverigeImages: finalImages,
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api-v2/admin/sverige-products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'X-Admin-Token': token,
+        },
+        body: JSON.stringify({
+          title: formState.sverigeTitle.trim(),
+          sverigeTitle: formState.sverigeTitle.trim(),
+          sverigePrice: formState.sverigePrice.trim(),
+          unitCost: formState.unitCostEur.trim() || undefined,
+          brand: formState.brand.trim() || 'Hatake',
+          description: formState.description.trim(),
+          stockQuantity: Math.max(0, parseInt(formState.stockQuantity, 10) || 15),
+          moq: Math.max(1, parseInt(formState.moq, 10) || 1),
+          productDomain: formState.productDomain,
+          tcgGame: formState.tcgGame || null,
+          productType: isGraded ? 'graded' : 'sealed',
+          sealedType: isGraded ? null : formState.categoryType,
+          gradingCompany: isGraded ? formState.gradingCompany : null,
+          grade: isGraded ? formState.grade : null,
+          certNumber: isGraded ? formState.certNumber : null,
+          language: formState.language || null,
+          isPreorder: formState.isPreorder,
+          preorderLabel: formState.isPreorder ? formState.preorderLabel.trim() : null,
+          images: finalImages,
+          sverigeImages: finalImages,
+          isSverigeB2c: true,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || t('Kunde inte skapa produkten'));
+      }
+
+      toast.success(`${t('Produkt tillagd på hatake.shop')}: ${formState.sverigeTitle}`);
+      setFormState(INITIAL_PRODUCT_FORM);
+      setImageUrlInput('');
+      setModalMode(null);
+      queryClient.invalidateQueries({ queryKey: ['sverige-admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    } catch (err: any) {
+      toast.error(err?.message || t('Kunde inte skapa produkten'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const removeProductFromB2c = (id: number) => {
@@ -356,7 +433,9 @@ export function AdminSverigeTab() {
   };
 
   const filtered = (Array.isArray(products) ? products : []).filter((p: any) =>
-    `${p.sverigeTitle || ''} ${p.title || ''} ${p.brand || ''}`.toLowerCase().includes(search.toLowerCase())
+    `${p.sverigeTitle || ''} ${p.title || ''} ${p.brand || ''} ${p.tcgGame || ''}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
   );
 
   const toggleSelectAll = () => {
@@ -386,7 +465,11 @@ export function AdminSverigeTab() {
         if (batchStockQty.trim()) payload.stockQuantity = Math.max(0, parseInt(batchStockQty, 10) || 0);
         await fetch(`/api-v2/admin/products/${id}/sverige`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            'X-Admin-Token': token,
+          },
           body: JSON.stringify(payload),
         });
       }
@@ -432,7 +515,7 @@ export function AdminSverigeTab() {
             </div>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
               {t(
-                'Lägg till nya produkter för hatake.shop (localhost:3000), sätt priser i SEK (inkl. moms), hantera lagersaldo och ladda upp produktbilder.'
+                'Lägg till och hantera produkter för hatake.shop, sätt priser i SEK (inkl. moms), välj TCG eller Merchandise och ladda upp produktbilder.'
               )}
             </p>
           </div>
@@ -440,7 +523,7 @@ export function AdminSverigeTab() {
           <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
             <button
               type="button"
-              onClick={() => setShowCreateModal(true)}
+              onClick={openCreateModal}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-400 hover:from-cyan-400 hover:to-sky-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -542,7 +625,7 @@ export function AdminSverigeTab() {
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setShowCreateModal(true)}
+                onClick={openCreateModal}
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-400 hover:from-cyan-400 hover:to-sky-300 text-slate-950 font-black text-sm shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -573,7 +656,7 @@ export function AdminSverigeTab() {
                     </button>
                   </th>
                   <th className="p-4">{t('Produkt / Varumärke')}</th>
-                  <th className="p-4">{t('Kategori & Språk')}</th>
+                  <th className="p-4">{t('Typ & TCG-Spel')}</th>
                   <th className="p-4">{t('Pris (SEK)')}</th>
                   <th className="p-4">{t('Lager & Status')}</th>
                   <th className="p-4">{t('Bilder')}</th>
@@ -588,9 +671,13 @@ export function AdminSverigeTab() {
                       : Array.isArray(p.images)
                         ? p.images
                         : [];
+                  const domain = inferProductDomain(p);
+                  const gameCode = inferTcgGame(p);
+                  const gameTitle = tcgGameLabel(gameCode);
+
                   return (
                     <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="p-4 text-center align-top">
+                      <td className="p-4 text-center align-middle">
                         <button
                           type="button"
                           onClick={() => toggleSelect(p.id)}
@@ -603,297 +690,118 @@ export function AdminSverigeTab() {
                           )}
                         </button>
                       </td>
-
-                      {editingId === p.id ? (
-                        <>
-                          <td className="p-4 align-top space-y-2 min-w-[240px]">
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                                {t('Produkttitel')}
-                              </label>
-                              <input
-                                type="text"
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white"
+                      <td className="p-4">
+                        <div className="font-bold text-slate-100">{p.sverigeTitle || p.title}</div>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                          <span className="text-cyan-400 font-semibold">{p.brand || 'Hatake'}</span>
+                          {p.description && (
+                            <span className="text-slate-500 truncate max-w-[240px]">• {p.description}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 text-xs text-slate-300">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-md border font-bold uppercase ${
+                              domain === 'merchandise'
+                                ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                                : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                            }`}
+                          >
+                            {domain === 'merchandise' ? t('Merchandise') : 'TCG'}
+                          </span>
+                          {gameTitle && (
+                            <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-200 font-semibold">
+                              {gameTitle}
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 font-medium">
+                            {p.productType === 'graded'
+                              ? `${p.gradingCompany || 'PSA'} ${p.grade || '10'}`
+                              : t(sealedTypeLabel(p.sealedType || 'booster_box'))}
+                          </span>
+                          {p.language && (
+                            <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 uppercase font-bold">
+                              {p.language}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 font-extrabold text-emerald-400 tabular-nums">
+                        {formatSEK(getB2cPriceSEK(p))}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          {p.isPreorder ? (
+                            <span className="inline-flex w-fit px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-bold">
+                              {p.preorderLabel || t('Förhandsbokning')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex w-fit px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold tabular-nums">
+                              {p.stockQuantity ?? 20} {t('st i lager')}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex gap-1.5">
+                          {imgs.slice(0, 3).map((img: string, i: number) => (
+                            <div
+                              key={i}
+                              className="w-10 h-10 rounded-lg border border-slate-700 overflow-hidden bg-slate-950 shrink-0"
+                            >
+                              <SafeImage
+                                src={img}
+                                alt=""
+                                fallbackIcon={<Package className="w-4 h-4 text-slate-600" />}
+                                className="w-full h-full object-contain p-0.5"
                               />
                             </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                                {t('Varumärke')}
-                              </label>
-                              <input
-                                type="text"
-                                value={editBrand}
-                                onChange={(e) => setEditBrand(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white"
-                              />
+                          ))}
+                          {imgs.length > 3 && (
+                            <div className="w-10 h-10 rounded-lg border border-slate-700 bg-slate-800 flex items-center justify-center text-xs text-slate-400 shrink-0">
+                              +{imgs.length - 3}
                             </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                                {t('Beskrivning')}
-                              </label>
-                              <textarea
-                                rows={2}
-                                value={editDescription}
-                                onChange={(e) => setEditDescription(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white"
-                              />
-                            </div>
-                          </td>
-                          <td className="p-4 align-top space-y-2 min-w-[170px]">
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                                {t('Produkttyp')}
-                              </label>
-                              <select
-                                value={editCategoryType}
-                                onChange={(e) => setEditCategoryType(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
-                              >
-                                {SEALED_TYPES.map((st) => (
-                                  <option key={st.value} value={st.value}>
-                                    {st.label}
-                                  </option>
-                                ))}
-                                <option value="graded">{t('Graderat Kort (Slab)')}</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                                {t('Språk')}
-                              </label>
-                              <select
-                                value={editLanguage}
-                                onChange={(e) => setEditLanguage(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
-                              >
-                                <option value="">{t('Inget / Tillbehör')}</option>
-                                {PRODUCT_LANGUAGES.map((l) => (
-                                  <option key={l.value} value={l.value}>
-                                    {l.flag} {l.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </td>
-                          <td className="p-4 align-top">
-                            <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                              {t('Pris i SEK (kr)')}
-                            </label>
-                            <input
-                              type="number"
-                              step="1"
-                              value={editPrice}
-                              onChange={(e) => setEditPrice(e.target.value)}
-                              className="w-28 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-bold"
-                            />
-                          </td>
-                          <td className="p-4 align-top space-y-2 min-w-[180px]">
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                                {t('Antal i lager (st)')}
-                              </label>
-                              <input
-                                type="number"
-                                min={0}
-                                value={editStock}
-                                onChange={(e) => setEditStock(e.target.value)}
-                                className="w-24 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-white"
-                              />
-                            </div>
-                            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={editPreorder}
-                                onChange={(e) => setEditPreorder(e.target.checked)}
-                                className="rounded border-slate-600 bg-slate-900 text-cyan-500"
-                              />
-                              <span>{t('Förhandsbokning (Preorder)')}</span>
-                            </label>
-                            {editPreorder && (
-                              <input
-                                type="text"
-                                value={editPreorderLabel}
-                                onChange={(e) => setEditPreorderLabel(e.target.value)}
-                                placeholder={t('T.ex. Lansering Q4 2026')}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white"
-                              />
-                            )}
-                          </td>
-                          <td className="p-4 align-top min-w-[200px]">
-                            <div className="flex gap-2 flex-wrap mb-2">
-                              {editImages.map((img, i) => (
-                                <div
-                                  key={i}
-                                  className="relative w-11 h-11 rounded-lg border border-slate-600 overflow-hidden group"
-                                >
-                                  <SafeImage src={img} alt="" className="w-full h-full object-cover" />
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditImages(editImages.filter((_, idx) => idx !== i))}
-                                    className="absolute inset-0 bg-black/65 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-rose-400"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="cursor-pointer text-xs inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-semibold">
-                                <ImageIcon className="w-3.5 h-3.5" />
-                                <span>{uploading ? t('Laddar upp...') : t('Ladda upp bildfil')}</span>
-                                <input
-                                  type="file"
-                                  multiple
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={handleEditImageUpload}
-                                  disabled={uploading}
-                                />
-                              </label>
-                              <div className="flex gap-1">
-                                <input
-                                  type="url"
-                                  value={editImageUrlInput}
-                                  onChange={(e) => setEditImageUrlInput(e.target.value)}
-                                  placeholder="https://..."
-                                  className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (editImageUrlInput.trim()) {
-                                      setEditImages((prev) => [...prev, editImageUrlInput.trim()]);
-                                      setEditImageUrlInput('');
-                                    }
-                                  }}
-                                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-cyan-300 font-bold"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4 align-top text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => saveEdit(p.id)}
-                                className="inline-flex items-center gap-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors"
-                              >
-                                <Save className="w-3.5 h-3.5" /> {t('Spara')}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingId(null)}
-                                className="text-slate-400 hover:text-white px-2.5 py-1.5 text-xs font-semibold"
-                              >
-                                {t('Cancel')}
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="p-4">
-                            <div className="font-bold text-slate-100">{p.sverigeTitle || p.title}</div>
-                            <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
-                              <span className="text-cyan-400 font-semibold">{p.brand || 'Hatake'}</span>
-                              {p.description && (
-                                <span className="text-slate-500 truncate max-w-[240px]">• {p.description}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4 text-xs text-slate-300">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 font-semibold">
-                                {p.productType === 'graded' ? 'Graded Slab' : p.sealedType || 'sealed'}
-                              </span>
-                              {p.language && (
-                                <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 uppercase font-bold">
-                                  {p.language}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4 font-extrabold text-emerald-400 tabular-nums">
-                            {formatSEK(getB2cPriceSEK(p))}
-                          </td>
-                          <td className="p-4">
-                            <div className="flex flex-col gap-1">
-                              {p.isPreorder ? (
-                                <span className="inline-flex w-fit px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-bold">
-                                  {p.preorderLabel || t('Förhandsbokning')}
-                                </span>
-                              ) : (
-                                <span className="inline-flex w-fit px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold tabular-nums">
-                                  {p.stockQuantity ?? 20} {t('st i lager')}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex gap-1.5">
-                              {imgs.slice(0, 3).map((img: string, i: number) => (
-                                <div
-                                  key={i}
-                                  className="w-10 h-10 rounded-lg border border-slate-700 overflow-hidden bg-slate-950 shrink-0"
-                                >
-                                  <SafeImage
-                                    src={img}
-                                    alt=""
-                                    fallbackIcon={<Package className="w-4 h-4 text-slate-600" />}
-                                    className="w-full h-full object-contain p-0.5"
-                                  />
-                                </div>
-                              ))}
-                              {imgs.length > 3 && (
-                                <div className="w-10 h-10 rounded-lg border border-slate-700 bg-slate-800 flex items-center justify-center text-xs text-slate-400 shrink-0">
-                                  +{imgs.length - 3}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4 text-right">
-                            <div className="inline-flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setPreviewProduct(p)}
-                                title={t('Förhandsgranska på hatake.shop')}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                                <span className="hidden sm:inline">{t('Förhandsgranska')}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => startEdit(p)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-colors"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                                <span>{t('Redigera')}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeProductFromB2c(p.id)}
-                                title={t('Dölj från hatake.shop (behåll i databas)')}
-                                className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-900 rounded-lg transition-colors"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => deletePermanentMutation.mutate(p.id)}
-                                title={t('Radera permanent')}
-                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      )}
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewProduct(p)}
+                            title={t('Förhandsgranska på hatake.shop')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                            <span className="hidden sm:inline">{t('Förhandsgranska')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(p)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>{t('Redigera')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeProductFromB2c(p.id)}
+                            title={t('Dölj från hatake.shop (behåll i databas)')}
+                            className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deletePermanentMutation.mutate(p.id)}
+                            title={t('Radera permanent')}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -903,48 +811,146 @@ export function AdminSverigeTab() {
         )}
       </div>
 
-      {/* Create New Product Modal (Framer Motion) */}
+      {/* Create / Edit Product Scrollable Modal */}
       <AnimatePresence>
-        {showCreateModal && (
+        {modalMode && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
-            onClick={() => setShowCreateModal(false)}
+            className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden"
+            onClick={() => setModalMode(null)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
-              transition={{ type: 'spring', duration: 0.35 }}
+              transition={{ type: 'spring', duration: 0.3 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden my-8"
+              className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]"
             >
-              <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              {/* Fixed Modal Header */}
+              <div className="px-5 sm:px-6 py-4 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                    <Plus className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                    {modalMode === 'edit' ? <Edit2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-white">
-                      {t('Lägg till ny produkt på hatake.shop')}
+                    <h3 className="text-base sm:text-lg font-black text-white">
+                      {modalMode === 'edit'
+                        ? t('Redigera produkt på hatake.shop')
+                        : t('Lägg till ny produkt på hatake.shop')}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      {t('Produkten publiceras direkt i den svenska B2C-butiken (SEK inkl. moms)')}
+                      {t('Välj om produkten är TCG eller Merchandise samt vilket TCG-spel den tillhör')}
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => setModalMode(null)}
+                  aria-label={t('Close')}
                   className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateNewProduct} className="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
+              {/* Scrollable Form Body */}
+              <form
+                id="b2c-product-form"
+                onSubmit={handleSubmitModal}
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-5 custom-scrollbar"
+              >
+                {/* Step 1: TCG vs Merchandise + TCG Game Picker */}
+                <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-cyan-400">
+                      {t('Klassificering (TCG eller Merchandise)')} *
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleDomainSwitch('tcg')}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                          formState.productDomain === 'tcg'
+                            ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 border-cyan-400 shadow-lg shadow-cyan-500/20'
+                            : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
+                        }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        <span>TCG ({t('Kortspel & Slabs')})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDomainSwitch('merchandise')}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                          formState.productDomain === 'merchandise'
+                            ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-indigo-400 shadow-lg shadow-indigo-500/20'
+                            : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
+                        }`}
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                        <span>{t('Merchandise & Tillbehör')}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Step 2: Select TCG Game */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                        {t('TCG-spel / Serie')}{' '}
+                        {formState.productDomain === 'tcg' ? '*' : `(${t('Optional')})`}
+                      </label>
+                      <select
+                        required={formState.productDomain === 'tcg'}
+                        value={formState.tcgGame}
+                        onChange={(e) => handleGameChange(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+                      >
+                        {TCG_GAMES.map((g) => (
+                          <option key={g.value} value={g.value}>
+                            {t(g.label)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                        {formState.productDomain === 'merchandise'
+                          ? t('Typ av Merchandise')
+                          : t('TCG-Format / Produkttyp')}
+                      </label>
+                      <select
+                        value={formState.categoryType}
+                        onChange={(e) => setFormState({ ...formState, categoryType: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+                      >
+                        {formState.productDomain === 'merchandise' ? (
+                          MERCHANDISE_FORMATS.map((mf) => (
+                            <option key={mf.value} value={mf.value}>
+                              {t(mf.label)}
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            {TCG_ONLY_FORMATS.map((st) => (
+                              <option key={st.value} value={st.value}>
+                                {t(st.label)}
+                              </option>
+                            ))}
+                            <option value="graded">{t('Graderat Kort (PSA / BGS / CGC)')}</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Title & Price */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
@@ -953,8 +959,8 @@ export function AdminSverigeTab() {
                     <input
                       type="text"
                       required
-                      value={newForm.sverigeTitle}
-                      onChange={(e) => setNewForm({ ...newForm, sverigeTitle: e.target.value })}
+                      value={formState.sverigeTitle}
+                      onChange={(e) => setFormState({ ...formState, sverigeTitle: e.target.value })}
                       placeholder={t('T.ex. Pokémon Surging Sparks Booster Box')}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
                     />
@@ -968,55 +974,37 @@ export function AdminSverigeTab() {
                       required
                       min="1"
                       step="1"
-                      value={newForm.sverigePrice}
-                      onChange={(e) => setNewForm({ ...newForm, sverigePrice: e.target.value })}
+                      value={formState.sverigePrice}
+                      onChange={(e) => setFormState({ ...formState, sverigePrice: e.target.value })}
                       placeholder="1490"
                       className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm font-bold text-emerald-400 outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Brand & Language */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                      {t('Varumärke / Spel')}
+                      {t('Varumärke / Tillverkare')}
                     </label>
                     <input
                       type="text"
                       list="hatake-brands-list"
-                      value={newForm.brand}
-                      onChange={(e) => setNewForm({ ...newForm, brand: e.target.value })}
+                      value={formState.brand}
+                      onChange={(e) => setFormState({ ...formState, brand: e.target.value })}
                       placeholder="Pokémon"
                       className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
                     />
                     <datalist id="hatake-brands-list">
                       <option value="Pokémon" />
-                      <option value="One Piece" />
                       <option value="Magic: The Gathering" />
-                      <option value="Disney Lorcana" />
                       <option value="Yu-Gi-Oh!" />
-                      <option value="Dragon Ball Super" />
+                      <option value="Disney Lorcana" />
                       <option value="Hatake" />
+                      <option value="GlimmerFall" />
                       <option value="TopBestPKG" />
                     </datalist>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                      {t('Kategori / Produkttyp')}
-                    </label>
-                    <select
-                      value={newForm.categoryType}
-                      onChange={(e) => setNewForm({ ...newForm, categoryType: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
-                    >
-                      {SEALED_TYPES.map((st) => (
-                        <option key={st.value} value={st.value}>
-                          {st.label}
-                        </option>
-                      ))}
-                      <option value="graded">{t('Graderat Kort (PSA / BGS / CGC)')}</option>
-                    </select>
                   </div>
 
                   <div>
@@ -1024,29 +1012,29 @@ export function AdminSverigeTab() {
                       {t('Språk / Utgåva')}
                     </label>
                     <select
-                      value={newForm.language}
-                      onChange={(e) => setNewForm({ ...newForm, language: e.target.value })}
+                      value={formState.language}
+                      onChange={(e) => setFormState({ ...formState, language: e.target.value })}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
                     >
-                      <option value="">{t('Inget / Tillbehör')}</option>
+                      <option value="">{t('Inget / Merchandise')}</option>
                       {PRODUCT_LANGUAGES.map((l) => (
                         <option key={l.value} value={l.value}>
-                          {l.flag} {l.label}
+                          {l.flag} {t(l.label)}
                         </option>
                       ))}
                     </select>
                   </div>
                 </div>
 
-                {newForm.categoryType === 'graded' && (
+                {formState.categoryType === 'graded' && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-950/70 border border-amber-500/30">
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-amber-300 mb-1">
                         {t('Graderingsbolag')}
                       </label>
                       <select
-                        value={newForm.gradingCompany}
-                        onChange={(e) => setNewForm({ ...newForm, gradingCompany: e.target.value })}
+                        value={formState.gradingCompany}
+                        onChange={(e) => setFormState({ ...formState, gradingCompany: e.target.value })}
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white"
                       >
                         <option value="PSA">PSA</option>
@@ -1060,8 +1048,8 @@ export function AdminSverigeTab() {
                       </label>
                       <input
                         type="text"
-                        value={newForm.grade}
-                        onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })}
+                        value={formState.grade}
+                        onChange={(e) => setFormState({ ...formState, grade: e.target.value })}
                         placeholder="10"
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white"
                       />
@@ -1072,9 +1060,9 @@ export function AdminSverigeTab() {
                       </label>
                       <input
                         type="text"
-                        value={newForm.certNumber}
-                        onChange={(e) => setNewForm({ ...newForm, certNumber: e.target.value })}
-                        placeholder="Valfritt"
+                        value={formState.certNumber}
+                        onChange={(e) => setFormState({ ...formState, certNumber: e.target.value })}
+                        placeholder={t('Valfritt')}
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white"
                       />
                     </div>
@@ -1089,27 +1077,27 @@ export function AdminSverigeTab() {
                     <input
                       type="number"
                       min="0"
-                      value={newForm.stockQuantity}
-                      onChange={(e) => setNewForm({ ...newForm, stockQuantity: e.target.value })}
+                      value={formState.stockQuantity}
+                      onChange={(e) => setFormState({ ...formState, stockQuantity: e.target.value })}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
                     />
                   </div>
 
-                  <div className="sm:col-span-2 pt-4 sm:pt-5 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="sm:col-span-2 pt-2 sm:pt-5 flex flex-col sm:flex-row sm:items-center gap-3">
                     <label className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-200 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={newForm.isPreorder}
-                        onChange={(e) => setNewForm({ ...newForm, isPreorder: e.target.checked })}
+                        checked={formState.isPreorder}
+                        onChange={(e) => setFormState({ ...formState, isPreorder: e.target.checked })}
                         className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-cyan-500"
                       />
                       <span>{t('Förhandsbokning (Preorder)')}</span>
                     </label>
-                    {newForm.isPreorder && (
+                    {formState.isPreorder && (
                       <input
                         type="text"
-                        value={newForm.preorderLabel}
-                        onChange={(e) => setNewForm({ ...newForm, preorderLabel: e.target.value })}
+                        value={formState.preorderLabel}
+                        onChange={(e) => setFormState({ ...formState, preorderLabel: e.target.value })}
                         placeholder={t('T.ex. Förhandsbokning · Release Q4')}
                         className="flex-1 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2 text-xs text-white outline-none"
                       />
@@ -1123,8 +1111,8 @@ export function AdminSverigeTab() {
                   </label>
                   <textarea
                     rows={3}
-                    value={newForm.description}
-                    onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
+                    value={formState.description}
+                    onChange={(e) => setFormState({ ...formState, description: e.target.value })}
                     placeholder={t('Beskriv innehåll, skick, utgåva och leveransinformation...')}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
                   />
@@ -1134,7 +1122,7 @@ export function AdminSverigeTab() {
                 <div className="space-y-3 p-4 rounded-2xl bg-slate-950/70 border border-slate-800">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                      {t('Produktbilder')} ({newForm.images.length})
+                      {t('Produktbilder')} ({formState.images.length})
                     </label>
                     <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-colors">
                       <ImageIcon className="w-3.5 h-3.5" />
@@ -1144,7 +1132,7 @@ export function AdminSverigeTab() {
                         multiple
                         accept="image/*"
                         className="hidden"
-                        onChange={handleNewImageUpload}
+                        onChange={handleModalImageUpload}
                         disabled={uploading}
                       />
                     </label>
@@ -1166,7 +1154,7 @@ export function AdminSverigeTab() {
                       type="button"
                       onClick={() => {
                         if (imageUrlInput.trim()) {
-                          setNewForm((prev) => ({
+                          setFormState((prev) => ({
                             ...prev,
                             images: [...prev.images, imageUrlInput.trim()],
                           }));
@@ -1179,9 +1167,9 @@ export function AdminSverigeTab() {
                     </button>
                   </div>
 
-                  {newForm.images.length > 0 && (
+                  {formState.images.length > 0 && (
                     <div className="flex flex-wrap gap-2.5 pt-1">
-                      {newForm.images.map((url, idx) => (
+                      {formState.images.map((url, idx) => (
                         <div
                           key={idx}
                           className="relative w-16 h-16 rounded-xl border border-slate-700 overflow-hidden bg-slate-900 group"
@@ -1190,7 +1178,7 @@ export function AdminSverigeTab() {
                           <button
                             type="button"
                             onClick={() =>
-                              setNewForm((prev) => ({
+                              setFormState((prev) => ({
                                 ...prev,
                                 images: prev.images.filter((_, i) => i !== idx),
                               }))
@@ -1204,25 +1192,33 @@ export function AdminSverigeTab() {
                     </div>
                   )}
                 </div>
-
-                <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs sm:text-sm"
-                  >
-                    {t('Cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={creating || uploading}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-400 hover:from-cyan-400 hover:to-sky-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/20 disabled:opacity-50"
-                  >
-                    <Check className="w-4 h-4 stroke-[2.5]" />
-                    <span>{creating ? t('Publicerar...') : t('Publicera på hatake.shop')}</span>
-                  </button>
-                </div>
               </form>
+
+              {/* Fixed Sticky Modal Footer */}
+              <div className="px-5 sm:px-6 py-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-end gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setModalMode(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs sm:text-sm cursor-pointer"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  form="b2c-product-form"
+                  disabled={saving || updateMutation.isPending || uploading}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-400 hover:from-cyan-400 hover:to-sky-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/20 disabled:opacity-50 cursor-pointer"
+                >
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>
+                    {saving || updateMutation.isPending
+                      ? t('Sparar...')
+                      : modalMode === 'edit'
+                        ? t('Spara ändringar')
+                        : t('Publicera på hatake.shop')}
+                  </span>
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -1235,7 +1231,7 @@ export function AdminSverigeTab() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden"
             onClick={() => setShowCatalogPicker(false)}
           >
             <motion.div
@@ -1243,9 +1239,9 @@ export function AdminSverigeTab() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[82vh]"
+              className="w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85dvh]"
             >
-              <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+              <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between shrink-0">
                 <div>
                   <h3 className="text-lg font-black text-white">
                     {t('Publicera produkt från B2B-katalogen på hatake.shop')}
@@ -1263,20 +1259,20 @@ export function AdminSverigeTab() {
                 </button>
               </div>
 
-              <div className="p-4 border-b border-slate-800">
+              <div className="p-4 border-b border-slate-800 shrink-0">
                 <div className="relative">
                   <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={catalogSearch}
                     onChange={(e) => setCatalogSearch(e.target.value)}
-                    placeholder={t('Sök bland B2B-produkter (t.ex. Pokémon, One Piece, Binder, Acrylic)...')}
+                    placeholder={t('Sök bland B2B-produkter (t.ex. Pokémon, Binder, Acrylic)...')}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white outline-none"
                   />
                 </div>
               </div>
 
-              <div className="divide-y divide-slate-800 overflow-y-auto flex-1">
+              <div className="divide-y divide-slate-800 overflow-y-auto flex-1 min-h-0 overscroll-contain">
                 {availableB2bToImport.slice(0, 60).map((item: any) => {
                   const imgs = Array.isArray(item.images) ? item.images : [];
                   const defaultSek = String(getB2cPriceSEK(item));

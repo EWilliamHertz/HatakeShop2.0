@@ -45,7 +45,7 @@ import { useSiteMode } from './SiteModeContext.tsx';
 import { LanguageToggle } from './LanguageToggle.tsx';
 import { useCurrency } from './CurrencyProvider.tsx';
 import { SafeImage } from './SafeImage.tsx';
-import { getB2cPriceSEK } from '../pages/SwedenShop.tsx';
+import { getB2cPriceSEK, matchesB2cCategoryTab, type B2CCategoryTab } from '../pages/SwedenShop.tsx';
 import { useTheme } from './ThemeContext.tsx';
 
 export function cn(...inputs: (string | undefined | null | false)[]) {
@@ -97,7 +97,6 @@ function B2bBottomAdminPanel() {
       try {
         const token =
           sessionStorage.getItem('hatake_admin_token') ||
-          localStorage.getItem('hatake_admin_token') ||
           (await user?.getIdToken()) ||
           '';
         const [statsRes, b2cRes] = await Promise.all([
@@ -333,14 +332,20 @@ export function Layout() {
     { name: 'RFQ Messages', label: 'RFQ Messages', path: '/rfq', icon: MessageSquare, protected: true },
   ];
 
-  const b2cCategoryLinks = [
-    { label: t('Alla'), cat: 'all' },
-    { label: t('Booster-boxar'), cat: 'booster_boxes' },
-    { label: t('ETB & Samlarboxar'), cat: 'etb_collections' },
-    { label: t('Decks'), cat: 'decks' },
-    { label: t('Graderade Kort'), cat: 'graded' },
-    { label: t('Pärmar & Tillbehör'), cat: 'accessories' },
-  ];
+  const b2cCategoryLinks = React.useMemo(() => {
+    const candidates: { label: string; cat: B2CCategoryTab }[] = [
+      { label: t('Alla'), cat: 'all' },
+      { label: t('Booster-boxar'), cat: 'booster_boxes' },
+      { label: t('ETB & Samlarboxar'), cat: 'etb_collections' },
+      { label: t('Decks'), cat: 'decks' },
+      { label: t('Graderade Kort'), cat: 'graded' },
+      { label: t('Pärmar & Tillbehör'), cat: 'accessories' },
+    ];
+    return candidates.filter((c) => {
+      if (c.cat === 'all') return true;
+      return b2cPreviewPool.some((p) => matchesB2cCategoryTab(p, c.cat));
+    });
+  }, [b2cPreviewPool, t]);
 
   const managementNavItems = [
     ...(dbUser?.role === 'seller' || dbUser?.role === 'both'
@@ -918,7 +923,7 @@ export function Layout() {
                   <Settings className="w-4 h-4 text-slate-400" />
                   <span>{t('Settings')}</span>
                 </Link>
-                {isAdminAccount && (
+                {isB2B && isAdminAccount && (
                   <Link
                     to="/admin"
                     onClick={() => setMobileMenuOpen(false)}
@@ -1024,7 +1029,7 @@ export function Layout() {
                   </a>
                 </>
               )}
-              {isAdminAccount && (
+              {isB2B && isAdminAccount && (
                 <Link
                   to="/admin"
                   className="text-xs font-bold text-amber-400 hover:text-amber-300 uppercase tracking-wider"
@@ -1063,31 +1068,35 @@ export function Layout() {
             <span className="text-[10px] mt-0.5">{t('Butik')}</span>
           </Link>
 
-          <Link
-            to="/?cat=booster_boxes"
-            className={cn(
-              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-colors',
-              searchParams.get('cat') === 'booster_boxes'
-                ? 'text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            )}
-          >
-            <Box className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">{t('Boxar')}</span>
-          </Link>
+          {b2cCategoryLinks.some((c) => c.cat === 'booster_boxes') && (
+            <Link
+              to="/?cat=booster_boxes"
+              className={cn(
+                'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-colors',
+                searchParams.get('cat') === 'booster_boxes'
+                  ? 'text-cyan-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
+              )}
+            >
+              <Box className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5">{t('Boxar')}</span>
+            </Link>
+          )}
 
-          <Link
-            to="/?cat=accessories"
-            className={cn(
-              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-colors',
-              searchParams.get('cat') === 'accessories'
-                ? 'text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            )}
-          >
-            <ShieldCheck className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">{t('Tillbehör')}</span>
-          </Link>
+          {b2cCategoryLinks.some((c) => c.cat === 'accessories') && (
+            <Link
+              to="/?cat=accessories"
+              className={cn(
+                'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-colors',
+                searchParams.get('cat') === 'accessories'
+                  ? 'text-cyan-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
+              )}
+            >
+              <ShieldCheck className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5">{t('Tillbehör')}</span>
+            </Link>
+          )}
 
           <button
             type="button"

@@ -1302,7 +1302,7 @@ router.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/p
       await ensureSealedTaxonomySchema();
       const productId = parseInt(req.params.id, 10);
       if (isNaN(productId)) return res.status(400).json({ error: "Invalid product id" });
-      const { title, description, moq, oemMoq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, categoryIds, certifications, isSponsored, language, sealedType, productType } = req.body;
+      const { title, description, moq, oemMoq, originType, sellerId, shippingOptions, images, approvalStatus, categoryId, categoryIds, certifications, isSponsored, language, sealedType, productType, productDomain, tcgGame } = req.body;
       const updateData: any = {};
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
@@ -1342,6 +1342,8 @@ router.patch(["/admin/products/:id", "/api/admin/products/:id", "/api-v2/admin/p
       if (language !== undefined) updateData.language = language || null;
       if (sealedType !== undefined) updateData.sealedType = sealedType || null;
       if (productType !== undefined) updateData.productType = productType || null;
+      if (productDomain !== undefined) updateData.productDomain = productDomain || 'tcg';
+      if (tcgGame !== undefined) updateData.tcgGame = tcgGame || null;
 
       if (Object.keys(updateData).length === 0) {
         return res.status(400).json({ error: "No valid updates provided" });
@@ -1419,6 +1421,8 @@ router.patch(["/admin/products/bulk", "/api/admin/products/bulk", "/api-v2/admin
     if (updates.language !== undefined) updateData.language = updates.language || null;
     if (updates.sealedType !== undefined) updateData.sealedType = updates.sealedType || null;
     if (updates.productType !== undefined) updateData.productType = updates.productType || null;
+    if (updates.productDomain !== undefined) updateData.productDomain = updates.productDomain || 'tcg';
+    if (updates.tcgGame !== undefined) updateData.tcgGame = updates.tcgGame || null;
     if (updates.originType !== undefined) {
       const normalized = normalizeOriginType(updates.originType);
       if (!normalized) {
@@ -1560,6 +1564,8 @@ router.post(["/admin/sverige-products", "/api/admin/sverige-products", "/api-v2/
       stockQuantity,
       moq,
       categoryId,
+      productDomain,
+      tcgGame,
       sealedType,
       productType,
       gradingCompany,
@@ -1602,6 +1608,7 @@ router.post(["/admin/sverige-products", "/api/admin/sverige-products", "/api-v2/
     const parsedCatId = categoryId ? parseInt(String(categoryId), 10) : null;
     const parsedStock = stockQuantity !== undefined ? Math.max(0, parseInt(String(stockQuantity), 10) || 0) : 20;
     const parsedMoq = moq !== undefined ? Math.max(1, parseInt(String(moq), 10) || 1) : 1;
+    const resolvedDomain = productDomain === 'merchandise' ? 'merchandise' : 'tcg';
 
     const [created] = await db.insert(products).values({
       sellerId,
@@ -1620,6 +1627,8 @@ router.post(["/admin/sverige-products", "/api/admin/sverige-products", "/api-v2/
       leadTimeDays: 2,
       images: imgArray,
       sverigeImages: imgArray,
+      productDomain: resolvedDomain,
+      tcgGame: tcgGame || null,
       language: language || null,
       sealedType: sealedType || null,
       productType: productType === "graded" ? "graded" : "sealed",
@@ -1645,6 +1654,7 @@ router.post(["/admin/sverige-products", "/api/admin/sverige-products", "/api-v2/
 
 router.patch(["/admin/products/:id/sverige", "/api/admin/products/:id/sverige", "/api-v2/admin/products/:id/sverige"], requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
+    await ensureSealedTaxonomySchema();
     const productId = parseInt(req.params.id, 10);
     const {
       isSverigeB2c,
@@ -1658,6 +1668,8 @@ router.patch(["/admin/products/:id/sverige", "/api/admin/products/:id/sverige", 
       moq,
       isPreorder,
       preorderLabel,
+      productDomain,
+      tcgGame,
       sealedType,
       productType,
       gradingCompany,
@@ -1687,6 +1699,8 @@ router.patch(["/admin/products/:id/sverige", "/api/admin/products/:id/sverige", 
     if (moq !== undefined) updates.moq = Math.max(1, parseInt(String(moq), 10) || 1);
     if (isPreorder !== undefined) updates.isPreorder = Boolean(isPreorder);
     if (preorderLabel !== undefined) updates.preorderLabel = preorderLabel || null;
+    if (productDomain !== undefined) updates.productDomain = productDomain === 'merchandise' ? 'merchandise' : 'tcg';
+    if (tcgGame !== undefined) updates.tcgGame = tcgGame || null;
     if (sealedType !== undefined) updates.sealedType = sealedType || null;
     if (productType !== undefined) updates.productType = productType || 'sealed';
     if (gradingCompany !== undefined) updates.gradingCompany = gradingCompany || null;

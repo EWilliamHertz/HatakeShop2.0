@@ -472,7 +472,7 @@ const CartDrawer = () => {
               <p className="font-bold text-slate-200 text-base">{t('Your cart is empty.')}</p>
               <p className="text-xs text-slate-400 mt-1 max-w-xs">
                 {isSverige
-                  ? t('Utforska vårt sortiment av Pokémon, One Piece, GlimmerFall och tillbehör.')
+                  ? t('Utforska vårt sortiment av TCG, graderade kort och merchandise.')
                   : t('Add product samples or wholesale quantities to request a bulk quote.')}
               </p>
               <button

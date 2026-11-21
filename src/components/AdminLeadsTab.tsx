@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import { toast } from 'sonner';
 import {
@@ -159,6 +160,7 @@ function matchClientMailRule(lead: any, rules: MailSettingRule[]): MailSettingRu
 }
 
 export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPreviewingHtml }: any) {
+  const { t } = useTranslation();
   const leads: any[] = useMemo(() => {
     const arr = Array.isArray(leadsProp) ? leadsProp : [];
     return arr.map(l => {
@@ -262,6 +264,8 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
 
   const getToken = useCallback(async () => {
+    const adminTok = sessionStorage.getItem('hatake_admin_token');
+    if (adminTok) return adminTok;
     try {
       return await user?.getIdToken();
     } catch {
@@ -1078,12 +1082,12 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
   };
 
   const pipelineTabs: { key: LeadView; label: string; count: number; icon: React.ReactNode }[] = [
-    { key: 'to-send', label: 'To Send', count: pipelineCounts.toSend, icon: <Send className="w-3.5 h-3.5" /> },
-    { key: 'sent', label: 'Contacted', count: pipelineCounts.sent, icon: <Mail className="w-3.5 h-3.5" /> },
-    { key: 'engaged', label: 'Opened / Clicked', count: pipelineCounts.engaged, icon: <Eye className="w-3.5 h-3.5" /> },
-    { key: 'recruited', label: 'Recruited', count: pipelineCounts.recruited, icon: <UserCheck className="w-3.5 h-3.5" /> },
-    { key: 'failed', label: 'Failed', count: pipelineCounts.failed, icon: <AlertTriangle className="w-3.5 h-3.5" /> },
-    { key: 'all', label: 'All CRM Leads', count: pipelineCounts.all, icon: <Building2 className="w-3.5 h-3.5" /> },
+    { key: 'to-send', label: t('To Send'), count: pipelineCounts.toSend, icon: <Send className="w-3.5 h-3.5" /> },
+    { key: 'sent', label: t('Contacted'), count: pipelineCounts.sent, icon: <Mail className="w-3.5 h-3.5" /> },
+    { key: 'engaged', label: t('Opened / Clicked'), count: pipelineCounts.engaged, icon: <Eye className="w-3.5 h-3.5" /> },
+    { key: 'recruited', label: t('Recruited'), count: pipelineCounts.recruited, icon: <UserCheck className="w-3.5 h-3.5" /> },
+    { key: 'failed', label: t('Failed'), count: pipelineCounts.failed, icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+    { key: 'all', label: t('All CRM Leads'), count: pipelineCounts.all, icon: <Building2 className="w-3.5 h-3.5" /> },
   ];
 
   const insertVarIntoField = (field: 'subjectTemplate' | 'headlineTemplate' | 'introTemplate' | 'regionalNote', tokenStr: string) => {
@@ -1104,14 +1108,14 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
           <div>
             <div className="flex items-center gap-2.5">
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                B2B Partner CRM
+                {t('B2B Partner CRM')}
               </span>
               <span className="text-xs text-slate-400">
-                {leads.length.toLocaleString()} total companies • {geoStats.countries.length} countries • {mailRules.length} geo mail rules
+                {leads.length.toLocaleString()} {t('total companies')} • {geoStats.countries.length} {t('countries')} • {mailRules.length} {t('geo mail rules')}
               </span>
             </div>
             <h2 className="text-xl font-black text-white mt-1">
-              Partner Outreach & Geo-Targeted Mail CRM
+              {t('Partner Outreach & Geo-Targeted Mail CRM')}
             </h2>
           </div>
 
@@ -1121,7 +1125,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               onClick={() => setIsManualAddModalOpen(true)}
               className="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Lead
+              <Plus className="w-3.5 h-3.5" /> {t('Add Lead')}
             </button>
 
             <button
@@ -1129,22 +1133,22 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               onClick={handleSyncSwedishShops}
               disabled={syncingSwedish}
               className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
-              title="Import Swedish card shops (with email) into CRM under Country = Sweden"
+              title={t('Import Swedish card shops (with email) into CRM under Country = Sweden')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncingSwedish ? 'animate-spin' : ''}`} />
-              🇸🇪 Sync Swedish Shops
+              🇸🇪 {t('Sync Swedish Shops')}
             </button>
 
             <div className="inline-flex items-center bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
               <input
                 type="text"
-                placeholder="CSV Country (optional)"
+                placeholder={t('CSV Country (optional)')}
                 value={importDefaultCountry}
                 onChange={e => setImportDefaultCountry(e.target.value)}
                 className="bg-transparent px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 w-36 outline-none border-r border-slate-700"
               />
               <label className="cursor-pointer bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 px-3 py-2 text-xs font-bold transition-colors inline-flex items-center gap-1">
-                {uploading ? 'Importing…' : '↑ Import CSV'}
+                {uploading ? t('Importing…') : `↑ ${t('Import CSV')}`}
                 <input
                   type="file"
                   accept=".csv"
@@ -1163,7 +1167,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 className="bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
-                {syncingFile ? 'Syncing…' : 'Sync Project CSV'}
+                {syncingFile ? t('Syncing…') : t('Sync Project CSV')}
               </button>
             )}
 
@@ -1173,7 +1177,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
-              Export {selectedIds.size > 0 ? `(${selectedIds.size})` : 'CSV'}
+              {t('Export')} {selectedIds.size > 0 ? `(${selectedIds.size})` : 'CSV'}
             </button>
 
             <button
@@ -1186,7 +1190,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               }`}
             >
               <Settings2 className="w-3.5 h-3.5" />
-              Geo Mail Settings ({mailRules.length})
+              {t('Geo Mail Settings')} ({mailRules.length})
             </button>
           </div>
         </div>
@@ -1196,11 +1200,11 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
           <div className="mt-4 bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs space-y-1.5">
             <div className="flex justify-between font-semibold">
               <span className="text-cyan-400">
-                Importing CSV ({uploadProgress.current.toLocaleString()} / {uploadProgress.total.toLocaleString()})
+                {t('Importing CSV')} ({uploadProgress.current.toLocaleString()} / {uploadProgress.total.toLocaleString()})
               </span>
               <span>
-                <span className="text-emerald-400">+{uploadProgress.added} added</span> •{' '}
-                <span className="text-amber-400">{uploadProgress.duplicates} duplicates skipped</span>
+                <span className="text-emerald-400">+{uploadProgress.added} {t('added')}</span> •{' '}
+                <span className="text-amber-400">{uploadProgress.duplicates} {t('duplicates skipped')}</span>
               </span>
             </div>
             <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -1217,7 +1221,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
           {/* Batch Size & Quick Select */}
           <div className="xl:col-span-5 flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Batch:</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{t('Batch')}:</span>
               <input
                 type="number"
                 min={1}
@@ -1226,17 +1230,17 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onChange={e => setTargetBatchSize(Math.max(1, Math.min(200, Number(e.target.value) || 50)))}
                 className="w-12 bg-slate-800 text-white font-bold text-xs text-center rounded px-1 py-0.5 border border-slate-700 outline-none"
               />
-              <span className="text-[11px] text-slate-400">mails</span>
+              <span className="text-[11px] text-slate-400">{t('mails')}</span>
             </div>
 
             <button
               type="button"
               onClick={() => selectExactBatchFromFilter(targetBatchSize, true)}
               className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
-              title="Select the first N pending leads from your active Country / City / Search filter"
+              title={t('Select the first N pending leads from your active Country / City / Search filter')}
             >
               <ListChecks className="w-3.5 h-3.5" />
-              Select {targetBatchSize} Pending in Filter ({Math.min(targetBatchSize, pendingInFiltered.length)})
+              {t('Select')} {targetBatchSize} {t('Pending in Filter')} ({Math.min(targetBatchSize, pendingInFiltered.length)})
             </button>
 
             {selectedIds.size > 0 && selectedIds.size < targetBatchSize && (
@@ -1244,9 +1248,9 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 type="button"
                 onClick={() => selectExactBatchFromFilter(targetBatchSize - selectedIds.size, false)}
                 className="bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors"
-                title="Add leads from current filter until your queue reaches your target batch size"
+                title={t('Add leads from current filter until your queue reaches your target batch size')}
               >
-                + Top Up Queue to {targetBatchSize}
+                + {t('Top Up Queue to')} {targetBatchSize}
               </button>
             )}
           </div>
@@ -1259,10 +1263,10 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               onChange={e => setDispatchRuleMode(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-200 outline-none focus:border-indigo-500"
             >
-              <option value="auto">✨ Auto-Match Geo Rule (City → State → Country)</option>
+              <option value="auto">✨ {t('Auto-Match Geo Rule (City → State → Country)')}</option>
               {mailRules.map(r => (
                 <option key={r.id} value={String(r.id)}>
-                  📌 Force Rule: {r.name} ({r.language?.toUpperCase()})
+                  📌 {t('Force Rule')}: {r.name} ({r.language?.toUpperCase()})
                 </option>
               ))}
             </select>
@@ -1276,7 +1280,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
             >
               <Eye className="w-3.5 h-3.5 text-cyan-400" />
-              Preview Mail
+              {t('Preview Mail')}
             </button>
 
             {selectedIds.size > 0 && (
@@ -1285,7 +1289,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onClick={() => setShowQueueModal(true)}
                 className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
               >
-                Queue ({selectedIds.size}/{targetBatchSize})
+                {t('Queue')} ({selectedIds.size}/{targetBatchSize})
               </button>
             )}
 
@@ -1297,7 +1301,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 className="px-4 py-1.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-lg text-xs font-black shadow-lg shadow-indigo-600/25 inline-flex items-center gap-1.5 disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
-                {sending ? 'Sending…' : `Send Selected (${selectedIds.size})`}
+                {sending ? t('Sending…') : `${t('Send Selected')} (${selectedIds.size})`}
               </button>
             ) : (
               <button
@@ -1308,8 +1312,8 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 {sending
-                  ? `Sending (${sendProgress.current}/${sendProgress.total})…`
-                  : `Send ${Math.min(targetBatchSize, pendingInFiltered.length)} in Filter`}
+                  ? `${t('Sending')} (${sendProgress.current}/${sendProgress.total})…`
+                  : `${t('Send')} ${Math.min(targetBatchSize, pendingInFiltered.length)} ${t('in Filter')}`}
               </button>
             )}
           </div>
@@ -1648,26 +1652,26 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
 
       {/* 3. Pipeline Stage Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        {pipelineTabs.map(t => (
+        {pipelineTabs.map(tab => (
           <button
-            key={t.key}
+            key={tab.key}
             type="button"
-            onClick={() => setView(t.key)}
+            onClick={() => setView(tab.key)}
             className={`rounded-xl border p-3.5 text-left transition-all ${
-              view === t.key
+              view === tab.key
                 ? 'bg-slate-800 border-cyan-500/60 shadow-lg shadow-cyan-500/10'
                 : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
             }`}
           >
             <div
               className={`flex items-center gap-1.5 mb-1 text-[11px] font-bold uppercase tracking-wider ${
-                view === t.key ? 'text-cyan-400' : 'text-slate-400'
+                view === tab.key ? 'text-cyan-400' : 'text-slate-400'
               }`}
             >
-              {t.icon} {t.label}
+              {tab.icon} {tab.label}
             </div>
-            <div className={`text-xl font-black tabular-nums ${view === t.key ? 'text-white' : 'text-slate-300'}`}>
-              {t.count.toLocaleString()}
+            <div className={`text-xl font-black tabular-nums ${view === tab.key ? 'text-white' : 'text-slate-300'}`}>
+              {tab.count.toLocaleString()}
             </div>
           </button>
         ))}
@@ -1678,7 +1682,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
             <Globe2 className="w-4 h-4 text-cyan-400" />
-            <span>Geographic CRM Directory (Click Country → State/Region → City to drill down)</span>
+            <span>{t('Geographic CRM Directory (Click Country → State/Region → City to drill down)')}</span>
           </div>
           <div className="flex items-center gap-2">
             {(countryFilter !== 'all' || stateFilter !== 'all' || cityFilter !== 'all') && (
@@ -1691,7 +1695,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 }}
                 className="text-[11px] text-rose-400 hover:text-rose-300 font-bold"
               >
-                Reset Geo Filter
+                {t('Reset Geo Filter')}
               </button>
             )}
             <button
@@ -1699,7 +1703,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               onClick={() => setShowGeoExplorer(v => !v)}
               className="text-xs text-slate-400 hover:text-white font-semibold"
             >
-              {showGeoExplorer ? 'Hide Map Pills' : 'Show Map Pills'}
+              {showGeoExplorer ? t('Hide Map Pills') : t('Show Map Pills')}
             </button>
           </div>
         </div>
@@ -1721,7 +1725,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                     : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:border-slate-600'
                 }`}
               >
-                🌍 All Countries ({leads.length.toLocaleString()})
+                🌍 {t('All Countries')} ({leads.length.toLocaleString()})
               </button>
               {geoStats.countries.map(c => (
                 <button
@@ -1741,7 +1745,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   <span>{getCountryFlag(c.name)}</span>
                   <span>{c.name}</span>
                   <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-900 text-slate-400">
-                    {c.pending.toLocaleString()} pending / {c.total.toLocaleString()}
+                    {c.pending.toLocaleString()} {t('pending')} / {c.total.toLocaleString()}
                   </span>
                 </button>
               ))}
@@ -1751,7 +1755,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
             {geoStats.states.length > 1 && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0 mr-1">
-                  Regions / States:
+                  {t('Regions / States')}:
                 </span>
                 {geoStats.states.slice(0, 18).map(s => (
                   <button
@@ -1778,7 +1782,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0 mr-1">
                   <MapPin className="w-3 h-3 inline mr-0.5" />
-                  Top Cities:
+                  {t('Top Cities')}:
                 </span>
                 {geoStats.cities.slice(0, 18).map(ct => (
                   <button
@@ -1809,7 +1813,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search company, email, city, notes, tags…"
+                placeholder={t('Search company, email, city, notes, tags…')}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500"
@@ -1834,7 +1838,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               }}
               className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-200 outline-none"
             >
-              <option value="all">All Countries ({geoStats.countries.length})</option>
+              <option value="all">{t('All Countries')} ({geoStats.countries.length})</option>
               {geoStats.countries.map(c => (
                 <option key={c.name} value={c.name}>
                   {c.name} ({c.total})
@@ -1850,7 +1854,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               }}
               className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-200 outline-none"
             >
-              <option value="all">All States / Regions ({geoStats.states.length})</option>
+              <option value="all">{t('All States / Regions')} ({geoStats.states.length})</option>
               {geoStats.states.map(s => (
                 <option key={s.name} value={s.name}>
                   {s.name} ({s.total})
@@ -1863,7 +1867,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               onChange={e => setCityFilter(e.target.value)}
               className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-200 outline-none"
             >
-              <option value="all">All Cities ({geoStats.cities.length})</option>
+              <option value="all">{t('All Cities')} ({geoStats.cities.length})</option>
               {geoStats.cities.slice(0, 300).map(ct => (
                 <option key={ct.name} value={ct.name}>
                   {ct.name} ({ct.total})
@@ -1876,10 +1880,10 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               onChange={e => setSegmentFilter(e.target.value)}
               className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-200 outline-none"
             >
-              <option value="all">All Segments</option>
+              <option value="all">{t('All Segments')}</option>
               <option value="TCG">TCG</option>
               <option value="Sports">Sports</option>
-              <option value="General">General</option>
+              <option value="General">{t('General')}</option>
             </select>
 
             <div className="flex gap-1.5">
@@ -1888,20 +1892,20 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onChange={e => setDataFilter(e.target.value)}
                 className="w-1/2 bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs font-semibold text-slate-200 outline-none"
               >
-                <option value="all">All Data</option>
-                <option value="has-website">Has Website</option>
-                <option value="has-socials">Has Socials</option>
-                <option value="has-notes">Has Notes</option>
+                <option value="all">{t('All Data')}</option>
+                <option value="has-website">{t('Has Website')}</option>
+                <option value="has-socials">{t('Has Socials')}</option>
+                <option value="has-notes">{t('Has Notes')}</option>
               </select>
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as any)}
                 className="w-1/2 bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs font-semibold text-slate-200 outline-none"
               >
-                <option value="newest">Newest</option>
-                <option value="company">A–Z Name</option>
-                <option value="geo">Country/City</option>
-                <option value="status">Status</option>
+                <option value="newest">{t('Newest')}</option>
+                <option value="company">{t('A–Z Name')}</option>
+                <option value="geo">{t('Country/City')}</option>
+                <option value="status">{t('Status')}</option>
               </select>
             </div>
           </div>
@@ -1910,11 +1914,11 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-bold text-slate-200">
-                Showing {filteredLeads.length.toLocaleString()} leads
+                {t('Showing')} {filteredLeads.length.toLocaleString()} {t('leads')}
               </span>
               <span className="text-slate-500">•</span>
               <span className="text-cyan-400 font-semibold">
-                {pendingInFiltered.length.toLocaleString()} ready to send
+                {pendingInFiltered.length.toLocaleString()} {t('ready to send')}
               </span>
               {geoStats.tags.length > 0 && (
                 <select
@@ -1922,10 +1926,10 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   onChange={e => setTagFilter(e.target.value)}
                   className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-300 outline-none"
                 >
-                  <option value="all">All Tags</option>
-                  {geoStats.tags.map(t => (
-                    <option key={t} value={t}>
-                      🏷️ {t}
+                  <option value="all">{t('All Tags')}</option>
+                  {geoStats.tags.map(tag => (
+                    <option key={tag} value={tag}>
+                      🏷️ {tag}
                     </option>
                   ))}
                 </select>
@@ -1938,14 +1942,14 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onClick={() => selectExactBatchFromFilter(targetBatchSize, true)}
                 className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold"
               >
-                Select {targetBatchSize} in View
+                {t('Select')} {targetBatchSize} {t('in View')}
               </button>
               <button
                 type="button"
                 onClick={selectAllFiltered}
                 className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold"
               >
-                Select All {filteredLeads.length.toLocaleString()} Filtered
+                {t('Select All')} {filteredLeads.length.toLocaleString()} {t('Filtered')}
               </button>
               {selectedIds.size > 0 && (
                 <button
@@ -1953,7 +1957,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   onClick={() => setSelectedIds(new Set())}
                   className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold"
                 >
-                  Clear ({selectedIds.size})
+                  {t('Clear')} ({selectedIds.size})
                 </button>
               )}
             </div>
@@ -1965,20 +1969,20 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
           <div className="bg-indigo-950/40 px-4 py-3 border-b border-indigo-500/30 flex flex-wrap items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 text-xs font-bold text-indigo-200">
               <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
-              <span>{selectedIds.size} Lead(s) Selected — Bulk Organize:</span>
+              <span>{selectedIds.size} {t('Lead(s) Selected — Bulk Organize:')}</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
-                placeholder="Set Country…"
+                placeholder={t('Set Country…')}
                 value={bulkCountry}
                 onChange={e => setBulkCountry(e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white w-28 outline-none"
               />
               <input
                 type="text"
-                placeholder="Set City…"
+                placeholder={t('Set City…')}
                 value={bulkCity}
                 onChange={e => setBulkCity(e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white w-28 outline-none"
@@ -1988,14 +1992,14 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onChange={e => setBulkSegment(e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none"
               >
-                <option value="">Segment…</option>
+                <option value="">{t('Segment…')}</option>
                 <option value="TCG">TCG</option>
                 <option value="Sports">Sports</option>
-                <option value="General">General</option>
+                <option value="General">{t('General')}</option>
               </select>
               <input
                 type="text"
-                placeholder="Add Tag…"
+                placeholder={t('Add Tag…')}
                 value={bulkTag}
                 onChange={e => setBulkTag(e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white w-24 outline-none"
@@ -2005,10 +2009,10 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onChange={e => setBulkStatus(e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none"
               >
-                <option value="">Status…</option>
-                <option value="pending">Pending</option>
-                <option value="sent">Sent</option>
-                <option value="recruited">Recruited</option>
+                <option value="">{t('Status…')}</option>
+                <option value="pending">{t('Pending')}</option>
+                <option value="sent">{t('Sent')}</option>
+                <option value="recruited">{t('Recruited')}</option>
               </select>
 
               <button
@@ -2017,7 +2021,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onClick={() => handleBulkAction()}
                 className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold disabled:opacity-50"
               >
-                {applyingBulk ? 'Applying…' : 'Apply to Selected'}
+                {applyingBulk ? t('Applying…') : t('Apply to Selected')}
               </button>
 
               <button
@@ -2025,7 +2029,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onClick={() => setShowQueueModal(true)}
                 className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold"
               >
-                Review & Send ({selectedIds.size})
+                {t('Review & Send')} ({selectedIds.size})
               </button>
 
               <button
@@ -2033,7 +2037,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 disabled={applyingBulk}
                 onClick={() => handleBulkAction('delete')}
                 className="p-1.5 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-colors"
-                title="Delete selected leads"
+                title={t('Delete selected leads')}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -2051,18 +2055,18 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                     type="button"
                     onClick={selectPageLeads}
                     className="text-slate-400 hover:text-cyan-400 transition-colors"
-                    title="Select/deselect all rows on current page"
+                    title={t('Select/deselect all rows on current page')}
                   >
                     {allOnPageChecked ? <CheckSquare className="w-4 h-4 text-cyan-400" /> : <Square className="w-4 h-4" />}
                   </button>
                 </th>
-                <th className="px-3 py-3">Company & Segment</th>
-                <th className="px-3 py-3">Email & Contact</th>
-                <th className="px-3 py-3">Country / City</th>
-                <th className="px-3 py-3">Web & Socials</th>
-                <th className="px-3 py-3">CRM Notes & Tags</th>
-                <th className="px-3 py-3">Status & Geo Rule</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-3 py-3">{t('Company & Segment')}</th>
+                <th className="px-3 py-3">{t('Email & Contact')}</th>
+                <th className="px-3 py-3">{t('Country / City')}</th>
+                <th className="px-3 py-3">{t('Web & Socials')}</th>
+                <th className="px-3 py-3">{t('CRM Notes & Tags')}</th>
+                <th className="px-3 py-3">{t('Status & Geo Rule')}</th>
+                <th className="px-4 py-3 text-right">{t('Actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -2071,7 +2075,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   <td colSpan={8} className="px-4 py-14 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <Globe2 className="w-10 h-10 text-slate-600" />
-                      <div className="text-base font-bold text-white">No leads match current filters</div>
+                      <div className="text-base font-bold text-white">{t('No leads match current filters')}</div>
                       <p className="text-xs text-slate-500">
                         Try clearing a country/city filter or switching pipeline tabs above.
                       </p>
@@ -2455,21 +2459,21 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
       {/* 6. Selected 50-Mail Batch Queue Review Modal */}
       {showQueueModal && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4 overflow-hidden"
           onKeyDown={e => {
             if (e.key === 'Escape') setShowQueueModal(false);
           }}
           tabIndex={-1}
         >
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90dvh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="text-lg font-black text-white flex items-center gap-2">
                   <Send className="w-4 h-4 text-cyan-400" />
-                  Selected Mail Queue ({selectedLeadsList.length} Recipients)
+                  {t('Selected Mail Queue')} ({selectedLeadsList.length} {t('Recipients')})
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Review, preview, or remove individual stores before dispatching your batch.
+                  {t('Review, preview, or remove individual stores before dispatching your batch.')}
                 </p>
               </div>
               <button
@@ -2481,7 +2485,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-800/80 px-5">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-800/80 px-5">
               {selectedLeadsList.map((l, idx) => {
                 const rule = selectedOverrideRule || matchClientMailRule(l, mailRules);
                 return (
@@ -2493,11 +2497,11 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                       </div>
                       <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
                         <span>
-                          {getCountryFlag(l.country)} {[l.city, l.state, l.country].filter(Boolean).join(', ') || 'Unassigned'}
+                          {getCountryFlag(l.country)} {[l.city, l.state, l.country].filter(Boolean).join(', ') || t('Unassigned')}
                         </span>
                         {rule && (
                           <span className="text-indigo-300">
-                            • Rule: {rule.name} ({rule.language?.toUpperCase()})
+                            • {t('Rule')}: {rule.name} ({rule.language?.toUpperCase()})
                           </span>
                         )}
                       </div>
@@ -2508,14 +2512,14 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                         onClick={() => handlePreviewEmail(l)}
                         className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold"
                       >
-                        Preview
+                        {t('Preview')}
                       </button>
                       <button
                         type="button"
                         onClick={() => toggleSelect(l.id)}
                         className="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 font-semibold"
                       >
-                        Remove
+                        {t('Remove')}
                       </button>
                     </div>
                   </div>
@@ -2523,7 +2527,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               })}
             </div>
 
-            <div className="p-4 bg-slate-950 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="p-4 bg-slate-950 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -2532,7 +2536,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 }}
                 className="px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/10 rounded-xl"
               >
-                Clear Entire Queue
+                {t('Clear Entire Queue')}
               </button>
               <div className="flex items-center gap-2">
                 <button
@@ -2540,7 +2544,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   onClick={() => setShowQueueModal(false)}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold"
                 >
-                  Keep Organizing
+                  {t('Keep Organizing')}
                 </button>
                 <button
                   type="button"
@@ -2548,7 +2552,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   onClick={() => executeBatchSend('selected')}
                   className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-xl text-xs font-black shadow-lg disabled:opacity-50"
                 >
-                  {sending ? 'Dispatching…' : `🚀 Dispatch ${selectedLeadsList.length} Mails Now`}
+                  {sending ? t('Dispatching…') : `🚀 ${t('Dispatch')} ${selectedLeadsList.length} ${t('Mails Now')}`}
                 </button>
               </div>
             </div>
@@ -2559,15 +2563,15 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
       {/* 7. Add Lead Manually Modal */}
       {isManualAddModalOpen && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4 overflow-hidden"
           onKeyDown={e => {
             if (e.key === 'Escape') setIsManualAddModalOpen(false);
           }}
           tabIndex={-1}
         >
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90dvh] overflow-y-auto overscroll-contain">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black text-white">Add B2B Lead to CRM</h2>
+              <h2 className="text-lg font-black text-white">{t('Add B2B Lead to CRM')}</h2>
               <button
                 type="button"
                 onClick={() => setIsManualAddModalOpen(false)}
@@ -2579,7 +2583,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
             <form onSubmit={handleManualAdd} className="space-y-3 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">Company Name *</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('Company Name')} *</label>
                   <input
                     type="text"
                     required
@@ -2589,7 +2593,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">Email *</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('Email')} *</label>
                   <input
                     type="email"
                     required
@@ -2602,7 +2606,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
 
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">Country</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('Country')}</label>
                   <input
                     type="text"
                     value={manualLead.country}
@@ -2612,7 +2616,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">State / Region</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('State / Region')}</label>
                   <input
                     type="text"
                     value={manualLead.state}
@@ -2621,7 +2625,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">City</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('City')}</label>
                   <input
                     type="text"
                     value={manualLead.city}
@@ -2633,7 +2637,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
 
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">Segment</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('Segment')}</label>
                   <select
                     value={manualLead.segment}
                     onChange={e => setManualLead({ ...manualLead, segment: e.target.value })}
@@ -2641,11 +2645,11 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   >
                     <option value="TCG">TCG</option>
                     <option value="Sports">Sports</option>
-                    <option value="General">General</option>
+                    <option value="General">{t('General')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">Website</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('Website')}</label>
                   <input
                     type="text"
                     value={manualLead.website}
@@ -2654,7 +2658,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">Phone</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('Phone')}</label>
                   <input
                     type="text"
                     value={manualLead.phone}
@@ -2666,7 +2670,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">Tags (comma separated)</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('Tags (comma separated)')}</label>
                   <input
                     type="text"
                     placeholder="VIP, LGS, Priority"
@@ -2676,7 +2680,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-400 mb-1">Instagram / Social URL</label>
+                  <label className="block font-semibold text-slate-400 mb-1">{t('Instagram / Social URL')}</label>
                   <input
                     type="text"
                     value={manualLead.instagram}
@@ -2687,7 +2691,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-400 mb-1">CRM Notes</label>
+                <label className="block font-semibold text-slate-400 mb-1">{t('CRM Notes')}</label>
                 <textarea
                   rows={2}
                   value={manualLead.notes}
@@ -2702,14 +2706,14 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                   onClick={() => setIsManualAddModalOpen(false)}
                   className="px-4 py-2 text-slate-400 hover:bg-slate-800 rounded-xl font-bold"
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingManual}
                   className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2 rounded-xl font-bold disabled:opacity-50"
                 >
-                  {isSubmittingManual ? 'Adding…' : 'Save Lead to CRM'}
+                  {isSubmittingManual ? t('Adding…') : t('Save Lead to CRM')}
                 </button>
               </div>
             </form>
@@ -2720,21 +2724,21 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
       {/* 8. CSV Import Summary Modal */}
       {importSummary?.isOpen && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4 overflow-hidden"
           onKeyDown={e => {
             if (e.key === 'Escape') setImportSummary(null);
           }}
           tabIndex={-1}
         >
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto overscroll-contain flex flex-col">
             <div className="flex justify-between items-start mb-4 pb-3 border-b border-slate-800">
               <div>
                 <h2 className="text-lg font-black text-white flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  CRM Import Report
+                  {t('CRM Import Report')}
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Source: <span className="text-slate-300 font-mono">{importSummary.source}</span>
+                  {t('Source')}: <span className="text-slate-300 font-mono">{importSummary.source}</span>
                 </p>
               </div>
               <button
@@ -2748,15 +2752,15 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
 
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-center">
-                <div className="text-[11px] font-semibold uppercase text-slate-400">Total Rows</div>
+                <div className="text-[11px] font-semibold uppercase text-slate-400">{t('Total Rows')}</div>
                 <div className="text-2xl font-black text-white mt-1 tabular-nums">{importSummary.total.toLocaleString()}</div>
               </div>
               <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/30 text-center">
-                <div className="text-[11px] font-semibold uppercase text-emerald-400">Added</div>
+                <div className="text-[11px] font-semibold uppercase text-emerald-400">{t('Added')}</div>
                 <div className="text-2xl font-black text-emerald-300 mt-1 tabular-nums">+{importSummary.added.toLocaleString()}</div>
               </div>
               <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/30 text-center">
-                <div className="text-[11px] font-semibold uppercase text-amber-400">Dupes Skipped</div>
+                <div className="text-[11px] font-semibold uppercase text-amber-400">{t('Dupes Skipped')}</div>
                 <div className="text-2xl font-black text-amber-300 mt-1 tabular-nums">{importSummary.duplicates.toLocaleString()}</div>
               </div>
             </div>
@@ -2767,7 +2771,7 @@ export function AdminLeadsTab({ leads: leadsProp, user, fetchAdminData, setPrevi
                 onClick={() => setImportSummary(null)}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold"
               >
-                Close
+                {t('Close')}
               </button>
             </div>
           </div>

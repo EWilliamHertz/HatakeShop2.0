@@ -29,7 +29,15 @@ import { useCurrency } from '../components/CurrencyProvider.tsx';
 import { useSiteMode } from '../components/SiteModeContext.tsx';
 import { useTheme } from '../components/ThemeContext.tsx';
 import { SafeImage, optimizeImageUrl } from '../components/SafeImage.tsx';
-import { PRODUCT_LANGUAGES, languageLabel, sealedTypeLabel } from '../lib/productTaxonomy.ts';
+import {
+  PRODUCT_LANGUAGES,
+  TCG_GAMES,
+  languageLabel,
+  sealedTypeLabel,
+  inferProductDomain,
+  inferTcgGame,
+  tcgGameLabel,
+} from '../lib/productTaxonomy.ts';
 
 export type B2CCategoryTab =
   | 'all'
@@ -93,7 +101,8 @@ export function matchesB2cCategoryTab(p: any, tab: B2CCategoryTab): boolean {
   }
   if (tab === 'accessories') {
     return (
-      sealedType === 'accessory' ||
+      p?.productDomain === 'merchandise' ||
+      ['accessory', 'binder', 'sleeves', 'toploaders', 'acrylic_case', 'deck_box', 'playmat', 'collectible_merch'].includes(sealedType) ||
       brand.includes('topbestpkg') ||
       title.includes('pärm') ||
       title.includes('binder') ||
@@ -236,6 +245,8 @@ export function SwedenShop() {
   const querySearch = searchParams.get('q') || '';
   const activeTab = (searchParams.get('cat') as B2CCategoryTab) || 'all';
   const [searchInput, setSearchInput] = useState(querySearch);
+  const [domainFilter, setDomainFilter] = useState<'all' | 'tcg' | 'merchandise'>('all');
+  const [gameFilter, setGameFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'preorder'>('all');
   const [langFilter, setLangFilter] = useState<string>('all');
   const [brandFilter, setBrandFilter] = useState<string>('all');
@@ -278,15 +289,36 @@ export function SwedenShop() {
   const categoryTabs: { id: B2CCategoryTab; label: string; count: number; icon: any }[] = useMemo(() => {
     const countFor = (tab: B2CCategoryTab) =>
       sverigeProducts.filter((p) => matchesB2cCategoryTab(p, tab)).length;
-    return [
+    const allTabs: { id: B2CCategoryTab; label: string; count: number; icon: any }[] = [
       { id: 'all', label: t('Alla produkter'), count: sverigeProducts.length, icon: Layers },
       { id: 'booster_boxes', label: t('Booster-boxar'), count: countFor('booster_boxes'), icon: Box },
       { id: 'etb_collections', label: t('ETB & Samlarboxar'), count: countFor('etb_collections'), icon: Sparkles },
       { id: 'decks', label: t('Kortlekar & Decks'), count: countFor('decks'), icon: Package },
       { id: 'graded', label: t('Graderade Kort'), count: countFor('graded'), icon: Award },
-      { id: 'accessories', label: t('Pärmar & Tillbehör'), count: countFor('accessories'), icon: ShieldCheck },
+      { id: 'accessories', label: t('Merchandise & Tillbehör'), count: countFor('accessories'), icon: ShieldCheck },
     ];
+    // Hide all empty categories except 'all'
+    return allTabs.filter((tab) => tab.id === 'all' || tab.count > 0);
   }, [sverigeProducts, t, i18n.language]);
+
+  const domainCounts = useMemo(() => {
+    let tcg = 0;
+    let merchandise = 0;
+    for (const p of sverigeProducts) {
+      if (inferProductDomain(p) === 'merchandise') merchandise++;
+      else tcg++;
+    }
+    return { tcg, merchandise };
+  }, [sverigeProducts]);
+
+  const availableGames = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of sverigeProducts) {
+      const g = inferTcgGame(p);
+      if (g) counts.set(g, (counts.get(g) || 0) + 1);
+    }
+    return TCG_GAMES.map((g) => ({ ...g, count: counts.get(g.value) || 0 })).filter((g) => g.count > 0);
+  }, [sverigeProducts]);
 
   const availableBrands = useMemo(() => {
     const counts = new Map<string, number>();
@@ -314,6 +346,14 @@ export function SwedenShop() {
     const list = sverigeProducts.filter((p) => {
       if (!matchesB2cCategoryTab(p, activeTab)) return false;
 
+      if (domainFilter !== 'all') {
+        if (inferProductDomain(p) !== domainFilter) return false;
+      }
+
+      if (gameFilter !== 'all') {
+        if (inferTcgGame(p) !== gameFilter) return false;
+      }
+
       if (stockFilter === 'in_stock') {
         if (p.isPreorder || (typeof p.stockQuantity === 'number' && p.stockQuantity <= 0)) return false;
       } else if (stockFilter === 'preorder') {
@@ -333,6 +373,8 @@ export function SwedenShop() {
           p.sverigeTitle,
           p.title,
           p.brand,
+          p.tcgGame,
+          tcgGameLabel(p.tcgGame),
           p.description,
           p.categoryName,
           p.cardSet,
@@ -361,10 +403,12 @@ export function SwedenShop() {
       sorted.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     }
     return sorted;
-  }, [sverigeProducts, activeTab, stockFilter, langFilter, brandFilter, querySearch, sortBy]);
+  }, [sverigeProducts, activeTab, domainFilter, gameFilter, stockFilter, langFilter, brandFilter, querySearch, sortBy]);
 
   const activeFilterCount =
     (activeTab !== 'all' ? 1 : 0) +
+    (domainFilter !== 'all' ? 1 : 0) +
+    (gameFilter !== 'all' ? 1 : 0) +
     (stockFilter !== 'all' ? 1 : 0) +
     (langFilter !== 'all' ? 1 : 0) +
     (brandFilter !== 'all' ? 1 : 0) +
@@ -372,6 +416,8 @@ export function SwedenShop() {
 
   const resetFilters = () => {
     setSearchInput('');
+    setDomainFilter('all');
+    setGameFilter('all');
     setStockFilter('all');
     setLangFilter('all');
     setBrandFilter('all');
@@ -484,41 +530,47 @@ export function SwedenShop() {
               )}
             </motion.p>
 
-            {/* Quick Category Action Buttons */}
+            {/* Quick Category Action Buttons (only show non-empty categories) */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, duration: 0.4 }}
               className="flex flex-wrap items-center gap-2.5 pt-1"
             >
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => setCategoryTab('booster_boxes')}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-white font-black text-xs sm:text-sm transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
-              >
-                {t('Shoppa Booster-boxar')}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => setCategoryTab('accessories')}
-                className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-white border border-slate-700 font-bold text-xs sm:text-sm transition-all cursor-pointer"
-              >
-                {t('Pärmar & Akrylskydd')}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => setCategoryTab('graded')}
-                className="px-4 py-2.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/35 font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Award className="w-3.5 h-3.5 text-indigo-400" />
-                <span>{t('Graderade Kort')}</span>
-              </motion.button>
+              {categoryTabs.some((c) => c.id === 'booster_boxes') && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => setCategoryTab('booster_boxes')}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-white font-black text-xs sm:text-sm transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
+                >
+                  {t('Shoppa Booster-boxar')}
+                </motion.button>
+              )}
+              {categoryTabs.some((c) => c.id === 'accessories') && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => setCategoryTab('accessories')}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-white border border-slate-700 font-bold text-xs sm:text-sm transition-all cursor-pointer"
+                >
+                  {t('Merchandise & Tillbehör')}
+                </motion.button>
+              )}
+              {categoryTabs.some((c) => c.id === 'graded') && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => setCategoryTab('graded')}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/35 font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Award className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>{t('Graderade Kort')}</span>
+                </motion.button>
+              )}
             </motion.div>
           </div>
 
@@ -574,42 +626,44 @@ export function SwedenShop() {
         </div>
       </motion.section>
 
-      {/* Scrollable Category Tabs Bar with Framer Motion Spring Indicator */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
-        {categoryTabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setCategoryTab(tab.id)}
-              className={`relative shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold border transition-colors cursor-pointer ${
-                isActive
-                  ? 'text-white border-cyan-500'
-                  : 'bg-slate-900/85 text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
-              }`}
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="b2cActiveCategoryPill"
-                  className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500 to-sky-500 shadow-lg shadow-cyan-500/25"
-                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                />
-              )}
-              <Icon className={`relative z-10 w-4 h-4 ${isActive ? '!text-white' : 'text-cyan-400'}`} />
-              <span className={`relative z-10 ${isActive ? '!text-white' : ''}`}>{tab.label}</span>
-              <span
-                className={`relative z-10 text-[11px] px-1.5 py-0.2 rounded-full tabular-nums ${
-                  isActive ? 'bg-black/25 !text-white font-extrabold' : 'bg-slate-800 text-slate-400'
+      {/* Scrollable Category Tabs Bar (Empty Categories Automatically Hidden) */}
+      {sverigeProducts.length > 0 && categoryTabs.length > 1 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
+          {categoryTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setCategoryTab(tab.id)}
+                className={`relative shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold border transition-colors cursor-pointer ${
+                  isActive
+                    ? 'text-white border-cyan-500'
+                    : 'bg-slate-900/85 text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
                 }`}
               >
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                {isActive && (
+                  <motion.div
+                    layoutId="b2cActiveCategoryPill"
+                    className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500 to-sky-500 shadow-lg shadow-cyan-500/25"
+                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                  />
+                )}
+                <Icon className={`relative z-10 w-4 h-4 ${isActive ? '!text-white' : 'text-cyan-400'}`} />
+                <span className={`relative z-10 ${isActive ? '!text-white' : ''}`}>{tab.label}</span>
+                <span
+                  className={`relative z-10 text-[11px] px-1.5 py-0.2 rounded-full tabular-nums ${
+                    isActive ? 'bg-black/25 !text-white font-extrabold' : 'bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Search, Filter & Sort Toolbar */}
       <motion.div
@@ -659,34 +713,67 @@ export function SwedenShop() {
             </button>
 
             {/* Desktop Inline Filters */}
-            <div className="hidden md:flex items-center gap-2">
-              <select
-                value={brandFilter}
-                onChange={(e) => setBrandFilter(e.target.value)}
-                aria-label={t('Varumärke')}
-                className="bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 outline-none cursor-pointer"
-              >
-                <option value="all">{t('Alla varumärken')}</option>
-                {availableBrands.map((b) => (
-                  <option key={b.brand} value={b.brand}>
-                    {b.brand} ({b.count})
-                  </option>
-                ))}
-              </select>
+            <div className="hidden md:flex items-center gap-2 flex-wrap">
+              {(domainCounts.tcg > 0 && domainCounts.merchandise > 0) && (
+                <select
+                  value={domainFilter}
+                  onChange={(e) => setDomainFilter(e.target.value as any)}
+                  aria-label={t('Klassificering')}
+                  className="bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 outline-none cursor-pointer"
+                >
+                  <option value="all">{t('TCG & Merchandise')}</option>
+                  <option value="tcg">TCG ({domainCounts.tcg})</option>
+                  <option value="merchandise">{t('Merchandise')} ({domainCounts.merchandise})</option>
+                </select>
+              )}
 
-              <select
-                value={langFilter}
-                onChange={(e) => setLangFilter(e.target.value)}
-                aria-label={t('Language / Edition')}
-                className="bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 outline-none cursor-pointer"
-              >
-                <option value="all">{t('Alla språk')}</option>
-                {availableLanguages.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {l.flag} {t(l.label)} ({l.count})
-                  </option>
-                ))}
-              </select>
+              {availableGames.length > 0 && (
+                <select
+                  value={gameFilter}
+                  onChange={(e) => setGameFilter(e.target.value)}
+                  aria-label={t('TCG-Spel')}
+                  className="bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 outline-none cursor-pointer"
+                >
+                  <option value="all">{t('Alla TCG-spel')}</option>
+                  {availableGames.map((g) => (
+                    <option key={g.value} value={g.value}>
+                      {t(g.label)} ({g.count})
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {availableBrands.length > 1 && (
+                <select
+                  value={brandFilter}
+                  onChange={(e) => setBrandFilter(e.target.value)}
+                  aria-label={t('Varumärke')}
+                  className="bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 outline-none cursor-pointer"
+                >
+                  <option value="all">{t('Alla varumärken')}</option>
+                  {availableBrands.map((b) => (
+                    <option key={b.brand} value={b.brand}>
+                      {b.brand} ({b.count})
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {availableLanguages.length > 0 && (
+                <select
+                  value={langFilter}
+                  onChange={(e) => setLangFilter(e.target.value)}
+                  aria-label={t('Language / Edition')}
+                  className="bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 outline-none cursor-pointer"
+                >
+                  <option value="all">{t('Alla språk')}</option>
+                  {availableLanguages.map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.flag} {t(l.label)} ({l.count})
+                    </option>
+                  ))}
+                </select>
+              )}
 
               <select
                 value={stockFilter}
@@ -817,6 +904,8 @@ export function SwedenShop() {
             const stock = typeof p.stockQuantity === 'number' ? p.stockQuantity : 15;
             const langMeta = p.language ? PRODUCT_LANGUAGES.find((x) => x.value === p.language) : null;
             const isGraded = p.productType === 'graded' || Boolean(p.gradingCompany);
+            const domain = inferProductDomain(p);
+            const gameLabel = tcgGameLabel(inferTcgGame(p));
 
             return (
               <motion.article
@@ -871,7 +960,9 @@ export function SwedenShop() {
                 <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center justify-between gap-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-cyan-400">
-                      <span className="truncate">{p.brand || 'Hatake'}</span>
+                      <span className="truncate">
+                        {domain === 'merchandise' ? t('Merchandise') : gameLabel || p.brand || 'TCG'}
+                      </span>
                       {p.sealedType && (
                         <span className="text-slate-400 font-medium truncate hidden sm:inline">
                           {t(sealedTypeLabel(p.sealedType))}
@@ -1017,41 +1108,93 @@ export function SwedenShop() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    {t('Varumärke')}
-                  </label>
-                  <select
-                    value={brandFilter}
-                    onChange={(e) => setBrandFilter(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white outline-none"
-                  >
-                    <option value="all">{t('Alla varumärken')}</option>
-                    {availableBrands.map((b) => (
-                      <option key={b.brand} value={b.brand}>
-                        {b.brand} ({b.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {(domainCounts.tcg > 0 && domainCounts.merchandise > 0) && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      {t('Klassificering')}
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { id: 'all', label: t('Alla') },
+                        { id: 'tcg', label: 'TCG' },
+                        { id: 'merchandise', label: t('Merchandise') },
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setDomainFilter(opt.id as any)}
+                          className={`py-2 px-2 rounded-xl text-xs font-bold border ${
+                            domainFilter === opt.id
+                              ? 'bg-cyan-500 text-slate-950 border-cyan-400'
+                              : 'bg-slate-950 text-slate-300 border-slate-800'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    {t('Language / Edition')}
-                  </label>
-                  <select
-                    value={langFilter}
-                    onChange={(e) => setLangFilter(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white outline-none"
-                  >
-                    <option value="all">{t('Alla språk')}</option>
-                    {availableLanguages.map((l) => (
-                      <option key={l.value} value={l.value}>
-                        {l.flag} {t(l.label)} ({l.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {availableGames.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      {t('TCG-Spel')}
+                    </label>
+                    <select
+                      value={gameFilter}
+                      onChange={(e) => setGameFilter(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white outline-none"
+                    >
+                      <option value="all">{t('Alla TCG-spel')}</option>
+                      {availableGames.map((g) => (
+                        <option key={g.value} value={g.value}>
+                          {t(g.label)} ({g.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {availableBrands.length > 1 && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      {t('Varumärke')}
+                    </label>
+                    <select
+                      value={brandFilter}
+                      onChange={(e) => setBrandFilter(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white outline-none"
+                    >
+                      <option value="all">{t('Alla varumärken')}</option>
+                      {availableBrands.map((b) => (
+                        <option key={b.brand} value={b.brand}>
+                          {b.brand} ({b.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {availableLanguages.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      {t('Language / Edition')}
+                    </label>
+                    <select
+                      value={langFilter}
+                      onChange={(e) => setLangFilter(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white outline-none"
+                    >
+                      <option value="all">{t('Alla språk')}</option>
+                      {availableLanguages.map((l) => (
+                        <option key={l.value} value={l.value}>
+                          {l.flag} {t(l.label)} ({l.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">

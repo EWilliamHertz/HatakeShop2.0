@@ -1162,6 +1162,8 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
           leadTimeDays: products.leadTimeDays,
           shippingOptions: products.shippingOptions,
           images: products.images,
+          productDomain: products.productDomain,
+          tcgGame: products.tcgGame,
           productType: products.productType,
           language: products.language,
           sealedType: products.sealedType,
@@ -1289,7 +1291,7 @@ app.get(["/marketplace/browse", "/api/marketplace/browse", "/api-v2/marketplace/
           (p.categoryId != null && desc.has(p.categoryId)) ||
           (Array.isArray(p.categoryIds) && p.categoryIds.some((cid: number) => desc.has(cid)))
         ).length;
-        if (count > 0 || sub.isVisibleIfEmpty) subOut.push({ id: sub.id, name: sub.name, productCount: count });
+        if (count > 0) subOut.push({ id: sub.id, name: sub.name, productCount: count });
       }
       categoriesOut.push({
         id: cat.id,
@@ -1745,9 +1747,10 @@ const injectSEO = async (
     const canonicalPath = meta.canonicalPath ?? req.path;
     const canonicalUrl = `${siteInfo.canonicalBase}${canonicalPath === '/' ? '/' : canonicalPath}`;
 
-    // Strip any static canonical or hreflang links from the template before injecting dynamic ones
+    // Strip any static canonical, hreflang, or OG title/description links from the template before injecting dynamic ones
     html = html.replace(/\s*<link rel="alternate" hreflang="[^"]*"[^>]*\/?>/gi, '');
     html = html.replace(/\s*<link rel="canonical"[^>]*\/?>/gi, '');
+    html = html.replace(/\s*<meta property="og:(title|description|url|site_name)"[^>]*\/?>/gi, '');
 
     if (meta.title) html = html.replace(/<title>(.*?)<\/title>/, `<title>${fullTitle}</title>`);
     if (meta.description) html = html.replace(/<meta name="description" content="(.*?)"\s*\/?>/, `<meta name="description" content="${meta.description}" />`);
@@ -1793,8 +1796,8 @@ const defaultSiteMetadata = async (siteInfo: ReturnType<typeof resolveRequestSit
     };
   }
   return {
-    title: 'Hatake.Shop — Sveriges & Nordens TCG- & Hobbybutik | Booster Boxes, Singles & Tillbehör',
-    description: 'Handla Pokémon, One Piece, Magic: The Gathering, GlimmerFall TCG, graderade samlarkort samt Hatake Pro pärmar och sleeves direkt från svenskt lager med 1–3 dagars leverans.',
+    title: 'Hatake.Shop — Sveriges TCG- & Hobbybutik | TCG, Graderade Kort & Merchandise',
+    description: 'Handla förseglade TCG-produkter, booster-boxar, graderade samlarkort, pärmar, sleeves och samlarmerchandise direkt från svenskt lager med 1–3 dagars leverans.',
     canonicalPath: reqPath,
     includeBrandSuffix: false,
   };

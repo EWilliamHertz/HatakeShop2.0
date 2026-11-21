@@ -1008,8 +1008,11 @@ export function Marketplace() {
 
           {categoryTree.map((parent: any) => {
             const isExpanded = !!expandedCategories[parent.id];
-            const count = categoryCountMap.get(parent.id);
-            if (!count && parent.children.length === 0 && !parent.isVisibleIfEmpty) return null;
+            const count = categoryCountMap.get(parent.id) || 0;
+            const nonEmptyChildren = (parent.children || []).filter(
+              (child: any) => (categoryCountMap.get(child.id) || 0) > 0
+            );
+            if (count <= 0 && nonEmptyChildren.length === 0) return null;
             return (
               <div key={parent.id}>
                 <div className="flex items-center w-full gap-0.5">
@@ -1023,11 +1026,11 @@ export function Marketplace() {
                     }`}
                   >
                     <span className="truncate">{parent.name}</span>
-                    {typeof count === 'number' && count > 0 && (
+                    {count > 0 && (
                       <span className="text-[11px] text-slate-500 tabular-nums ml-2">{count}</span>
                     )}
                   </button>
-                  {parent.children.length > 0 && (
+                  {nonEmptyChildren.length > 0 && (
                     <button
                       type="button"
                       onClick={(e) => toggleCategory(parent.id, e)}
@@ -1038,10 +1041,10 @@ export function Marketplace() {
                   )}
                 </div>
 
-                {parent.children.length > 0 && isExpanded && (
+                {nonEmptyChildren.length > 0 && isExpanded && (
                   <div className="pl-3 ml-2.5 border-l border-slate-800 space-y-0.5 mt-1">
-                    {parent.children.map((child: any) => {
-                      const subCount = categoryCountMap.get(child.id);
+                    {nonEmptyChildren.map((child: any) => {
+                      const subCount = categoryCountMap.get(child.id) || 0;
                       return (
                         <button
                           key={child.id}
@@ -1054,7 +1057,7 @@ export function Marketplace() {
                           }`}
                         >
                           <span className="truncate">{child.name}</span>
-                          {typeof subCount === 'number' && subCount > 0 && (
+                          {subCount > 0 && (
                             <span className="text-[10px] text-slate-500 tabular-nums">{subCount}</span>
                           )}
                         </button>

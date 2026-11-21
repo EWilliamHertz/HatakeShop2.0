@@ -28,7 +28,7 @@ import { WishlistButton } from './WishlistButton.tsx';
 import { ImageMagnifier } from './ImageMagnifier.tsx';
 import { LandedCostEstimator } from './LandedCostEstimator.tsx';
 import { VerificationBadge } from './VerificationBadge.tsx';
-import { languageLabel, sealedTypeLabel, PRODUCT_LANGUAGES } from '../lib/productTaxonomy.ts';
+import { languageLabel, sealedTypeLabel, tcgGameLabel, inferProductDomain, PRODUCT_LANGUAGES } from '../lib/productTaxonomy.ts';
 import { SafeImage } from './SafeImage.tsx';
 
 export interface ProductModalProps {
@@ -324,15 +324,26 @@ export function ProductModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handlePrev, handleNext, onClose]);
 
+  // Lock background page scroll while modal is open so wheel/touch always scrolls the modal cleanly
+  React.useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
   if (!product) return null;
 
   const langMeta = product.language ? PRODUCT_LANGUAGES.find(x => x.value === product.language) : null;
+  const domain = inferProductDomain(product);
+  const gameName = product.tcgGame ? tcgGameLabel(product.tcgGame) : '';
   const sellerId = product.seller?.id || product.sellerId;
   const activeImgIdx = Math.max(0, images.indexOf(activeImage || ''));
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-hidden"
       onClick={onClose}
     >
       {/* Floating Left Arrow */}
@@ -368,13 +379,13 @@ export function ProductModal({
       )}
 
       <div
-        className="relative w-full max-w-5xl bg-slate-900 border border-slate-700/90 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]"
+        className="relative w-full max-w-4xl bg-slate-900 border border-slate-700/90 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] sm:max-h-[86vh]"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* Top Modal Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-slate-900/95 backdrop-blur z-20 sticky top-0 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-800 bg-slate-900/95 backdrop-blur z-20 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 pr-2">
             <h2 className="text-base sm:text-lg font-extrabold text-white truncate">
               {product.sverigeTitle || product.title}
@@ -438,11 +449,11 @@ export function ProductModal({
         </div>
 
         {/* Scrollable Modal Body */}
-        <div className="overflow-y-auto flex-1 p-4 sm:p-6 pb-8 custom-scrollbar">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+        <div className="overflow-y-auto flex-1 min-h-0 overscroll-contain p-4 sm:p-6 pb-8 custom-scrollbar">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-7">
             {/* Left Column (5 cols): Gallery + Thumbnails */}
             <div className="lg:col-span-5 flex flex-col space-y-3">
-              <div className="w-full aspect-square max-h-[380px] bg-gradient-to-b from-slate-800/60 to-slate-950 rounded-2xl border border-slate-800 overflow-hidden flex items-center justify-center relative mx-auto shrink-0 shadow-inner">
+              <div className="w-full aspect-square max-h-[260px] sm:max-h-[340px] bg-gradient-to-b from-slate-800/60 to-slate-950 rounded-2xl border border-slate-800 overflow-hidden flex items-center justify-center relative mx-auto shrink-0 shadow-inner">
                 <WishlistButton productId={product.id} />
 
                 {images.length > 1 && (
@@ -533,15 +544,25 @@ export function ProductModal({
                     <VerificationBadge status={product.seller?.verificationStatus} />
                   </div>
 
+                  <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/35 text-xs font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                    {domain === 'merchandise' ? t('Merchandise') : 'TCG'}
+                  </span>
+
+                  {gameName && (
+                    <span className="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs font-bold px-2.5 py-1 rounded-lg">
+                      {gameName}
+                    </span>
+                  )}
+
                   {langMeta && (
                     <span className="bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold px-2.5 py-1 rounded-lg">
-                      {langMeta.flag} {languageLabel(product.language)}
+                      {langMeta.flag} {t(languageLabel(product.language))}
                     </span>
                   )}
 
                   {product.sealedType && (
                     <span className="bg-slate-800/80 text-slate-300 border border-slate-700 text-xs font-semibold px-2.5 py-1 rounded-lg">
-                      {sealedTypeLabel(product.sealedType)}
+                      {t(sealedTypeLabel(product.sealedType))}
                     </span>
                   )}
 

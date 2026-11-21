@@ -47,8 +47,7 @@ const ADMIN_TOKEN_KEY = 'hatake_admin_token';
 const ADMIN_USER_KEY = 'hatake_admin_user';
 
 export function getAdminAuthHeaders(fallbackBearerToken?: string | null): Record<string, string> {
-  const savedAdminToken =
-    sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+  const savedAdminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
   const bearer = savedAdminToken || fallbackBearerToken || '';
   const headers: Record<string, string> = {};
   if (bearer) {
@@ -81,11 +80,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [adminToken, setAdminToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // Purge legacy persistent localStorage admin tokens so only active per-tab sessionStorage unlock persists
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_USER_KEY);
+
     // 1. Verify if an active .env ADMIN_PASSWORD session exists and is cryptographically valid on server
-    const savedAdminToken =
-      sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
-    const savedAdminUserRaw =
-      sessionStorage.getItem(ADMIN_USER_KEY) || localStorage.getItem(ADMIN_USER_KEY);
+    const savedAdminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    const savedAdminUserRaw = sessionStorage.getItem(ADMIN_USER_KEY);
 
     if (savedAdminToken) {
       fetch('/api-v2/admin/verify', {
@@ -152,10 +153,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      const activeAdminToken =
-        sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
-      const activeAdminUserRaw =
-        sessionStorage.getItem(ADMIN_USER_KEY) || localStorage.getItem(ADMIN_USER_KEY);
+      const activeAdminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+      const activeAdminUserRaw = sessionStorage.getItem(ADMIN_USER_KEY);
 
       if (!currentUser && activeAdminToken && activeAdminUserRaw) {
         try {
@@ -174,8 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const origGetIdToken = currentUser.getIdToken.bind(currentUser);
         rawFirebaseTokenGetter = origGetIdToken;
         (currentUser as any).getIdToken = async (forceRefresh?: boolean) => {
-          const unlockedAdminTok =
-            sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
+          const unlockedAdminTok = sessionStorage.getItem(ADMIN_TOKEN_KEY);
           if (unlockedAdminTok && unlockedAdminTok.startsWith('hatake_admin.')) {
             return unlockedAdminTok;
           }
@@ -301,8 +299,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token);
     sessionStorage.setItem(ADMIN_USER_KEY, JSON.stringify(adminUser));
-    localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
-    localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(adminUser));
 
     setAdminToken(data.token);
     setIsAdminPasswordSession(true);
@@ -312,8 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cu = auth.currentUser;
       const origGetIdToken = cu.getIdToken.bind(cu);
       (cu as any).getIdToken = async (forceRefresh?: boolean) => {
-        const unlockedAdminTok =
-          sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
+        const unlockedAdminTok = sessionStorage.getItem(ADMIN_TOKEN_KEY);
         if (unlockedAdminTok && unlockedAdminTok.startsWith('hatake_admin.')) {
           return unlockedAdminTok;
         }

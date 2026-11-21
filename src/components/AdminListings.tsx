@@ -18,8 +18,8 @@ function SverigeToggle({ product, user, queryClient }: { product: any, user: any
         try {
           const token =
             sessionStorage.getItem('hatake_admin_token') ||
-            localStorage.getItem('hatake_admin_token') ||
-            (await user?.getIdToken());
+            (await user?.getIdToken()) ||
+            '';
           await fetch(`/api-v2/admin/products/${product.id}/sverige`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -73,10 +73,7 @@ export function AdminListings() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
-      let token =
-        sessionStorage.getItem('hatake_admin_token') ||
-        localStorage.getItem('hatake_admin_token') ||
-        '';
+      let token = sessionStorage.getItem('hatake_admin_token') || '';
       if (!token) {
         try {
           token = (await user?.getIdToken()) || '';
@@ -101,10 +98,7 @@ export function AdminListings() {
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async (payload: { productIds: number[]; updates: any }) => {
-      let token =
-        sessionStorage.getItem('hatake_admin_token') ||
-        localStorage.getItem('hatake_admin_token') ||
-        '';
+      let token = sessionStorage.getItem('hatake_admin_token') || '';
       if (!token) {
         try {
           token = (await user?.getIdToken()) || '';
@@ -198,8 +192,8 @@ export function AdminListings() {
       <div className="sticky top-[64px] sm:top-[80px] z-20 flex flex-col shadow-xl">
         <div className="bg-slate-900 p-5 border-b border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 rounded-t-2xl">
         <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">All Listings ({products.length})</h2>
-          <p className="text-sm text-slate-400 mt-1">Manage and bulk edit products from all sellers.</p>
+          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">{t('All Listings')} ({products.length})</h2>
+          <p className="text-sm text-slate-400 mt-1">{t('Manage and bulk edit products from all sellers.')}</p>
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
@@ -207,7 +201,7 @@ export function AdminListings() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input 
               type="text" 
-              placeholder="Search products or sellers..."
+              placeholder={t('Search products or sellers...')}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-slate-200 transition-all"
@@ -219,35 +213,35 @@ export function AdminListings() {
               onChange={e => setFilterProductType(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">All Main Types</option>
-              <option value="sealed">Sealed</option>
-              <option value="graded">Graded</option>
-              <option value="accessories">Accessories</option>
+              <option value="">{t('All Main Types')}</option>
+              <option value="sealed">{t('Sealed')}</option>
+              <option value="graded">{t('Graded')}</option>
+              <option value="accessories">{t('Merchandise & Accessories')}</option>
             </select>
           <select 
               value={filterSponsored} 
               onChange={e => setFilterSponsored(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">All Placements</option>
-              <option value="true">Sponsored Only</option>
-              <option value="false">Regular Only</option>
+              <option value="">{t('All Placements')}</option>
+              <option value="true">{t('Sponsored Only')}</option>
+              <option value="false">{t('Regular Only')}</option>
             </select>
           <select 
               value={filterSverigeB2c} 
               onChange={e => setFilterSverigeB2c(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">All Storefronts</option>
+              <option value="">{t('All Storefronts')}</option>
               <option value="true">🇸🇪 hatake.shop (B2C)</option>
-              <option value="false">🌐 B2B Only</option>
+              <option value="false">🌐 {t('B2B Only')}</option>
             </select>
             <select
             value={filterCompany}
             onChange={e => setFilterCompany(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
           >
-            <option value="">All Sellers/Companies</option>
+            <option value="">{t('All Sellers/Companies')}</option>
             {uniqueCompanies.map((s: any) => (
               <option key={s.id} value={s.id}>{s.companyName || s.displayName || s.email}</option>
             ))}
@@ -257,7 +251,7 @@ export function AdminListings() {
             onChange={e => setFilterCategory(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
           >
-            <option value="">All Categories</option>
+            <option value="">{t('All Categories')}</option>
             {Array.isArray(categoriesData) && categoriesData.map((c: any) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -268,9 +262,9 @@ export function AdminListings() {
             onChange={e => setFilterLanguage(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
           >
-            <option value="">All Languages</option>
-            {PRODUCT_LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-            <option value="__unset">⚠ No language set</option>
+            <option value="">{t('All Languages')}</option>
+            {PRODUCT_LANGUAGES.map(l => <option key={l.value} value={l.value}>{t(l.label)}</option>)}
+            <option value="__unset">⚠ {t('No language set')}</option>
           </select>
 
           <select 
@@ -278,9 +272,9 @@ export function AdminListings() {
             onChange={e => setFilterSealedType(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
           >
-            <option value="">All Product Types</option>
-            {SEALED_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            <option value="__unset">⚠ No type set</option>
+            <option value="">{t('All Product Types')}</option>
+            {SEALED_TYPES.map(s => <option key={s.value} value={s.value}>{t(s.label)}</option>)}
+            <option value="__unset">⚠ {t('No type set')}</option>
           </select>
           
           <select 
@@ -288,8 +282,8 @@ export function AdminListings() {
             onChange={e => setFilterOrigin(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
           >
-            <option value="">All Origins</option>
-            {ORIGIN_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <option value="">{t('All Origins')}</option>
+            {ORIGIN_TYPES.map(o => <option key={o.value} value={o.value}>{t(o.label)}</option>)}
           </select>
 
           <select 
@@ -297,10 +291,10 @@ export function AdminListings() {
             onChange={e => setFilterStatus(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
           >
-            <option value="">All Statuses</option>
-            <option value="approved">Approved</option>
-            <option value="pending">Pending</option>
-            <option value="rejected">Rejected</option>
+            <option value="">{t('All Statuses')}</option>
+            <option value="approved">{t('Approved')}</option>
+            <option value="pending">{t('Pending')}</option>
+            <option value="rejected">{t('Rejected')}</option>
           </select>
           
           <select 
@@ -308,22 +302,22 @@ export function AdminListings() {
             onChange={e => setSortBy(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 outline-none"
           >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
+            <option value="newest">{t('Newest First')}</option>
+            <option value="oldest">{t('Oldest')}</option>
+            <option value="price_asc">{t('Lowest Price')}</option>
+            <option value="price_desc">{t('Highest Price')}</option>
           </select>
         </div>
       </div>
 
       {selectedIds.length > 0 && (
         <div className="bg-cyan-900/20 border-b border-cyan-800 p-3 flex flex-wrap items-center justify-between gap-3 px-5">
-          <span className="text-sm font-semibold text-cyan-400">{selectedIds.length} listings selected</span>
+          <span className="text-sm font-semibold text-cyan-400">{selectedIds.length} {t('listings selected')}</span>
           <div className="flex items-center gap-3 flex-wrap">
             
             <div className="flex flex-col relative group">
               <button type="button" onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)} className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none min-w-[200px] text-left flex justify-between items-center">
-    <span>{bulkCategoryIds.length > 0 ? `${bulkCategoryIds.length} categories selected` : '-- Assign Categories --'}</span>
+    <span>{bulkCategoryIds.length > 0 ? `${bulkCategoryIds.length} ${t('categories selected')}` : t('-- Assign Categories --')}</span>
   </button>
   {isCategoryMenuOpen && (
     <>
@@ -348,7 +342,7 @@ export function AdminListings() {
                   onClick={() => setBulkCategoryIds([])}
                   className="w-full text-left p-1.5 mt-1 text-xs text-slate-400 hover:text-slate-200 border-t border-slate-700"
                 >
-                  Clear Selection
+                  {t('Clear Selection')}
                 </button>
               </div>
             </>
@@ -360,45 +354,45 @@ export function AdminListings() {
               onChange={e => setBulkSponsored(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">-- Set Sponsored --</option>
-              <option value="true">Mark as Sponsored</option>
-              <option value="false">Remove Sponsored</option>
+              <option value="">{t('-- Set Sponsored --')}</option>
+              <option value="true">{t('Mark as Sponsored')}</option>
+              <option value="false">{t('Remove Sponsored')}</option>
             </select>
             <select 
               value={bulkLanguage} 
               onChange={e => setBulkLanguage(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">-- Set Language --</option>
+              <option value="">{t('-- Set Language --')}</option>
               {PRODUCT_LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-              <option value="__clear">Clear language</option>
+              <option value="__clear">{t('Clear language')}</option>
             </select>
             <select 
               value={bulkSealedType} 
               onChange={e => setBulkSealedType(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">-- Set Product Type --</option>
-              {SEALED_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              <option value="__clear">Clear type</option>
+              <option value="">{t('-- Set Product Type --')}</option>
+              {SEALED_TYPES.map(s => <option key={s.value} value={s.value}>{t(s.label)}</option>)}
+              <option value="__clear">{t('Clear type')}</option>
             </select>
             <select 
               value={bulkProductType} 
               onChange={e => setBulkProductType(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">-- Set Main Type --</option>
-              <option value="sealed">Sealed</option>
-              <option value="graded">Graded</option>
-              <option value="accessories">Accessories</option>
-              <option value="__clear">Clear type</option>
+              <option value="">{t('-- Set Main Type --')}</option>
+              <option value="sealed">{t('Sealed')}</option>
+              <option value="graded">{t('Graded')}</option>
+              <option value="accessories">{t('Merchandise & Accessories')}</option>
+              <option value="__clear">{t('Clear type')}</option>
             </select>
             <select 
               value={bulkOriginType} 
               onChange={e => setBulkOriginType(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">-- Set Origin --</option>
+              <option value="">{t('-- Set Origin --')}</option>
               {ORIGIN_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <select 
@@ -406,16 +400,16 @@ export function AdminListings() {
               onChange={e => setBulkSverigeB2c(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none"
             >
-              <option value="">-- Set Sverige B2C --</option>
-              <option value="true">🇸🇪 Add to hatake.shop (B2C)</option>
-              <option value="false">Remove from hatake.shop (B2C)</option>
+              <option value="">{t('-- Set Sverige B2C --')}</option>
+              <option value="true">🇸🇪 {t('Add to hatake.shop (B2C)')}</option>
+              <option value="false">{t('Remove from hatake.shop (B2C)')}</option>
             </select>
             <button 
               onClick={handleBulkUpdate}
               disabled={(bulkCategoryIds.length === 0 && bulkSponsored === '' && bulkSverigeB2c === '' && bulkLanguage === '' && bulkSealedType === '' && bulkProductType === '' && bulkOriginType === '') || bulkUpdateMutation.isPending}
               className="btn-primary"
             >
-              {bulkUpdateMutation.isPending ? 'Updating...' : 'Apply Bulk Edit'}
+              {bulkUpdateMutation.isPending ? t('Updating...') : t('Apply Bulk Edit')}
                         </button>
           </div>
         </div>
@@ -431,14 +425,14 @@ export function AdminListings() {
                   {selectedIds.length === filteredProducts.length && filteredProducts.length > 0 ? <CheckSquare className="w-5 h-5 text-cyan-500" /> : <Square className="w-5 h-5" />}
                 </button>
               </th>
-              <th className="p-4">Product</th>
-              <th className="p-4">Seller</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">Language</th>
-              <th className="p-4">Type</th>
-              <th className="p-4">Origin</th>
-              <th className="p-4">Status</th>
-              <th className="p-4">Sverige B2C</th>
+              <th className="p-4">{t('Product')}</th>
+              <th className="p-4">{t('Seller')}</th>
+              <th className="p-4">{t('Category')}</th>
+              <th className="p-4">{t('Language')}</th>
+              <th className="p-4">{t('Type')}</th>
+              <th className="p-4">{t('Origin')}</th>
+              <th className="p-4">{t('Status')}</th>
+              <th className="p-4">{t('hatake.shop B2C')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700/50">
@@ -459,13 +453,13 @@ export function AdminListings() {
                       )}
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-200 line-clamp-1">{p.title} {p.isSponsored && <span className="ml-2 bg-[#ffcc00] text-black px-1.5 py-0.5 rounded text-[10px] font-bold">SPONSORED</span>}</div>
+                      <div className="font-semibold text-slate-200 line-clamp-1">{p.title} {p.isSponsored && <span className="ml-2 bg-[#ffcc00] text-black px-1.5 py-0.5 rounded text-[10px] font-bold">{t('SPONSORED')}</span>}</div>
                       <div className="text-xs text-slate-500">{p.originType} • MOQ: {p.moq}</div>
                     </div>
                   </div>
                 </td>
                 <td className="p-4">
-                  <div className="font-medium text-slate-300 text-sm">{p.seller?.companyName || p.seller?.displayName || 'Unknown'}</div>
+                  <div className="font-medium text-slate-300 text-sm">{p.seller?.companyName || p.seller?.displayName || t('Unknown')}</div>
                   <div className="text-xs text-slate-500">{p.seller?.email}</div>
                 </td>
                 
@@ -477,14 +471,14 @@ export function AdminListings() {
                         return c ? <span key={cid} className="bg-slate-700 px-1.5 py-0.5 rounded text-xs">{c.name}</span> : null;
                       })}
                     </div>
-                  ) : p.categoryId ? (Array.isArray(categoriesData) ? categoriesData : []).find((c: any) => c.id === p.categoryId)?.name || 'Unknown' : <span className="text-slate-500 italic">None</span>}
+                  ) : p.categoryId ? (Array.isArray(categoriesData) ? categoriesData : []).find((c: any) => c.id === p.categoryId)?.name || t('Unknown') : <span className="text-slate-500 italic">{t('None')}</span>}
                 </td>
 
                 <td className="p-4 text-sm">
-                  {p.language ? <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded text-xs">{languageLabel(p.language)}</span> : <span className="text-amber-400/80 text-xs italic">Not set</span>}
+                  {p.language ? <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded text-xs">{languageLabel(p.language)}</span> : <span className="text-amber-400/80 text-xs italic">{t('Not set')}</span>}
                 </td>
                 <td className="p-4 text-sm">
-                  {p.sealedType ? <span className="bg-slate-700 px-2 py-0.5 rounded text-xs">{sealedTypeLabel(p.sealedType)}</span> : <span className="text-amber-400/80 text-xs italic">Not set</span>}
+                  {p.sealedType ? <span className="bg-slate-700 px-2 py-0.5 rounded text-xs">{t(sealedTypeLabel(p.sealedType))}</span> : <span className="text-amber-400/80 text-xs italic">{t('Not set')}</span>}
                 </td>
                 <td className="p-4 text-sm">
                   {p.originType ? <span className="bg-slate-700 px-2 py-0.5 rounded text-xs text-slate-200">{originTypeShort(p.originType)}</span> : <span className="text-slate-500 italic">—</span>}
@@ -492,7 +486,7 @@ export function AdminListings() {
 
                 <td className="p-4">
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.approvalStatus === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : p.approvalStatus === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}`}>
-                    {p.approvalStatus}
+                    {p.approvalStatus === 'approved' ? t('Approved') : p.approvalStatus === 'rejected' ? t('Rejected') : t('Pending')}
                   </span>
                 </td>
                 <td className="p-4">
@@ -507,7 +501,7 @@ export function AdminListings() {
         
         {filteredProducts.length === 0 && (
           <div className="text-center py-12 text-slate-400">
-            No products found matching your search.
+            {t('No products found matching your search.')}
           </div>
         )}
       </div>

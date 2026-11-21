@@ -113,11 +113,13 @@ export const products = pgTable('products', {
   shippingOptions: jsonb('shipping_options').default(sql`'[]'::jsonb`),
   images: jsonb('images').default(sql`'[]'::jsonb`),
   
-  // Sealed-product classification
+  // Sealed-product & Store Taxonomy
+  productDomain: text('product_domain').default('tcg'), // 'tcg' | 'merchandise'
+  tcgGame: text('tcg_game'), // 'pokemon' | 'magic' | 'yugioh' | 'lorcana' | 'glimmerfall' | ...
   // language: 'en' | 'ja' | 'zh-Hant' (Traditional Chinese / Cantonese) | 'zh-Hans' (Simplified Chinese / Mandarin) | 'ko' | 'other'
   language: text('language'),
   // sealedType: 'booster_box' | 'etb' | 'booster_bundle' | 'booster_pack' | 'collection_box' | 'premium_collection'
-  //             | 'tin' | 'blister' | 'deck' | 'case' | 'accessory' | 'other'
+  //             | 'tin' | 'blister' | 'deck' | 'case' | 'single' | 'accessory' | 'binder' | 'sleeves' | 'toploaders' | 'acrylic_case' | 'deck_box' | 'playmat' | 'collectible_merch' | 'other'
   sealedType: text('sealed_type'),
   
   isSverigeB2c: boolean('is_sverige_b2c').default(false),

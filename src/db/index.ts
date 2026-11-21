@@ -65,13 +65,17 @@ export function ensureSealedTaxonomySchema(): Promise<void> {
       const check = await pool.query(`
         SELECT count(*)::int AS cnt
         FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'products' AND column_name IN ('language', 'sealed_type')
+        WHERE table_schema = 'public' AND table_name = 'products' AND column_name IN ('language', 'sealed_type', 'product_domain', 'tcg_game')
       `);
-      if (Number(check.rows[0]?.cnt) >= 2) return;
+      if (Number(check.rows[0]?.cnt) >= 4) return;
       await pool.query(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "language" text`);
       await pool.query(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "sealed_type" text`);
+      await pool.query(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "product_domain" text DEFAULT 'tcg'`);
+      await pool.query(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "tcg_game" text`);
       await pool.query(`CREATE INDEX IF NOT EXISTS "products_language_idx" ON "products" ("language")`);
       await pool.query(`CREATE INDEX IF NOT EXISTS "products_sealed_type_idx" ON "products" ("sealed_type")`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS "products_domain_idx" ON "products" ("product_domain")`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS "products_tcg_game_idx" ON "products" ("tcg_game")`);
     })().catch((err: any) => {
       console.error('[db] Failed to ensure sealed-taxonomy schema columns:', err?.message || err);
       // Reset so a later request can retry (e.g. after transient connectivity issues).

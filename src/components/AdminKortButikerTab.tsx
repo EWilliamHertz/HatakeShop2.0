@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext.tsx';
 import { 
   Store, Search, Plus, Upload, RefreshCw, Edit2, Trash2, 
@@ -25,6 +26,7 @@ export interface SwedishCardShop {
 
 export function AdminKortButikerTab() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
@@ -49,10 +51,7 @@ export function AdminKortButikerTab() {
   });
 
   const getToken = async () => {
-    const adminTok =
-      sessionStorage.getItem('hatake_admin_token') ||
-      localStorage.getItem('hatake_admin_token') ||
-      '';
+    const adminTok = sessionStorage.getItem('hatake_admin_token') || '';
     if (adminTok) return adminTok;
     return (await user?.getIdToken()) || '';
   };
@@ -213,7 +212,7 @@ export function AdminKortButikerTab() {
   };
 
   const handleDelete = (shop: SwedishCardShop) => {
-    if (confirm(`Är du säker på att du vill ta bort "${shop.name}"?`)) {
+    if (confirm(t('Är du säker på att du vill ta bort "{{name}}"?', { name: shop.name }))) {
       deleteMutation.mutate(shop.id);
     }
   };
@@ -272,7 +271,7 @@ export function AdminKortButikerTab() {
             <Store className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Kortbutiker Totalt</div>
+            <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">{t('Kortbutiker Totalt')}</div>
             <div className="text-2xl font-black text-white">{totalShops}</div>
           </div>
         </div>
@@ -282,7 +281,7 @@ export function AdminKortButikerTab() {
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Fysiska Butiker</div>
+            <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">{t('Fysiska Butiker')}</div>
             <div className="text-2xl font-black text-indigo-300">{physicalCount}</div>
           </div>
         </div>
@@ -292,7 +291,7 @@ export function AdminKortButikerTab() {
             <ShoppingBag className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Webbutiker</div>
+            <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">{t('Webbutiker')}</div>
             <div className="text-2xl font-black text-emerald-300">{webshopCount}</div>
           </div>
         </div>
@@ -302,7 +301,7 @@ export function AdminKortButikerTab() {
             <MapPin className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Orter i Sverige</div>
+            <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold">{t('Orter i Sverige')}</div>
             <div className="text-2xl font-black text-amber-300">{uniqueCities}</div>
           </div>
         </div>
@@ -314,13 +313,13 @@ export function AdminKortButikerTab() {
         <div className="p-6 border-b border-slate-700 bg-slate-900 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
             <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-              🇸🇪 Kortbutiker Sverige
+              🇸🇪 {t('Kortbutiker Sverige')}
               <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800">
                 kort_butiker_sverige
               </span>
             </h2>
             <p className="text-sm text-slate-400 mt-1">
-              Databas över svenska kort- och samlarbutiker. Hantera kontaktinfo, adress, korttyper samt lägg till butiker manuellt.
+              {t('Databas över svenska kort- och samlarbutiker. Hantera kontaktinfo, adress, korttyper samt lägg till butiker manuellt.')}
             </p>
           </div>
 
@@ -329,10 +328,10 @@ export function AdminKortButikerTab() {
               onClick={() => syncFileMutation.mutate()}
               disabled={syncFileMutation.isPending}
               className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
-              title="Läs in butiker från filen kort_butiker_sverige_komplett.csv i projektet"
+              title={t('Läs in butiker från CSV-filen i projektet')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncFileMutation.isPending ? 'animate-spin' : ''}`} />
-              Synka från fil
+              {t('Synka från fil')}
             </button>
 
             <button
@@ -340,7 +339,7 @@ export function AdminKortButikerTab() {
               className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors"
             >
               <Upload className="w-3.5 h-3.5 text-cyan-400" />
-              Importera CSV
+              {t('Importera CSV')}
             </button>
 
             <button
@@ -348,7 +347,7 @@ export function AdminKortButikerTab() {
               className="flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl border border-cyan-400/30 transition-all shadow-lg shadow-cyan-500/20 text-xs py-2 px-4"
             >
               <Plus className="w-4 h-4" />
-              + Lägg till butik manuellt
+              + {t('Lägg till butik manuellt')}
             </button>
           </div>
         </div>
@@ -359,7 +358,7 @@ export function AdminKortButikerTab() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Sök butik, stad, korttyp..."
+              placeholder={t('Sök butik, stad, korttyp...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-500"
@@ -367,19 +366,19 @@ export function AdminKortButikerTab() {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs text-slate-400 shrink-0">Typ:</span>
+            <span className="text-xs text-slate-400 shrink-0">{t('Typ')}:</span>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-cyan-500 w-full sm:w-auto"
             >
-              <option value="ALL">Alla typer ({totalShops})</option>
-              <option value="BOTH">Fysisk butik + Webshop</option>
-              <option value="WEBSHOP_ONLY">Endast Webshop</option>
-              <option value="PHYSICAL_ONLY">Endast Fysisk butik</option>
+              <option value="ALL">{t('Alla typer')} ({totalShops})</option>
+              <option value="BOTH">{t('Fysisk butik + Webshop')}</option>
+              <option value="WEBSHOP_ONLY">{t('Endast Webshop')}</option>
+              <option value="PHYSICAL_ONLY">{t('Endast Fysisk butik')}</option>
             </select>
             {isFetching && (
-              <span className="text-xs text-cyan-400 animate-pulse ml-2">Uppdaterar...</span>
+              <span className="text-xs text-cyan-400 animate-pulse ml-2">{t('Uppdaterar...')}</span>
             )}
           </div>
         </div>
@@ -389,12 +388,12 @@ export function AdminKortButikerTab() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-900/60 text-slate-400 border-b border-slate-700/60 uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="p-3.5">Butiksnamn</th>
-                <th className="p-3.5">Typ</th>
-                <th className="p-3.5">Stad / Adress</th>
-                <th className="p-3.5">Kontakt</th>
-                <th className="p-3.5">Korttyper</th>
-                <th className="p-3.5 text-right">Åtgärder</th>
+                <th className="p-3.5">{t('Butiksnamn')}</th>
+                <th className="p-3.5">{t('Typ')}</th>
+                <th className="p-3.5">{t('Stad / Adress')}</th>
+                <th className="p-3.5">{t('Kontakt')}</th>
+                <th className="p-3.5">{t('Korttyper')}</th>
+                <th className="p-3.5 text-right">{t('Åtgärder')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
@@ -483,14 +482,14 @@ export function AdminKortButikerTab() {
                       <button
                         onClick={() => openEditModal(shop)}
                         className="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-slate-700/50 rounded-lg transition-colors"
-                        title="Redigera"
+                        title={t('Redigera')}
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(shop)}
                         className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700/50 rounded-lg transition-colors"
-                        title="Ta bort"
+                        title={t('Ta bort')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -503,8 +502,8 @@ export function AdminKortButikerTab() {
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-slate-400">
                     {search || typeFilter !== 'ALL'
-                      ? 'Inga butiker matchar din sökning.'
-                      : 'Inga butiker hittades. Klicka på "Synka från fil" för att ladda butiker från kort_butiker_sverige_komplett.csv eller lägg till manuellt!'}
+                      ? t('Inga butiker matchar din sökning.')
+                      : t('Inga butiker hittades. Klicka på "Synka från fil" för att ladda butiker från kort_butiker_sverige_komplett.csv eller lägg till manuellt!')}
                   </td>
                 </tr>
               )}
@@ -515,12 +514,12 @@ export function AdminKortButikerTab() {
 
       {/* MODAL: MANUELLT TILLÄGG (Add Store) */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-slate-700 bg-slate-900 flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90dvh] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-slate-700 bg-slate-900 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-slate-100 flex items-center gap-2">
                 <Store className="w-5 h-5 text-cyan-400" />
-                Lägg till butik manuellt
+                {t('Lägg till butik manuellt')}
               </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
@@ -535,16 +534,16 @@ export function AdminKortButikerTab() {
                 e.preventDefault();
                 addMutation.mutate(formData);
               }}
-              className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+              className="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain"
             >
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Butiksnamn <span className="text-cyan-400">*</span>
+                  {t('Butiksnamn')} <span className="text-cyan-400">*</span>
                 </label>
                 <input
                   required
                   type="text"
-                  placeholder="t.ex. Coolcard.se"
+                  placeholder={t('t.ex. Coolcard.se')}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
@@ -553,24 +552,24 @@ export function AdminKortButikerTab() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Typ</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Typ')}</label>
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
                   >
-                    <option value="Fysisk butik + Webshop">Fysisk butik + Webshop</option>
-                    <option value="Webshop">Webshop</option>
-                    <option value="Fysisk butik">Fysisk butik</option>
-                    <option value="Webshop + Fysisk">Webshop + Fysisk</option>
+                    <option value="Fysisk butik + Webshop">{t('Fysisk butik + Webshop')}</option>
+                    <option value="Webshop">{t('Webshop')}</option>
+                    <option value="Fysisk butik">{t('Fysisk butik')}</option>
+                    <option value="Webshop + Fysisk">{t('Webshop + Fysisk')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Stad / Orter</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Stad / Orter')}</label>
                   <input
                     type="text"
-                    placeholder="t.ex. Stockholm, Göteborg"
+                    placeholder={t('t.ex. Stockholm, Göteborg')}
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
@@ -579,10 +578,10 @@ export function AdminKortButikerTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Adress</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Adress')}</label>
                 <input
                   type="text"
-                  placeholder="Gatuadress eller 'Flera lokaler'"
+                  placeholder={t("Gatuadress eller 'Flera lokaler'")}
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
@@ -591,7 +590,7 @@ export function AdminKortButikerTab() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Telefon</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Telefon')}</label>
                   <input
                     type="text"
                     placeholder="t.ex. +46 8 123 45"
@@ -602,7 +601,7 @@ export function AdminKortButikerTab() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">E-post</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">{t('E-post')}</label>
                   <input
                     type="email"
                     placeholder="info@butik.se"
@@ -614,7 +613,7 @@ export function AdminKortButikerTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Webbplats</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Webbplats')}</label>
                 <input
                   type="text"
                   placeholder="https://www.butik.se"
@@ -626,11 +625,11 @@ export function AdminKortButikerTab() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Korttyper (kommaseparerat)
+                  {t('Korttyper (kommaseparerat)')}
                 </label>
                 <input
                   type="text"
-                  placeholder="t.ex. Magic, Pokemon, Lorcana, One Piece"
+                  placeholder="t.ex. Magic, Pokémon, Lorcana"
                   value={formData.cardTypes}
                   onChange={(e) => setFormData({ ...formData, cardTypes: e.target.value })}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
@@ -638,10 +637,10 @@ export function AdminKortButikerTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Anteckningar / Info</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Anteckningar / Info')}</label>
                 <textarea
                   rows={2}
-                  placeholder="Övrig information eller öppettider..."
+                  placeholder={t('Övrig information eller öppettider...')}
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
@@ -654,7 +653,7 @@ export function AdminKortButikerTab() {
                   onClick={() => setIsAddModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-700"
                 >
-                  Avbryt
+                  {t('Avbryt')}
                 </button>
                 <button
                   type="submit"
@@ -662,7 +661,7 @@ export function AdminKortButikerTab() {
                   className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl px-4 py-2 text-xs transition-all disabled:opacity-50"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  {addMutation.isPending ? 'Sparar...' : 'Spara butik'}
+                  {addMutation.isPending ? t('Sparar...') : t('Spara butik')}
                 </button>
               </div>
             </form>
@@ -672,12 +671,12 @@ export function AdminKortButikerTab() {
 
       {/* MODAL: REDIGERA BUTIK (Edit Store) */}
       {editingShop && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-slate-700 bg-slate-900 flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90dvh] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-slate-700 bg-slate-900 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-slate-100 flex items-center gap-2">
                 <Edit2 className="w-5 h-5 text-cyan-400" />
-                Redigera butik: {editingShop.name}
+                {t('Redigera butik')}: {editingShop.name}
               </h3>
               <button
                 onClick={() => setEditingShop(null)}
@@ -692,11 +691,11 @@ export function AdminKortButikerTab() {
                 e.preventDefault();
                 updateMutation.mutate(editingShop);
               }}
-              className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+              className="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain"
             >
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Butiksnamn <span className="text-cyan-400">*</span>
+                  {t('Butiksnamn')} <span className="text-cyan-400">*</span>
                 </label>
                 <input
                   required
@@ -709,21 +708,21 @@ export function AdminKortButikerTab() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Typ</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Typ')}</label>
                   <select
                     value={editingShop.type || 'Fysisk butik + Webshop'}
                     onChange={(e) => setEditingShop({ ...editingShop, type: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
                   >
-                    <option value="Fysisk butik + Webshop">Fysisk butik + Webshop</option>
-                    <option value="Webshop">Webshop</option>
-                    <option value="Fysisk butik">Fysisk butik</option>
-                    <option value="Webshop + Fysisk">Webshop + Fysisk</option>
+                    <option value="Fysisk butik + Webshop">{t('Fysisk butik + Webshop')}</option>
+                    <option value="Webshop">{t('Webshop')}</option>
+                    <option value="Fysisk butik">{t('Fysisk butik')}</option>
+                    <option value="Webshop + Fysisk">{t('Webshop + Fysisk')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Stad / Orter</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Stad / Orter')}</label>
                   <input
                     type="text"
                     value={editingShop.city || ''}
@@ -734,7 +733,7 @@ export function AdminKortButikerTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Adress</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Adress')}</label>
                 <input
                   type="text"
                   value={editingShop.address || ''}
@@ -745,7 +744,7 @@ export function AdminKortButikerTab() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Telefon</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Telefon')}</label>
                   <input
                     type="text"
                     value={editingShop.phone || ''}
@@ -755,7 +754,7 @@ export function AdminKortButikerTab() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">E-post</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">{t('E-post')}</label>
                   <input
                     type="email"
                     value={editingShop.email || ''}
@@ -766,7 +765,7 @@ export function AdminKortButikerTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Webbplats</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Webbplats')}</label>
                 <input
                   type="text"
                   value={editingShop.website || ''}
@@ -776,7 +775,7 @@ export function AdminKortButikerTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Korttyper</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Korttyper')}</label>
                 <input
                   type="text"
                   value={editingShop.cardTypes || ''}
@@ -786,7 +785,7 @@ export function AdminKortButikerTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Anteckningar</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('Anteckningar')}</label>
                 <textarea
                   rows={2}
                   value={editingShop.notes || ''}
@@ -801,7 +800,7 @@ export function AdminKortButikerTab() {
                   onClick={() => setEditingShop(null)}
                   className="px-4 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-700"
                 >
-                  Avbryt
+                  {t('Avbryt')}
                 </button>
                 <button
                   type="submit"
@@ -809,7 +808,7 @@ export function AdminKortButikerTab() {
                   className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold rounded-xl px-4 py-2 text-xs transition-all disabled:opacity-50"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  {updateMutation.isPending ? 'Sparar...' : 'Spara ändringar'}
+                  {updateMutation.isPending ? t('Sparar...') : t('Spara ändringar')}
                 </button>
               </div>
             </form>
@@ -819,12 +818,12 @@ export function AdminKortButikerTab() {
 
       {/* MODAL: IMPORTERA CSV */}
       {isImportModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-5 border-b border-slate-700 bg-slate-900 flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md max-h-[90dvh] overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-5 border-b border-slate-700 bg-slate-900 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-slate-100 flex items-center gap-2">
                 <Upload className="w-5 h-5 text-cyan-400" />
-                Importera kortbutiker från CSV
+                {t('Importera kortbutiker från CSV')}
               </h3>
               <button
                 onClick={() => setIsImportModalOpen(false)}
@@ -834,16 +833,15 @@ export function AdminKortButikerTab() {
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain">
               <p className="text-xs text-slate-400">
-                Välj en .csv-fil med svenska kortbutiker (t.ex. <code>kort_butiker_sverige_komplett.csv</code>).
-                Filen bör innehålla kolumner som: <em>Butiks_Namn, Typ, Stad, Adress, Telefon, Email, Webbplats, Korttyper</em>.
+                {t('Välj en .csv-fil med svenska kortbutiker (t.ex. kort_butiker_sverige_komplett.csv). Filen bör innehålla kolumner som: Butiks_Namn, Typ, Stad, Adress, Telefon, Email, Webbplats, Korttyper.')}
               </p>
 
               <label className="border-2 border-dashed border-slate-600 hover:border-cyan-500 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer bg-slate-900/50 hover:bg-slate-900 transition-colors">
                 <Upload className="w-8 h-8 text-cyan-400 mb-2" />
-                <span className="text-xs font-semibold text-slate-200">Klicka för att välja CSV-fil</span>
-                <span className="text-[10px] text-slate-500 mt-1">.csv filer stöds</span>
+                <span className="text-xs font-semibold text-slate-200">{t('Klicka för att välja CSV-fil')}</span>
+                <span className="text-[10px] text-slate-500 mt-1">{t('.csv filer stöds')}</span>
                 <input
                   type="file"
                   accept=".csv,text/csv"
@@ -855,7 +853,7 @@ export function AdminKortButikerTab() {
 
               {importCsvMutation.isPending && (
                 <div className="text-center text-xs text-cyan-400 animate-pulse">
-                  Importerar butiker till databasen...
+                  {t('Importerar butiker till databasen...')}
                 </div>
               )}
 
@@ -865,7 +863,7 @@ export function AdminKortButikerTab() {
                   onClick={() => setIsImportModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-700"
                 >
-                  Stäng
+                  {t('Stäng')}
                 </button>
               </div>
             </div>

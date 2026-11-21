@@ -249,6 +249,8 @@ router.get("/api-v2/products", async (req: AuthRequest, res) => {
           leadTimeDays: products.leadTimeDays,
           shippingOptions: products.shippingOptions,
           images: products.images,
+          productDomain: products.productDomain,
+          tcgGame: products.tcgGame,
           productType: products.productType,
           language: products.language,
           sealedType: products.sealedType,
